@@ -14,19 +14,19 @@ export const Dashboard: React.FC = () => {
       {/* Header Section for Dashboard */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-dark">Overview</h1>
-          <p className="text-gray-500 mt-1">Detailed information about your store</p>
+          <h1 className="text-3xl font-bold text-dark">Panoramica</h1>
+          <p className="text-gray-500 mt-1">Informazioni dettagliate sulla tua attività</p>
         </div>
         <div className="flex items-center gap-3">
             <div className="bg-white rounded-full px-4 py-2 flex items-center gap-2 shadow-sm border border-gray-100">
-                <span className="text-sm font-medium text-gray-700">This month</span>
+                <span className="text-sm font-medium text-gray-700">Questo mese</span>
                 <svg width="10" height="6" viewBox="0 0 10 6" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <path d="M1 1L5 5L9 1" stroke="#374151" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
                 </svg>
             </div>
             <button className="bg-dark text-white px-6 py-2 rounded-full font-medium hover:bg-black transition-colors flex items-center gap-2">
                 <ArrowUpRight size={18} className="text-primary"/>
-                Export
+                Esporta
             </button>
         </div>
       </div>
@@ -36,12 +36,12 @@ export const Dashboard: React.FC = () => {
         {/* Revenue Card */}
         <div className="bg-white p-6 rounded-[2rem] shadow-sm flex flex-col justify-between min-h-[180px]">
           <div>
-            <h3 className="text-lg font-semibold text-gray-800">Total Revenue</h3>
+            <h3 className="text-lg font-semibold text-gray-800">Fatturato Totale</h3>
             <div className="flex items-center gap-3 mt-2">
-              <span className="text-3xl font-bold text-dark">$ 15,650</span>
-              <span className="bg-dark text-white text-xs px-2 py-1 rounded-full">+30.4%</span>
+              <span className="text-3xl font-bold text-dark">€ 15.650</span>
+              <span className="bg-dark text-white text-xs px-2 py-1 rounded-full">+30,4%</span>
             </div>
-            <p className="text-xs text-gray-400 mt-1">$ 12,000 last month</p>
+            <p className="text-xs text-gray-400 mt-1">€ 12.000 mese scorso</p>
           </div>
           <div className="h-16 w-full mt-4">
             <ResponsiveContainer width="100%" height="100%">
@@ -56,12 +56,12 @@ export const Dashboard: React.FC = () => {
         <div className="bg-white p-6 rounded-[2rem] shadow-sm flex flex-col justify-between min-h-[180px]">
           <div className="flex justify-between items-start">
              <div>
-                <h3 className="text-lg font-semibold text-gray-800">Total Customers</h3>
+                <h3 className="text-lg font-semibold text-gray-800">Clienti Totali</h3>
                 <div className="flex items-center gap-3 mt-2">
-                    <span className="text-3xl font-bold text-dark">1,226</span>
-                    <span className="bg-dark text-white text-xs px-2 py-1 rounded-full">+79.6%</span>
+                    <span className="text-3xl font-bold text-dark">1.226</span>
+                    <span className="bg-dark text-white text-xs px-2 py-1 rounded-full">+79,6%</span>
                 </div>
-                <p className="text-xs text-gray-400 mt-1">683 users last month</p>
+                <p className="text-xs text-gray-400 mt-1">683 utenti mese scorso</p>
              </div>
              <div className="h-20 w-20 relative">
                 <ResponsiveContainer width="100%" height="100%">
@@ -89,11 +89,11 @@ export const Dashboard: React.FC = () => {
           <div className="flex items-center gap-4 mt-2">
              <div className="flex items-center gap-2 text-xs text-gray-500">
                 <div className="w-2 h-2 rounded-full bg-primary"></div>
-                Women
+                Donne
              </div>
              <div className="flex items-center gap-2 text-xs text-gray-500">
                 <div className="w-2 h-2 rounded-full bg-gray-200"></div>
-                Men
+                Uomini
              </div>
           </div>
         </div>
@@ -101,12 +101,12 @@ export const Dashboard: React.FC = () => {
         {/* Orders Card */}
         <div className="bg-white p-6 rounded-[2rem] shadow-sm flex flex-col justify-between min-h-[180px]">
             <div>
-                <h3 className="text-lg font-semibold text-gray-800">Total Orders</h3>
+                <h3 className="text-lg font-semibold text-gray-800">Ordini Totali</h3>
                 <div className="flex items-center gap-3 mt-2">
-                    <span className="text-3xl font-bold text-dark">15,210</span>
-                    <span className="bg-dark text-white text-xs px-2 py-1 rounded-full">+51.3%</span>
+                    <span className="text-3xl font-bold text-dark">15.210</span>
+                    <span className="bg-dark text-white text-xs px-2 py-1 rounded-full">+51,3%</span>
                 </div>
-                <p className="text-xs text-gray-400 mt-1">10,056 users last month</p>
+                <p className="text-xs text-gray-400 mt-1">10.056 utenti mese scorso</p>
             </div>
             <div className="h-16 w-full mt-2">
                 <ResponsiveContainer width="100%" height="100%">
@@ -123,15 +123,15 @@ export const Dashboard: React.FC = () => {
          {/* Sales Analytics Chart */}
          <div className="lg:col-span-3 bg-white p-8 rounded-[2rem] shadow-sm">
             <div className="flex justify-between items-center mb-8">
-                <h3 className="text-xl font-bold text-dark">Sales Analytics</h3>
+                <h3 className="text-xl font-bold text-dark">Analisi Vendite</h3>
                 <div className="flex items-center gap-6">
                     <div className="flex items-center gap-2 text-sm text-gray-500">
                         <div className="w-3 h-3 rounded-full bg-primary"></div>
-                        Products sold
+                        Prodotti venduti
                     </div>
                     <div className="flex items-center gap-2 text-sm text-gray-500">
                         <div className="w-3 h-3 rounded-full bg-gray-100"></div>
-                        Product returns
+                        Resi
                     </div>
                 </div>
             </div>
@@ -164,13 +164,13 @@ export const Dashboard: React.FC = () => {
         {/* Top Sales by Country */}
         <div className="bg-white p-6 rounded-[2rem] shadow-sm">
             <div className="flex justify-between items-center mb-6">
-                <h3 className="text-lg font-bold text-dark">Top sales by country</h3>
-                <button className="text-sm font-medium underline text-gray-500 hover:text-dark">See all</button>
+                <h3 className="text-lg font-bold text-dark">Vendite top per paese</h3>
+                <button className="text-sm font-medium underline text-gray-500 hover:text-dark">Vedi tutti</button>
             </div>
             <div className="space-y-6">
                 {[
-                    { country: 'United States', flag: '🇺🇸', percent: 53 },
-                    { country: 'United Kingdom', flag: '🇬🇧', percent: 12 },
+                    { country: 'Stati Uniti', flag: '🇺🇸', percent: 53 },
+                    { country: 'Regno Unito', flag: '🇬🇧', percent: 12 },
                     { country: 'Canada', flag: '🇨🇦', percent: 61 },
                 ].map((item, idx) => (
                     <div key={idx}>
@@ -195,24 +195,24 @@ export const Dashboard: React.FC = () => {
         {/* Product Sales Table */}
         <div className="bg-white p-6 rounded-[2rem] shadow-sm">
             <div className="flex justify-between items-center mb-6">
-                <h3 className="text-lg font-bold text-dark">Product sales</h3>
-                <button className="text-sm font-medium underline text-gray-500 hover:text-dark">See all</button>
+                <h3 className="text-lg font-bold text-dark">Vendite prodotti</h3>
+                <button className="text-sm font-medium underline text-gray-500 hover:text-dark">Vedi tutti</button>
             </div>
             <div className="overflow-x-auto">
                 <table className="w-full">
                     <thead>
                         <tr className="text-left text-xs text-gray-400">
-                            <th className="pb-4 font-normal">Item</th>
-                            <th className="pb-4 font-normal text-right">Stock</th>
-                            <th className="pb-4 font-normal text-right">Price</th>
-                            <th className="pb-4 font-normal text-right">Items sold</th>
+                            <th className="pb-4 font-normal">Articolo</th>
+                            <th className="pb-4 font-normal text-right">Scorte</th>
+                            <th className="pb-4 font-normal text-right">Prezzo</th>
+                            <th className="pb-4 font-normal text-right">Venduti</th>
                         </tr>
                     </thead>
                     <tbody className="text-sm">
                         {[
-                            { name: 'Short-sleeved cardigan', price: 55.00, stock: 118, sold: 294, icon: '👕' },
-                            { name: 'Relaxed fit linen shorts', price: 34.60, stock: 29, sold: 569, icon: '🩳' },
-                            { name: 'Womens sweatshirt', price: 22.90, stock: 98, sold: 1629, icon: '🧥' },
+                            { name: 'Cardigan maniche corte', price: 55.00, stock: 118, sold: 294, icon: '👕' },
+                            { name: 'Shorts lino relax', price: 34.60, stock: 29, sold: 569, icon: '🩳' },
+                            { name: 'Felpa donna', price: 22.90, stock: 98, sold: 1629, icon: '🧥' },
                         ].map((product, idx) => (
                             <tr key={idx} className="border-b border-gray-50 last:border-0">
                                 <td className="py-3 flex items-center gap-3">
@@ -220,7 +220,7 @@ export const Dashboard: React.FC = () => {
                                     <span className="font-medium text-dark truncate max-w-[100px]">{product.name}</span>
                                 </td>
                                 <td className="py-3 text-right text-gray-500">{product.stock}</td>
-                                <td className="py-3 text-right font-medium text-dark">${product.price}</td>
+                                <td className="py-3 text-right font-medium text-dark">€{product.price}</td>
                                 <td className="py-3 text-right text-gray-500">{product.sold}</td>
                             </tr>
                         ))}
@@ -232,8 +232,8 @@ export const Dashboard: React.FC = () => {
         {/* Last Activity */}
         <div className="bg-white p-6 rounded-[2rem] shadow-sm">
             <div className="flex justify-between items-center mb-6">
-                <h3 className="text-lg font-bold text-dark">Last activity</h3>
-                <button className="text-sm font-medium underline text-gray-500 hover:text-dark">See all</button>
+                <h3 className="text-lg font-bold text-dark">Attività recenti</h3>
+                <button className="text-sm font-medium underline text-gray-500 hover:text-dark">Vedi tutti</button>
             </div>
             <div className="space-y-4">
                 {MOCK_CUSTOMERS.slice(0, 3).map((customer) => (
@@ -242,7 +242,7 @@ export const Dashboard: React.FC = () => {
                             <img src={customer.avatar} alt={customer.name} className="w-10 h-10 rounded-full object-cover" />
                             <div>
                                 <h4 className="text-sm font-bold text-dark">{customer.name}</h4>
-                                <p className="text-xs text-gray-500">Purchased <span className="underline decoration-dotted">Linen blend blazer</span></p>
+                                <p className="text-xs text-gray-500">Acquistato <span className="underline decoration-dotted">Blazer misto lino</span></p>
                             </div>
                         </div>
                         <button className="text-gray-400 hover:text-dark">

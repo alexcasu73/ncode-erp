@@ -19,16 +19,16 @@ export const Deals: React.FC = () => {
     <div className="h-full flex flex-col animate-fade-in pb-4">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
         <div>
-          <h1 className="text-3xl font-bold text-dark">Deals Pipeline</h1>
-          <p className="text-gray-500 mt-1">Track your opportunities</p>
+          <h1 className="text-3xl font-bold text-dark">Opportunità</h1>
+          <p className="text-gray-500 mt-1">Traccia le tue opportunità</p>
         </div>
         <div className="flex gap-3">
              <div className="bg-white px-4 py-2 rounded-full font-bold text-dark shadow-sm">
-                Total Pipeline: <span className="text-green-600">€ 85,500</span>
+                Pipeline Totale: <span className="text-green-600">€ 85.500</span>
              </div>
             <button className="bg-dark text-white px-6 py-2 rounded-full font-medium hover:bg-black transition-colors flex items-center gap-2">
                 <Plus size={18} className="text-primary"/>
-                New Deal
+                Nuova Opportunità
             </button>
         </div>
       </div>
@@ -82,7 +82,7 @@ export const Deals: React.FC = () => {
                             ))}
                             
                             <button className="w-full py-3 border-2 border-dashed border-gray-200 rounded-xl text-gray-400 hover:border-primary hover:text-primary transition-colors flex items-center justify-center gap-2 text-sm font-medium">
-                                <Plus size={16} /> Add Deal
+                                <Plus size={16} /> Aggiungi
                             </button>
                         </div>
                     </div>

@@ -5,6 +5,7 @@ import { CRM } from './components/CRM';
 import { Deals } from './components/Deals';
 import { Invoicing } from './components/Invoicing';
 import { Cashflow } from './components/Cashflow';
+import { FinancialStatement } from './components/FinancialStatement';
 import { Search, Bell, User } from 'lucide-react';
 
 const App: React.FC = () => {
@@ -17,6 +18,7 @@ const App: React.FC = () => {
       case 'deals': return <Deals />;
       case 'invoicing': return <Invoicing />;
       case 'cashflow': return <Cashflow />;
+      case 'financials': return <FinancialStatement />;
       default: return <Dashboard />;
     }
   };
@@ -32,7 +34,7 @@ const App: React.FC = () => {
             <Search size={20} className="text-gray-400 mr-3" />
             <input 
               type="text" 
-              placeholder="Search anything..." 
+              placeholder="Cerca qualsiasi cosa..." 
               className="bg-transparent border-none outline-none w-full text-sm text-dark placeholder-gray-400"
             />
           </div>

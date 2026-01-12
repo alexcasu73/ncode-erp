@@ -46,7 +46,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, onChangeView }) =
       <div className="p-4">
         <button className="w-full flex items-center justify-center lg:justify-start p-3 lg:px-4 rounded-full text-gray-500 hover:bg-red-50 hover:text-red-500 transition-colors">
           <LogOut size={20} />
-          <span className="hidden lg:block ml-3 font-medium">Log out</span>
+          <span className="hidden lg:block ml-3 font-medium">Esci</span>
         </button>
       </div>
     </div>
