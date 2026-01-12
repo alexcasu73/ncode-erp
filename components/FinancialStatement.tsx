@@ -1,22 +1,27 @@
 import React, { useState } from 'react';
-import { MOCK_FINANCIAL_ITEMS } from '../constants';
+import { useData } from '../context/DataContext';
 import { Download, Printer, Filter, Building2, TrendingUp, TrendingDown, Scale } from 'lucide-react';
 
 export const FinancialStatement: React.FC = () => {
+  const { financialItems, loading } = useData();
   const [activeTab, setActiveTab] = useState<'balance' | 'income'>('balance');
 
+  if (loading) {
+    return <div className="flex items-center justify-center h-64">Caricamento...</div>;
+  }
+
   // Helper calculations
-  const assets = MOCK_FINANCIAL_ITEMS.filter(i => i.section === 'Stato Patrimoniale' && i.category === 'Attivo');
-  const liabilities = MOCK_FINANCIAL_ITEMS.filter(i => i.section === 'Stato Patrimoniale' && i.category === 'Passivo');
-  
+  const assets = financialItems.filter(i => i.section === 'Stato Patrimoniale' && i.category === 'Attivo');
+  const liabilities = financialItems.filter(i => i.section === 'Stato Patrimoniale' && i.category === 'Passivo');
+
   const totalAssets = assets.reduce((sum, item) => sum + item.amount, 0);
   const totalLiabilities = liabilities.reduce((sum, item) => sum + item.amount, 0);
   // Net Assets (Patrimonio Netto is typically included in Passivo in Italian standard layouts as source of funds, but let's calculate gap)
   const equityGap = totalAssets - totalLiabilities; // Should ideally match if balanced properly
 
-  const productionValue = MOCK_FINANCIAL_ITEMS.filter(i => i.category === 'Valore della Produzione');
-  const productionCosts = MOCK_FINANCIAL_ITEMS.filter(i => i.category === 'Costi della Produzione');
-  
+  const productionValue = financialItems.filter(i => i.category === 'Valore della Produzione');
+  const productionCosts = financialItems.filter(i => i.category === 'Costi della Produzione');
+
   const totalProdValue = productionValue.reduce((sum, item) => sum + item.amount, 0);
   const totalProdCosts = productionCosts.reduce((sum, item) => sum + item.amount, 0);
   const operatingResult = totalProdValue - totalProdCosts;

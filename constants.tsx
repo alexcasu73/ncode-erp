@@ -76,9 +76,9 @@ export const MOCK_DEALS: Deal[] = [
 ];
 
 export const MOCK_INVOICES: Invoice[] = [
-  { id: 'INV-001', number: '001/2026', customerName: 'TechFlow', amount: 5600.00, date: '2026-01-02', status: 'Pagato' },
-  { id: 'INV-002', number: '002/2026', customerName: 'SoftCorp', amount: 2400.00, date: '2026-01-03', status: 'In Sospeso' },
-  { id: 'INV-003', number: '003/2026', customerName: 'Acme Inc', amount: 12500.50, date: '2025-12-15', status: 'Scaduto' },
+  { id: 'Fattura_001', data: new Date('2026-01-15'), mese: 'Gennaio', anno: 2026, nomeProgetto: '', tipo: 'Uscita', statoFatturazione: 'Effettivo', spesa: 'Tools', tipoSpesa: 'Costi per servizi', note: 'Claude', flusso: 14.75, iva: 0, percentualeIva: 0, percentualeFatturazione: 100, checked: false },
+  { id: 'Fattura_002', data: new Date('2026-01-20'), mese: 'Gennaio', anno: 2026, nomeProgetto: 'ChiarIA', tipo: 'Entrata', statoFatturazione: 'Effettivo', spesa: '', tipoSpesa: '', note: 'Formazione e sicurezza', flusso: 12505, iva: 2751.10, percentualeIva: 22, percentualeFatturazione: 100, checked: false },
+  { id: 'Fattura_003', data: new Date('2026-01-25'), mese: 'Gennaio', anno: 2026, nomeProgetto: '', tipo: 'Uscita', statoFatturazione: 'Effettivo', spesa: 'Utenze', tipoSpesa: 'Costi per servizi', note: 'Verisure', flusso: 45.90, iva: 10.10, percentualeIva: 22, percentualeFatturazione: 100, checked: false },
 ];
 
 export const MOCK_TRANSACTIONS: Transaction[] = [

@@ -31,13 +31,29 @@ export interface Deal {
   expectedClose: string;
 }
 
+// Tipo di spesa per le uscite
+export type TipoSpesa = 'Costi per servizi' | 'Altri costi' | 'Team' | '';
+
+// Categoria spesa
+export type CategoriaSpesa = 'Tools' | 'Utenze' | 'Affitto casa' | 'Banca' | 'Commercialista' | 'Marketing' | 'Intrattenimento' | 'Generiche' | 'Costi per servizi' | '';
+
 export interface Invoice {
   id: string;
-  number: string;
-  customerName: string;
-  amount: number;
-  date: string;
-  status: 'Pagato' | 'In Sospeso' | 'Scaduto';
+  data: Date | string;
+  mese: string;
+  anno: number;
+  nomeProgetto: string;
+  tipo: 'Entrata' | 'Uscita';
+  statoFatturazione: 'Stimato' | 'Effettivo' | 'Nessuno';
+  nextStep?: string;
+  spesa: string; // Categoria spesa (Tools, Utenze, etc.)
+  tipoSpesa: string; // Tipo spesa (Costi per servizi, Team, etc.)
+  note: string;
+  flusso: number; // Importo netto
+  iva: number; // Importo IVA
+  percentualeIva: number; // Aliquota IVA (0, 22)
+  percentualeFatturazione: number; // % fatturazione
+  checked: boolean;
 }
 
 export interface Transaction {

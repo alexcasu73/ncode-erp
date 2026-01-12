@@ -1,21 +1,28 @@
 import React from 'react';
-import { 
-  BarChart, Bar, XAxis, Tooltip, ResponsiveContainer, 
-  LineChart, Line, PieChart, Pie, Cell 
+import {
+  BarChart, Bar, XAxis, Tooltip, ResponsiveContainer,
+  LineChart, Line, PieChart, Pie, Cell
 } from 'recharts';
-import { SALES_DATA, REVENUE_DATA, MOCK_CUSTOMERS } from '../constants';
+import { SALES_DATA, REVENUE_DATA } from '../constants';
+import { useData } from '../context/DataContext';
 import { ArrowUpRight, TrendingUp, MoreVertical, Search, Bell } from 'lucide-react';
 
 const COLORS = ['#D1F366', '#E5E7EB']; // Primary Green, Gray
 
 export const Dashboard: React.FC = () => {
+  const { customers, loading } = useData();
+
+  if (loading) {
+    return <div className="flex items-center justify-center h-64">Caricamento...</div>;
+  }
+
   return (
     <div className="space-y-6 animate-fade-in pb-8">
       {/* Header Section for Dashboard */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-dark">Panoramica</h1>
-          <p className="text-gray-500 mt-1">Informazioni dettagliate sulla tua attività</p>
+          <h1 className="text-page-title text-dark">Panoramica</h1>
+          <p className="text-page-subtitle mt-1">Informazioni dettagliate sulla tua attività</p>
         </div>
         <div className="flex items-center gap-3">
             <div className="bg-white rounded-full px-4 py-2 flex items-center gap-2 shadow-sm border border-gray-100">
@@ -36,12 +43,12 @@ export const Dashboard: React.FC = () => {
         {/* Revenue Card */}
         <div className="bg-white p-6 rounded-[2rem] shadow-sm flex flex-col justify-between min-h-[180px]">
           <div>
-            <h3 className="text-lg font-semibold text-gray-800">Fatturato Totale</h3>
+            <h3 className="text-card-title">Fatturato Totale</h3>
             <div className="flex items-center gap-3 mt-2">
-              <span className="text-3xl font-bold text-dark">€ 15.650</span>
+              <span className="text-kpi-value text-dark">€ 15.650</span>
               <span className="bg-dark text-white text-xs px-2 py-1 rounded-full">+30,4%</span>
             </div>
-            <p className="text-xs text-gray-400 mt-1">€ 12.000 mese scorso</p>
+            <p className="text-small mt-1">€ 12.000 mese scorso</p>
           </div>
           <div className="h-16 w-full mt-4">
             <ResponsiveContainer width="100%" height="100%">
@@ -56,12 +63,12 @@ export const Dashboard: React.FC = () => {
         <div className="bg-white p-6 rounded-[2rem] shadow-sm flex flex-col justify-between min-h-[180px]">
           <div className="flex justify-between items-start">
              <div>
-                <h3 className="text-lg font-semibold text-gray-800">Clienti Totali</h3>
+                <h3 className="text-card-title">Clienti Totali</h3>
                 <div className="flex items-center gap-3 mt-2">
-                    <span className="text-3xl font-bold text-dark">1.226</span>
+                    <span className="text-kpi-value text-dark">1.226</span>
                     <span className="bg-dark text-white text-xs px-2 py-1 rounded-full">+79,6%</span>
                 </div>
-                <p className="text-xs text-gray-400 mt-1">683 utenti mese scorso</p>
+                <p className="text-small mt-1">683 utenti mese scorso</p>
              </div>
              <div className="h-20 w-20 relative">
                 <ResponsiveContainer width="100%" height="100%">
@@ -101,12 +108,12 @@ export const Dashboard: React.FC = () => {
         {/* Orders Card */}
         <div className="bg-white p-6 rounded-[2rem] shadow-sm flex flex-col justify-between min-h-[180px]">
             <div>
-                <h3 className="text-lg font-semibold text-gray-800">Ordini Totali</h3>
+                <h3 className="text-card-title">Ordini Totali</h3>
                 <div className="flex items-center gap-3 mt-2">
-                    <span className="text-3xl font-bold text-dark">15.210</span>
+                    <span className="text-kpi-value text-dark">15.210</span>
                     <span className="bg-dark text-white text-xs px-2 py-1 rounded-full">+51,3%</span>
                 </div>
-                <p className="text-xs text-gray-400 mt-1">10.056 utenti mese scorso</p>
+                <p className="text-small mt-1">10.056 utenti mese scorso</p>
             </div>
             <div className="h-16 w-full mt-2">
                 <ResponsiveContainer width="100%" height="100%">
@@ -123,7 +130,7 @@ export const Dashboard: React.FC = () => {
          {/* Sales Analytics Chart */}
          <div className="lg:col-span-3 bg-white p-8 rounded-[2rem] shadow-sm">
             <div className="flex justify-between items-center mb-8">
-                <h3 className="text-xl font-bold text-dark">Analisi Vendite</h3>
+                <h3 className="text-section-title text-dark">Analisi Vendite</h3>
                 <div className="flex items-center gap-6">
                     <div className="flex items-center gap-2 text-sm text-gray-500">
                         <div className="w-3 h-3 rounded-full bg-primary"></div>
@@ -164,8 +171,8 @@ export const Dashboard: React.FC = () => {
         {/* Top Sales by Country */}
         <div className="bg-white p-6 rounded-[2rem] shadow-sm">
             <div className="flex justify-between items-center mb-6">
-                <h3 className="text-lg font-bold text-dark">Vendite top per paese</h3>
-                <button className="text-sm font-medium underline text-gray-500 hover:text-dark">Vedi tutti</button>
+                <h3 className="text-section-title text-dark">Vendite top per paese</h3>
+                <button className="text-body font-medium underline text-gray-500 hover:text-dark">Vedi tutti</button>
             </div>
             <div className="space-y-6">
                 {[
@@ -195,8 +202,8 @@ export const Dashboard: React.FC = () => {
         {/* Product Sales Table */}
         <div className="bg-white p-6 rounded-[2rem] shadow-sm">
             <div className="flex justify-between items-center mb-6">
-                <h3 className="text-lg font-bold text-dark">Vendite prodotti</h3>
-                <button className="text-sm font-medium underline text-gray-500 hover:text-dark">Vedi tutti</button>
+                <h3 className="text-section-title text-dark">Vendite prodotti</h3>
+                <button className="text-body font-medium underline text-gray-500 hover:text-dark">Vedi tutti</button>
             </div>
             <div className="overflow-x-auto">
                 <table className="w-full">
@@ -232,11 +239,11 @@ export const Dashboard: React.FC = () => {
         {/* Last Activity */}
         <div className="bg-white p-6 rounded-[2rem] shadow-sm">
             <div className="flex justify-between items-center mb-6">
-                <h3 className="text-lg font-bold text-dark">Attività recenti</h3>
-                <button className="text-sm font-medium underline text-gray-500 hover:text-dark">Vedi tutti</button>
+                <h3 className="text-section-title text-dark">Attività recenti</h3>
+                <button className="text-body font-medium underline text-gray-500 hover:text-dark">Vedi tutti</button>
             </div>
             <div className="space-y-4">
-                {MOCK_CUSTOMERS.slice(0, 3).map((customer) => (
+                {customers.slice(0, 3).map((customer) => (
                     <div key={customer.id} className="flex items-center justify-between p-2 hover:bg-gray-50 rounded-xl transition-colors">
                         <div className="flex items-center gap-3">
                             <img src={customer.avatar} alt={customer.name} className="w-10 h-10 rounded-full object-cover" />

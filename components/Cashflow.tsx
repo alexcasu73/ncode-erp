@@ -1,6 +1,6 @@
 import React from 'react';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
-import { MOCK_TRANSACTIONS } from '../constants';
+import { useData } from '../context/DataContext';
 import { Plus, Download, Printer, ArrowUpCircle, ArrowDownCircle, Filter } from 'lucide-react';
 
 const CASHFLOW_DATA = [
@@ -14,6 +14,12 @@ const CASHFLOW_DATA = [
 ];
 
 export const Cashflow: React.FC = () => {
+  const { transactions, loading } = useData();
+
+  if (loading) {
+    return <div className="flex items-center justify-center h-64">Caricamento...</div>;
+  }
+
   return (
     <div className="space-y-6 animate-fade-in pb-8">
       {/* Header */}
@@ -106,7 +112,7 @@ export const Cashflow: React.FC = () => {
                     </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
-                    {MOCK_TRANSACTIONS.map((trx) => (
+                    {transactions.map((trx) => (
                         <tr key={trx.id} className="hover:bg-gray-50 transition-colors">
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                 {new Date(trx.date).toLocaleDateString()}
