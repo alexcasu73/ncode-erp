@@ -1,20 +1,349 @@
-import React from 'react';
-import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
+import React, { useState, useMemo } from 'react';
+import { XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, BarChart, Bar } from 'recharts';
 import { useData } from '../context/DataContext';
-import { Plus, Download, Printer, ArrowUpCircle, ArrowDownCircle, Filter } from 'lucide-react';
+import { CashflowRecord, Invoice } from '../types';
+import { Plus, ArrowUpCircle, ArrowDownCircle, Calendar, Search, ChevronUp, ChevronDown, ChevronsUpDown, X, Edit2, Trash2, Wallet, Settings } from 'lucide-react';
 
-const CASHFLOW_DATA = [
-  { month: 'Gen', income: 4000, expense: 2400 },
-  { month: 'Feb', income: 3000, expense: 1398 },
-  { month: 'Mar', income: 2000, expense: 9800 },
-  { month: 'Apr', income: 2780, expense: 3908 },
-  { month: 'Mag', income: 1890, expense: 4800 },
-  { month: 'Giu', income: 2390, expense: 3800 },
-  { month: 'Lug', income: 3490, expense: 4300 },
-];
+// Helper per formattare valuta
+const formatCurrency = (value: number): string => {
+  return new Intl.NumberFormat('it-IT', {
+    style: 'currency',
+    currency: 'EUR'
+  }).format(value);
+};
+
+// Mesi italiani abbreviati
+const MESI_ABR = ['Gen', 'Feb', 'Mar', 'Apr', 'Mag', 'Giu', 'Lug', 'Ago', 'Set', 'Ott', 'Nov', 'Dic'];
+const MESI_FULL = ['Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno', 'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre'];
+
+// Helper per estrarre anno e mese dalla data di pagamento (formato YYYY-MM-DD)
+const getAnnoFromDate = (dateStr?: string): number | null => {
+  if (!dateStr) return null;
+  const year = parseInt(dateStr.substring(0, 4));
+  return isNaN(year) ? null : year;
+};
+
+const getMeseFromDate = (dateStr?: string): string | null => {
+  if (!dateStr) return null;
+  const month = parseInt(dateStr.substring(5, 7));
+  if (isNaN(month) || month < 1 || month > 12) return null;
+  return MESI_FULL[month - 1];
+};
+
+const getMeseIndexFromDate = (dateStr?: string): number => {
+  if (!dateStr) return -1;
+  const month = parseInt(dateStr.substring(5, 7));
+  if (isNaN(month) || month < 1 || month > 12) return -1;
+  return month - 1;
+};
+
+// Formatta la data di pagamento in formato leggibile (DD/MM/YYYY)
+const formatDate = (dateStr?: string): string => {
+  if (!dateStr) return '-';
+  const parts = dateStr.split('-');
+  if (parts.length !== 3) return dateStr;
+  return `${parts[2]}/${parts[1]}/${parts[0]}`;
+};
+
+// Formatta ID fattura: "Fattura_xyz" -> "N. xyz/anno"
+const formatInvoiceNumber = (id: string, anno?: number): string => {
+  const numero = id.replace('Fattura_', '');
+  return anno ? `N. ${numero}/${anno}` : `N. ${numero}`;
+};
+
+// Formatta data emissione fattura (può essere Date o string)
+const formatInvoiceDate = (data?: Date | string): string => {
+  if (!data) return '-';
+  if (data instanceof Date) {
+    return `${data.getDate().toString().padStart(2, '0')}/${(data.getMonth() + 1).toString().padStart(2, '0')}/${data.getFullYear()}`;
+  }
+  // Se è stringa in formato YYYY-MM-DD
+  if (typeof data === 'string' && data.includes('-')) {
+    const parts = data.split('-');
+    if (parts.length === 3) {
+      return `${parts[2]}/${parts[1]}/${parts[0]}`;
+    }
+  }
+  return String(data);
+};
 
 export const Cashflow: React.FC = () => {
-  const { transactions, loading } = useData();
+  const {
+    invoices,
+    cashflowRecords,
+    loading,
+    addCashflowRecord,
+    updateCashflowRecord,
+    deleteCashflowRecord,
+    getBankBalance,
+    setBankBalance
+  } = useData();
+
+  const [filterAnno, setFilterAnno] = useState<number | 'tutti'>('tutti');
+  const [filterMese, setFilterMese] = useState<string>('tutti');
+  const [vistaStato, setVistaStato] = useState<'tutti' | 'effettivo' | 'stimato'>('tutti');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterTipo, setFilterTipo] = useState<'tutti' | 'Entrata' | 'Uscita'>('tutti');
+  const [showModal, setShowModal] = useState(false);
+  const [editingRecord, setEditingRecord] = useState<CashflowRecord | null>(null);
+  const [showBankBalanceModal, setShowBankBalanceModal] = useState(false);
+  const [bankBalanceInput, setBankBalanceInput] = useState<string>('');
+
+  // Form state
+  const [formInvoiceId, setFormInvoiceId] = useState('');
+  const [formDataPagamento, setFormDataPagamento] = useState('');
+  const [formNote, setFormNote] = useState('');
+
+  // Sorting
+  type SortColumn = 'mese' | 'progetto' | 'spesa' | 'tipo' | 'stato' | 'totale';
+  type SortDirection = 'asc' | 'desc';
+  const [sortColumn, setSortColumn] = useState<SortColumn>('mese');
+  const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
+
+  const handleSort = (column: SortColumn) => {
+    if (sortColumn === column) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortColumn(column);
+      setSortDirection('desc');
+    }
+  };
+
+  const SortIcon = ({ column }: { column: SortColumn }) => {
+    if (sortColumn !== column) return <ChevronsUpDown size={14} className="text-gray-300" />;
+    return sortDirection === 'asc' ? <ChevronUp size={14} /> : <ChevronDown size={14} />;
+  };
+
+  // Anni disponibili (basati sulle date di pagamento dei cashflow records)
+  const anniDisponibili = useMemo((): number[] => {
+    const anni = cashflowRecords
+      .map(cf => getAnnoFromDate(cf.dataPagamento))
+      .filter((a): a is number => a !== null);
+    const uniqueAnni = [...new Set(anni)];
+    return uniqueAnni.sort((a, b) => b - a);
+  }, [cashflowRecords]);
+
+  // Mappa cashflow records con le fatture
+  const cashflowWithInvoices = useMemo(() => {
+    return cashflowRecords.map(cf => {
+      const invoice = invoices.find(inv => inv.id === cf.invoiceId);
+      return { ...cf, invoice };
+    }).filter(cf => cf.invoice); // Solo record con fattura valida
+  }, [cashflowRecords, invoices]);
+
+  // Records filtrati per anno, mese e stato (basati sulla DATA DI PAGAMENTO)
+  const recordsFiltrati = useMemo(() => {
+    let filtered = cashflowWithInvoices;
+    if (filterAnno !== 'tutti') {
+      filtered = filtered.filter(cf => getAnnoFromDate(cf.dataPagamento) === filterAnno);
+    }
+    if (filterMese !== 'tutti') {
+      filtered = filtered.filter(cf => getMeseFromDate(cf.dataPagamento) === filterMese);
+    }
+    if (vistaStato === 'effettivo') {
+      filtered = filtered.filter(cf => cf.invoice?.statoFatturazione === 'Effettivo');
+    } else if (vistaStato === 'stimato') {
+      filtered = filtered.filter(cf => cf.invoice?.statoFatturazione === 'Stimato');
+    }
+    return filtered;
+  }, [cashflowWithInvoices, filterAnno, filterMese, vistaStato]);
+
+  // Fatture filtrate per tabella (include ricerca e tipo)
+  const recordsPerTabella = useMemo(() => {
+    return recordsFiltrati.filter(cf => {
+      const inv = cf.invoice;
+      if (!inv) return false;
+      const matchesSearch = searchTerm === '' ||
+        inv.nomeProgetto?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        inv.spesa?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        inv.note?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        cf.note?.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesTipo = filterTipo === 'tutti' || inv.tipo === filterTipo;
+      return matchesSearch && matchesTipo;
+    });
+  }, [recordsFiltrati, searchTerm, filterTipo]);
+
+  // Ordina records per tabella (ordinamento per mese usa data di pagamento)
+  const sortedRecords = useMemo(() => {
+    return [...recordsPerTabella].sort((a, b) => {
+      const invA = a.invoice;
+      const invB = b.invoice;
+      if (!invA || !invB) return 0;
+
+      let comparison = 0;
+      switch (sortColumn) {
+        case 'mese':
+          // Ordina per data di pagamento
+          comparison = (a.dataPagamento || '').localeCompare(b.dataPagamento || '');
+          break;
+        case 'progetto':
+          comparison = (invA.nomeProgetto || '').localeCompare(invB.nomeProgetto || '');
+          break;
+        case 'spesa':
+          comparison = (invA.spesa || '').localeCompare(invB.spesa || '');
+          break;
+        case 'tipo':
+          comparison = (invA.tipo || '').localeCompare(invB.tipo || '');
+          break;
+        case 'stato':
+          comparison = (invA.statoFatturazione || '').localeCompare(invB.statoFatturazione || '');
+          break;
+        case 'totale':
+          comparison = ((invA.flusso || 0) + (invA.iva || 0)) - ((invB.flusso || 0) + (invB.iva || 0));
+          break;
+      }
+      return sortDirection === 'asc' ? comparison : -comparison;
+    });
+  }, [recordsPerTabella, sortColumn, sortDirection]);
+
+  // Calcola totali (flusso + iva)
+  const totals = useMemo(() => {
+    const entrate = recordsFiltrati.filter(cf => cf.invoice?.tipo === 'Entrata');
+    const uscite = recordsFiltrati.filter(cf => cf.invoice?.tipo === 'Uscita');
+
+    const totaleEntrate = entrate.reduce((acc, cf) => acc + (cf.invoice?.flusso || 0) + (cf.invoice?.iva || 0), 0);
+    const totaleUscite = uscite.reduce((acc, cf) => acc + (cf.invoice?.flusso || 0) + (cf.invoice?.iva || 0), 0);
+
+    return {
+      entrate: totaleEntrate,
+      uscite: totaleUscite,
+      saldo: totaleEntrate - totaleUscite,
+      countEntrate: entrate.length,
+      countUscite: uscite.length,
+    };
+  }, [recordsFiltrati]);
+
+  // Saldo iniziale e saldo in banca per l'anno selezionato
+  const currentBankBalance = useMemo(() => {
+    if (filterAnno === 'tutti') return undefined;
+    return getBankBalance(filterAnno);
+  }, [filterAnno, getBankBalance]);
+
+  const saldoInBanca = useMemo(() => {
+    const saldoIniziale = currentBankBalance?.saldoIniziale || 0;
+    return saldoIniziale + totals.saldo;
+  }, [currentBankBalance, totals.saldo]);
+
+  // Conteggio per stato (basato sulla DATA DI PAGAMENTO)
+  const countByStato = useMemo(() => {
+    let baseFiltered = cashflowWithInvoices;
+    if (filterAnno !== 'tutti') {
+      baseFiltered = baseFiltered.filter(cf => getAnnoFromDate(cf.dataPagamento) === filterAnno);
+    }
+    if (filterMese !== 'tutti') {
+      baseFiltered = baseFiltered.filter(cf => getMeseFromDate(cf.dataPagamento) === filterMese);
+    }
+    return {
+      effettive: baseFiltered.filter(cf => cf.invoice?.statoFatturazione === 'Effettivo').length,
+      stimate: baseFiltered.filter(cf => cf.invoice?.statoFatturazione === 'Stimato').length,
+    };
+  }, [cashflowWithInvoices, filterAnno, filterMese]);
+
+  // Dati per grafico mensile (basato sulla DATA DI PAGAMENTO)
+  const chartData = useMemo(() => {
+    const monthlyData: { [key: string]: { entrate: number; uscite: number } } = {};
+
+    MESI_ABR.forEach(m => {
+      monthlyData[m] = { entrate: 0, uscite: 0 };
+    });
+
+    recordsFiltrati.forEach(cf => {
+      const inv = cf.invoice;
+      const meseIndex = getMeseIndexFromDate(cf.dataPagamento);
+      if (inv && meseIndex !== -1) {
+        const meseAbr = MESI_ABR[meseIndex];
+        const totale = (inv.flusso || 0) + (inv.iva || 0);
+        if (inv.tipo === 'Entrata') {
+          monthlyData[meseAbr].entrate += totale;
+        } else {
+          monthlyData[meseAbr].uscite += totale;
+        }
+      }
+    });
+
+    return MESI_ABR.map(m => ({
+      month: m,
+      entrate: monthlyData[m].entrate,
+      uscite: monthlyData[m].uscite,
+    }));
+  }, [recordsFiltrati]);
+
+  // Fatture disponibili per selezione (non già nel cashflow)
+  const invoicesDisponibili = useMemo(() => {
+    const usedInvoiceIds = new Set(cashflowRecords.map(cf => cf.invoiceId));
+    return invoices.filter(inv => !usedInvoiceIds.has(inv.id));
+  }, [invoices, cashflowRecords]);
+
+  // Modal handlers
+  const openNewModal = () => {
+    setEditingRecord(null);
+    setFormInvoiceId('');
+    setFormDataPagamento('');
+    setFormNote('');
+    setShowModal(true);
+  };
+
+  const openEditModal = (record: CashflowRecord & { invoice?: Invoice }) => {
+    setEditingRecord(record);
+    setFormInvoiceId(record.invoiceId);
+    setFormDataPagamento(record.dataPagamento || '');
+    setFormNote(record.note || '');
+    setShowModal(true);
+  };
+
+  const closeModal = () => {
+    setShowModal(false);
+    setEditingRecord(null);
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    const recordData = {
+      invoiceId: formInvoiceId,
+      dataPagamento: formDataPagamento || undefined,
+      note: formNote || undefined,
+    };
+
+    if (editingRecord) {
+      await updateCashflowRecord(editingRecord.id, recordData);
+    } else {
+      await addCashflowRecord(recordData);
+    }
+
+    closeModal();
+  };
+
+  const handleDelete = async (id: string) => {
+    if (window.confirm('Sei sicuro di voler eliminare questo movimento?')) {
+      await deleteCashflowRecord(id);
+    }
+  };
+
+  // Bank balance modal handlers
+  const openBankBalanceModal = () => {
+    if (filterAnno !== 'tutti') {
+      setBankBalanceInput(currentBankBalance?.saldoIniziale?.toString() || '');
+      setShowBankBalanceModal(true);
+    }
+  };
+
+  const closeBankBalanceModal = () => {
+    setShowBankBalanceModal(false);
+    setBankBalanceInput('');
+  };
+
+  const handleSaveBankBalance = async () => {
+    if (filterAnno === 'tutti') return;
+    const value = parseFloat(bankBalanceInput) || 0;
+    await setBankBalance(filterAnno, value);
+    closeBankBalanceModal();
+  };
+
+  // Trova fattura selezionata per preview
+  const selectedInvoice = useMemo(() => {
+    return invoices.find(inv => inv.id === formInvoiceId);
+  }, [formInvoiceId, invoices]);
 
   if (loading) {
     return <div className="flex items-center justify-center h-64">Caricamento...</div>;
@@ -25,142 +354,516 @@ export const Cashflow: React.FC = () => {
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-dark">Flusso di Cassa</h1>
-          <p className="text-gray-500 mt-1">Monitora entrate, uscite e liquidità</p>
+          <h1 className="text-page-title text-dark">Flusso di Cassa</h1>
+          <p className="text-page-subtitle mt-1">Monitora entrate, uscite e liquidità</p>
         </div>
-        <button className="bg-dark text-white px-6 py-2 rounded-full font-medium hover:bg-black transition-colors flex items-center gap-2">
-            <Plus size={18} className="text-primary"/>
-            Registra Transazione
+        <button
+          onClick={openNewModal}
+          className="bg-dark text-white px-6 py-2 rounded-full font-medium hover:bg-black transition-colors flex items-center gap-2"
+        >
+          <Plus size={18} className="text-primary"/>
+          Aggiungi Movimento
         </button>
       </div>
 
+      {/* Filtri Anno e Stato */}
+      <div className="flex flex-wrap gap-4 items-center">
+        {/* Selettore Anno */}
+        <div className="bg-white rounded-2xl shadow-sm p-2 flex items-center">
+          <Calendar size={16} className="text-gray-400 ml-2" />
+          <select
+            value={filterAnno === 'tutti' ? 'tutti' : filterAnno}
+            onChange={(e) => setFilterAnno(e.target.value === 'tutti' ? 'tutti' : parseInt(e.target.value))}
+            className="px-3 py-2 bg-transparent border-none font-medium text-dark text-sm focus:ring-0 focus:outline-none cursor-pointer"
+          >
+            <option value="tutti">Tutti gli anni</option>
+            {anniDisponibili.map(anno => (
+              <option key={anno} value={anno}>{anno}</option>
+            ))}
+          </select>
+        </div>
+
+        {/* Selettore Mese */}
+        <div className="bg-white rounded-2xl shadow-sm p-2 flex items-center">
+          <select
+            value={filterMese}
+            onChange={(e) => setFilterMese(e.target.value)}
+            className="px-3 py-2 bg-transparent border-none font-medium text-dark text-sm focus:ring-0 focus:outline-none cursor-pointer"
+          >
+            <option value="tutti">Tutti i mesi</option>
+            {MESI_FULL.map(mese => (
+              <option key={mese} value={mese}>{mese}</option>
+            ))}
+          </select>
+        </div>
+
+        {/* Toggle Vista Stato */}
+        <div className="bg-white rounded-2xl shadow-sm p-2 inline-flex gap-1">
+          <button
+            onClick={() => setVistaStato('tutti')}
+            className={`px-4 py-2 rounded-xl font-medium text-sm transition-colors ${
+              vistaStato === 'tutti'
+                ? 'bg-dark text-white'
+                : 'text-gray-600 hover:bg-gray-100'
+            }`}
+          >
+            Tutti ({countByStato.effettive + countByStato.stimate})
+          </button>
+          <button
+            onClick={() => setVistaStato('effettivo')}
+            className={`px-4 py-2 rounded-xl font-medium text-sm transition-colors ${
+              vistaStato === 'effettivo'
+                ? 'bg-green-600 text-white'
+                : 'text-gray-600 hover:bg-gray-100'
+            }`}
+          >
+            Effettivo ({countByStato.effettive})
+          </button>
+          <button
+            onClick={() => setVistaStato('stimato')}
+            className={`px-4 py-2 rounded-xl font-medium text-sm transition-colors ${
+              vistaStato === 'stimato'
+                ? 'bg-blue-600 text-white'
+                : 'text-gray-600 hover:bg-gray-100'
+            }`}
+          >
+            Stimato ({countByStato.stimate})
+          </button>
+        </div>
+      </div>
+
       {/* KPI Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-white p-6 rounded-[2rem] shadow-sm border-l-4 border-primary">
-            <div className="flex items-center gap-2 mb-2">
-                <ArrowUpCircle className="text-green-600" size={20} />
-                <h3 className="text-gray-500 text-sm font-medium">Entrate Totali</h3>
-            </div>
-            <p className="text-3xl font-bold text-dark">€ 8.100,00</p>
-            <p className="text-xs text-green-600 mt-1 font-medium">+15% vs mese scorso</p>
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+        <div className="bg-white p-5 rounded-2xl shadow-sm border-l-4 border-green-500">
+          <div className="flex items-center gap-2 mb-1">
+            <ArrowUpCircle size={16} className="text-green-500" />
+            <h3 className="text-card-title">
+              Entrate Totali {vistaStato !== 'tutti' && `(${vistaStato === 'effettivo' ? 'Effettive' : 'Stimate'})`}
+            </h3>
+          </div>
+          <p className="text-kpi-value text-dark">{formatCurrency(totals.entrate)}</p>
+          <p className="text-small mt-1">{totals.countEntrate} voci</p>
         </div>
-        <div className="bg-white p-6 rounded-[2rem] shadow-sm border-l-4 border-red-400">
-            <div className="flex items-center gap-2 mb-2">
-                <ArrowDownCircle className="text-red-500" size={20} />
-                <h3 className="text-gray-500 text-sm font-medium">Uscite Totali</h3>
-            </div>
-            <p className="text-3xl font-bold text-dark">€ 1.435,50</p>
-            <p className="text-xs text-red-500 mt-1 font-medium">+5% vs mese scorso</p>
+        <div className="bg-white p-5 rounded-2xl shadow-sm border-l-4 border-orange-500">
+          <div className="flex items-center gap-2 mb-1">
+            <ArrowDownCircle size={16} className="text-orange-500" />
+            <h3 className="text-card-title">
+              Uscite Totali {vistaStato !== 'tutti' && `(${vistaStato === 'effettivo' ? 'Effettive' : 'Stimate'})`}
+            </h3>
+          </div>
+          <p className="text-kpi-value text-dark">{formatCurrency(totals.uscite)}</p>
+          <p className="text-small mt-1">{totals.countUscite} voci</p>
         </div>
-        <div className="bg-white p-6 rounded-[2rem] shadow-sm border-l-4 border-blue-400">
-            <h3 className="text-gray-500 text-sm font-medium">Saldo Netto</h3>
-            <p className="text-3xl font-bold text-dark mt-2">€ 6.664,50</p>
-            <p className="text-xs text-gray-400 mt-1">Margine operativo 82%</p>
+        <div className="bg-white p-5 rounded-2xl shadow-sm border-l-4 border-primary">
+          <h3 className="text-card-title mb-1">
+            Saldo Netto {vistaStato !== 'tutti' && `(${vistaStato === 'effettivo' ? 'Effettivo' : 'Stimato'})`}
+          </h3>
+          <p className={`text-kpi-value ${totals.saldo >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+            {formatCurrency(totals.saldo)}
+          </p>
+          <p className="text-small mt-1">Entrate - Uscite</p>
+        </div>
+        {/* Saldo in Banca - visibile solo quando è selezionato un anno specifico */}
+        <div className={`bg-white p-5 rounded-2xl shadow-sm border-l-4 border-indigo-500 ${filterAnno === 'tutti' ? 'opacity-50' : ''}`}>
+          <div className="flex items-center justify-between mb-1">
+            <div className="flex items-center gap-2">
+              <Wallet size={16} className="text-indigo-500" />
+              <h3 className="text-card-title">Saldo in Banca</h3>
+            </div>
+            {filterAnno !== 'tutti' && (
+              <button
+                onClick={openBankBalanceModal}
+                className="p-1 text-gray-400 hover:text-indigo-500 transition-colors"
+                title="Modifica saldo iniziale"
+              >
+                <Settings size={14} />
+              </button>
+            )}
+          </div>
+          {filterAnno === 'tutti' ? (
+            <>
+              <p className="text-kpi-value text-gray-400">-</p>
+              <p className="text-small mt-1">Seleziona un anno</p>
+            </>
+          ) : (
+            <>
+              <p className={`text-kpi-value ${saldoInBanca >= 0 ? 'text-indigo-600' : 'text-red-600'}`}>
+                {formatCurrency(saldoInBanca)}
+              </p>
+              <p className="text-small mt-1">
+                Iniziale: {formatCurrency(currentBankBalance?.saldoIniziale || 0)}
+              </p>
+            </>
+          )}
+        </div>
+        <div className="bg-white p-5 rounded-2xl shadow-sm border-l-4 border-blue-500">
+          <h3 className="text-card-title mb-3">Riepilogo per Stato</h3>
+          <div className="flex justify-around">
+            <div className="text-center px-4">
+              <p className="text-kpi-small text-green-600">{countByStato.effettive}</p>
+              <p className="text-small">Effettive</p>
+            </div>
+            <div className="w-px bg-gray-200 self-stretch"></div>
+            <div className="text-center px-4">
+              <p className="text-kpi-small text-blue-600">{countByStato.stimate}</p>
+              <p className="text-small">Stimate</p>
+            </div>
+          </div>
         </div>
       </div>
 
       {/* Chart Section */}
-      <div className="bg-white p-8 rounded-[2rem] shadow-sm">
-        <h3 className="text-xl font-bold text-dark mb-6">Andamento Temporale</h3>
+      <div className="bg-white p-6 rounded-2xl shadow-sm">
+        <h3 className="text-section-title text-dark mb-6">Andamento Mensile</h3>
         <div className="h-[300px] w-full">
-            <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={CASHFLOW_DATA}
-                margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
-                    <defs>
-                        <linearGradient id="colorIncome" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#D1F366" stopOpacity={0.8}/>
-                        <stop offset="95%" stopColor="#D1F366" stopOpacity={0}/>
-                        </linearGradient>
-                        <linearGradient id="colorExpense" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#f87171" stopOpacity={0.8}/>
-                        <stop offset="95%" stopColor="#f87171" stopOpacity={0}/>
-                        </linearGradient>
-                    </defs>
-                    <XAxis dataKey="month" axisLine={false} tickLine={false} />
-                    <YAxis axisLine={false} tickLine={false} />
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
-                    <Tooltip 
-                        contentStyle={{ backgroundColor: '#111827', borderRadius: '12px', border: 'none', color: '#fff' }}
-                        itemStyle={{ color: '#fff' }}
-                    />
-                    <Area type="monotone" dataKey="income" stroke="#D1F366" fillOpacity={1} fill="url(#colorIncome)" strokeWidth={3} />
-                    <Area type="monotone" dataKey="expense" stroke="#f87171" fillOpacity={1} fill="url(#colorExpense)" strokeWidth={3} />
-                </AreaChart>
-            </ResponsiveContainer>
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={chartData} barGap={0}>
+              <XAxis
+                dataKey="month"
+                axisLine={false}
+                tickLine={false}
+                tick={{ fill: '#6B7280', fontSize: 12 }}
+                dy={10}
+              />
+              <YAxis
+                axisLine={false}
+                tickLine={false}
+                tick={{ fill: '#6B7280', fontSize: 12 }}
+                tickFormatter={(value) => `€${(value / 1000).toFixed(0)}k`}
+              />
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
+              <Tooltip
+                contentStyle={{ backgroundColor: '#111827', borderRadius: '12px', border: 'none', color: '#fff' }}
+                itemStyle={{ color: '#fff' }}
+                formatter={(value: number) => formatCurrency(value)}
+                labelStyle={{ color: '#9CA3AF' }}
+              />
+              <Bar dataKey="entrate" name="Entrate" fill="#22c55e" radius={[4, 4, 0, 0]} barSize={20} />
+              <Bar dataKey="uscite" name="Uscite" fill="#f97316" radius={[4, 4, 0, 0]} barSize={20} />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+        <div className="flex justify-center gap-8 mt-4">
+          <div className="flex items-center gap-2 text-sm text-gray-500">
+            <div className="w-3 h-3 rounded bg-green-500"></div>
+            Entrate
+          </div>
+          <div className="flex items-center gap-2 text-sm text-gray-500">
+            <div className="w-3 h-3 rounded bg-orange-500"></div>
+            Uscite
+          </div>
         </div>
       </div>
 
-      {/* Transactions Table */}
-      <div className="bg-white rounded-[2rem] shadow-sm overflow-hidden">
-        <div className="p-6 border-b border-gray-100 flex justify-between items-center">
-             <h3 className="text-lg font-bold text-dark">Movimenti Recenti</h3>
-             <button className="p-2 border border-gray-200 rounded-xl hover:bg-gray-50 text-gray-600">
-                <Filter size={20} />
-            </button>
+      {/* Tabella Movimenti */}
+      <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
+        {/* Header tabella con ricerca e filtri */}
+        <div className="p-4 border-b border-gray-100 flex flex-wrap gap-4 items-center justify-between">
+          <h3 className="text-section-title text-dark">Dettaglio Movimenti</h3>
+          <div className="flex flex-wrap gap-3 items-center">
+            {/* Ricerca */}
+            <div className="relative">
+              <Search size={16} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Cerca..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-9 pr-4 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 w-48"
+              />
+            </div>
+            {/* Filtro Tipo */}
+            <select
+              value={filterTipo}
+              onChange={(e) => setFilterTipo(e.target.value as 'tutti' | 'Entrata' | 'Uscita')}
+              className="px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+            >
+              <option value="tutti">Tutti i tipi</option>
+              <option value="Entrata">Entrate</option>
+              <option value="Uscita">Uscite</option>
+            </select>
+          </div>
         </div>
+
+        {/* Tabella */}
         <div className="overflow-x-auto">
-            <table className="w-full">
-                <thead className="bg-gray-50">
-                    <tr className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                        <th className="px-6 py-4 rounded-tl-2xl">Data</th>
-                        <th className="px-6 py-4">Descrizione</th>
-                        <th className="px-6 py-4">Categoria</th>
-                        <th className="px-6 py-4">Tipo</th>
-                        <th className="px-6 py-4">Importo</th>
-                        <th className="px-6 py-4">Stato</th>
-                        <th className="px-6 py-4 rounded-tr-2xl text-right">Azioni</th>
-                    </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100">
-                    {transactions.map((trx) => (
-                        <tr key={trx.id} className="hover:bg-gray-50 transition-colors">
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                {new Date(trx.date).toLocaleDateString()}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-dark">
-                                {trx.description}
-                                <div className="text-xs text-gray-400 font-normal">{trx.id}</div>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                                {trx.category}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                                <span className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                                    trx.type === 'Entrata' 
-                                        ? 'bg-green-100 text-green-800' 
-                                        : 'bg-red-100 text-red-800'
-                                }`}>
-                                    {trx.type}
-                                </span>
-                            </td>
-                            <td className={`px-6 py-4 whitespace-nowrap text-sm font-bold ${
-                                trx.type === 'Entrata' ? 'text-green-600' : 'text-red-500'
-                            }`}>
-                                {trx.type === 'Entrata' ? '+' : '-'} € {trx.amount.toLocaleString(undefined, {minimumFractionDigits: 2})}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                                <span className={`text-xs font-medium ${
-                                    trx.status === 'Completato' ? 'text-gray-600' : 'text-orange-500'
-                                }`}>
-                                    {trx.status}
-                                </span>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                <div className="flex justify-end gap-3">
-                                    <button className="text-gray-400 hover:text-dark">
-                                        <Download size={18} />
-                                    </button>
-                                    <button className="text-gray-400 hover:text-dark">
-                                        <Printer size={18} />
-                                    </button>
-                                </div>
-                            </td>
-                        </tr>
-                    ))}
-                </tbody>
-            </table>
+          <table className="w-full">
+            <thead className="bg-gray-50">
+              <tr className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                <th className="px-4 py-3 cursor-pointer hover:bg-gray-100" onClick={() => handleSort('mese')}>
+                  <div className="flex items-center gap-1">Data Pag. <SortIcon column="mese" /></div>
+                </th>
+                <th className="px-4 py-3 cursor-pointer hover:bg-gray-100" onClick={() => handleSort('progetto')}>
+                  <div className="flex items-center gap-1">Progetto <SortIcon column="progetto" /></div>
+                </th>
+                <th className="px-4 py-3 cursor-pointer hover:bg-gray-100" onClick={() => handleSort('spesa')}>
+                  <div className="flex items-center gap-1">Spesa <SortIcon column="spesa" /></div>
+                </th>
+                <th className="px-4 py-3">Tipo Spesa</th>
+                <th className="px-4 py-3">Note</th>
+                <th className="px-4 py-3 cursor-pointer hover:bg-gray-100" onClick={() => handleSort('tipo')}>
+                  <div className="flex items-center gap-1">Tipo <SortIcon column="tipo" /></div>
+                </th>
+                <th className="px-4 py-3 cursor-pointer hover:bg-gray-100" onClick={() => handleSort('stato')}>
+                  <div className="flex items-center gap-1">Stato <SortIcon column="stato" /></div>
+                </th>
+                <th className="px-4 py-3 text-right cursor-pointer hover:bg-gray-100" onClick={() => handleSort('totale')}>
+                  <div className="flex items-center gap-1 justify-end">Totale <SortIcon column="totale" /></div>
+                </th>
+                <th className="px-4 py-3 text-right">Azioni</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {sortedRecords.map((record) => {
+                const inv = record.invoice;
+                if (!inv) return null;
+                const totale = (inv.flusso || 0) + (inv.iva || 0);
+                return (
+                  <tr key={record.id} className="hover:bg-gray-50 transition-colors">
+                    <td className="px-4 py-3 text-sm text-gray-600">{formatDate(record.dataPagamento)}</td>
+                    <td className="px-4 py-3 text-sm font-medium text-dark">{inv.nomeProgetto || '-'}</td>
+                    <td className="px-4 py-3 text-sm text-gray-600">{inv.spesa || '-'}</td>
+                    <td className="px-4 py-3 text-sm text-gray-600">{inv.tipoSpesa || '-'}</td>
+                    <td className="px-4 py-3 text-sm text-gray-500 max-w-[200px] truncate" title={record.note || inv.note}>{record.note || inv.note || '-'}</td>
+                    <td className="px-4 py-3">
+                      <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                        inv.tipo === 'Entrata'
+                          ? 'bg-green-100 text-green-700'
+                          : 'bg-orange-100 text-orange-700'
+                      }`}>
+                        {inv.tipo}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                        inv.statoFatturazione === 'Effettivo'
+                          ? 'bg-green-100 text-green-700'
+                          : inv.statoFatturazione === 'Stimato'
+                          ? 'bg-blue-100 text-blue-700'
+                          : 'bg-gray-100 text-gray-600'
+                      }`}>
+                        {inv.statoFatturazione}
+                      </span>
+                    </td>
+                    <td className={`px-4 py-3 text-sm font-bold text-right ${
+                      inv.tipo === 'Entrata' ? 'text-green-600' : 'text-orange-600'
+                    }`}>
+                      {inv.tipo === 'Entrata' ? '+' : '-'}{formatCurrency(totale)}
+                    </td>
+                    <td className="px-4 py-3 text-right">
+                      <div className="flex justify-end gap-2">
+                        <button
+                          onClick={() => openEditModal(record)}
+                          className="p-1 text-gray-400 hover:text-dark transition-colors"
+                        >
+                          <Edit2 size={16} />
+                        </button>
+                        <button
+                          onClick={() => handleDelete(record.id)}
+                          className="p-1 text-gray-400 hover:text-red-500 transition-colors"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+          {sortedRecords.length === 0 && (
+            <div className="p-8 text-center text-gray-500">
+              Nessun movimento trovato. Aggiungi un movimento collegandolo a una fattura.
+            </div>
+          )}
+        </div>
+        {/* Footer con conteggio */}
+        <div className="p-4 border-t border-gray-100 bg-gray-50 text-sm text-gray-500">
+          {sortedRecords.length} movimenti visualizzati
         </div>
       </div>
+
+      {/* Modal Aggiungi/Modifica Movimento */}
+      {showModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+            <div className="p-6 border-b border-gray-100 flex justify-between items-center">
+              <h2 className="text-xl font-bold text-dark">
+                {editingRecord ? 'Modifica Movimento' : 'Nuovo Movimento'}
+              </h2>
+              <button onClick={closeModal} className="text-gray-400 hover:text-dark">
+                <X size={24} />
+              </button>
+            </div>
+            <form onSubmit={handleSubmit} className="p-6 space-y-4">
+              {/* Selezione Fattura */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Fattura di Riferimento *
+                </label>
+                <select
+                  value={formInvoiceId}
+                  onChange={(e) => setFormInvoiceId(e.target.value)}
+                  required
+                  disabled={!!editingRecord}
+                  className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/50 disabled:bg-gray-100"
+                >
+                  <option value="">Seleziona una fattura...</option>
+                  {(editingRecord ? invoices : invoicesDisponibili).map(inv => (
+                    <option key={inv.id} value={inv.id}>
+                      {formatInvoiceNumber(inv.id, inv.anno)} | {formatInvoiceDate(inv.data)} | {inv.nomeProgetto || inv.spesa || 'N/A'} ({inv.tipo}) - {formatCurrency((inv.flusso || 0) + (inv.iva || 0))}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Preview Fattura Selezionata */}
+              {selectedInvoice && (
+                <div className="bg-gray-50 rounded-xl p-4 space-y-2">
+                  <h4 className="text-sm font-medium text-gray-700">
+                    Dati dalla fattura: <span className="text-dark">{formatInvoiceNumber(selectedInvoice.id, selectedInvoice.anno)}</span>
+                  </h4>
+                  <div className="grid grid-cols-2 gap-2 text-sm">
+                    <div><span className="text-gray-500">Data Emissione:</span> {formatInvoiceDate(selectedInvoice.data)}</div>
+                    <div><span className="text-gray-500">Tipo:</span> {selectedInvoice.tipo}</div>
+                    <div><span className="text-gray-500">Progetto:</span> {selectedInvoice.nomeProgetto || '-'}</div>
+                    <div><span className="text-gray-500">Stato:</span> {selectedInvoice.statoFatturazione}</div>
+                    <div><span className="text-gray-500">Spesa:</span> {selectedInvoice.spesa || '-'}</div>
+                    <div>
+                      <span className="text-gray-500">Totale:</span>{' '}
+                      <span className={`font-bold ${selectedInvoice.tipo === 'Entrata' ? 'text-green-600' : 'text-orange-600'}`}>
+                        {formatCurrency((selectedInvoice.flusso || 0) + (selectedInvoice.iva || 0))}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Data Pagamento */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Data Pagamento (opzionale)
+                </label>
+                <input
+                  type="date"
+                  value={formDataPagamento}
+                  onChange={(e) => setFormDataPagamento(e.target.value)}
+                  className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/50"
+                />
+              </div>
+
+              {/* Note */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Note (opzionale)
+                </label>
+                <textarea
+                  value={formNote}
+                  onChange={(e) => setFormNote(e.target.value)}
+                  rows={3}
+                  className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/50 resize-none"
+                  placeholder="Note aggiuntive sul movimento..."
+                />
+              </div>
+
+              {/* Actions */}
+              <div className="flex gap-3 pt-4">
+                <button
+                  type="button"
+                  onClick={closeModal}
+                  className="flex-1 px-4 py-2 border border-gray-200 rounded-xl text-gray-600 hover:bg-gray-50 transition-colors"
+                >
+                  Annulla
+                </button>
+                <button
+                  type="submit"
+                  disabled={!formInvoiceId}
+                  className="flex-1 px-4 py-2 bg-dark text-white rounded-xl hover:bg-black transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {editingRecord ? 'Salva Modifiche' : 'Aggiungi Movimento'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Saldo Iniziale Banca */}
+      {showBankBalanceModal && filterAnno !== 'tutti' && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md">
+            <div className="p-6 border-b border-gray-100 flex justify-between items-center">
+              <div>
+                <h2 className="text-xl font-bold text-dark">Saldo Iniziale {filterAnno}</h2>
+                <p className="text-sm text-gray-500 mt-1">Inserisci il saldo in banca ad inizio anno</p>
+              </div>
+              <button onClick={closeBankBalanceModal} className="text-gray-400 hover:text-dark">
+                <X size={24} />
+              </button>
+            </div>
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Saldo Iniziale (EUR)
+                </label>
+                <div className="relative">
+                  <span className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400">€</span>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={bankBalanceInput}
+                    onChange={(e) => setBankBalanceInput(e.target.value)}
+                    className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/50 text-lg"
+                    placeholder="0,00"
+                    autoFocus
+                  />
+                </div>
+                <p className="text-xs text-gray-500 mt-2">
+                  Questo valore rappresenta il saldo del conto corrente al 1° gennaio {filterAnno}
+                </p>
+              </div>
+
+              {/* Preview calcolo */}
+              <div className="bg-gray-50 rounded-xl p-4 space-y-2">
+                <h4 className="text-sm font-medium text-gray-700">Anteprima saldo:</h4>
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-500">Saldo iniziale:</span>
+                  <span className="font-medium">{formatCurrency(parseFloat(bankBalanceInput) || 0)}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-500">Saldo netto movimenti:</span>
+                  <span className={`font-medium ${totals.saldo >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                    {totals.saldo >= 0 ? '+' : ''}{formatCurrency(totals.saldo)}
+                  </span>
+                </div>
+                <div className="border-t border-gray-200 pt-2 flex justify-between">
+                  <span className="font-medium text-gray-700">Saldo in banca:</span>
+                  <span className={`font-bold ${((parseFloat(bankBalanceInput) || 0) + totals.saldo) >= 0 ? 'text-indigo-600' : 'text-red-600'}`}>
+                    {formatCurrency((parseFloat(bankBalanceInput) || 0) + totals.saldo)}
+                  </span>
+                </div>
+              </div>
+
+              {/* Actions */}
+              <div className="flex gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={closeBankBalanceModal}
+                  className="flex-1 px-4 py-2 border border-gray-200 rounded-xl text-gray-600 hover:bg-gray-50 transition-colors"
+                >
+                  Annulla
+                </button>
+                <button
+                  onClick={handleSaveBankBalance}
+                  className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition-colors"
+                >
+                  Salva
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

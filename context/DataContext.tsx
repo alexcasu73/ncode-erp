@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
-import { Customer, Deal, Invoice, Transaction, FinancialItem, DealStage } from '../types';
+import { Customer, Deal, Invoice, Transaction, FinancialItem, DealStage, CashflowRecord, BankBalance } from '../types';
 import {
   MOCK_CUSTOMERS,
   MOCK_DEALS,
@@ -45,6 +45,8 @@ interface DataContextType {
   invoices: Invoice[];
   transactions: Transaction[];
   financialItems: FinancialItem[];
+  cashflowRecords: CashflowRecord[];
+  bankBalances: BankBalance[];
 
   // Loading states
   loading: boolean;
@@ -76,6 +78,15 @@ interface DataContextType {
   updateFinancialItem: (id: string, item: Partial<FinancialItem>) => Promise<boolean>;
   deleteFinancialItem: (id: string) => Promise<boolean>;
 
+  // Cashflow CRUD
+  addCashflowRecord: (record: Omit<CashflowRecord, 'id'>) => Promise<CashflowRecord | null>;
+  updateCashflowRecord: (id: string, record: Partial<CashflowRecord>) => Promise<boolean>;
+  deleteCashflowRecord: (id: string) => Promise<boolean>;
+
+  // Bank Balance CRUD
+  setBankBalance: (anno: number, saldoIniziale: number, note?: string) => Promise<BankBalance | null>;
+  getBankBalance: (anno: number) => BankBalance | undefined;
+
   // Refresh
   refreshData: () => Promise<void>;
 }
@@ -96,6 +107,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [financialItems, setFinancialItems] = useState<FinancialItem[]>([]);
+  const [cashflowRecords, setCashflowRecords] = useState<CashflowRecord[]>([]);
+  const [bankBalances, setBankBalances] = useState<BankBalance[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -116,17 +129,21 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setInvoices(MOCK_INVOICES);
       setTransactions(MOCK_TRANSACTIONS);
       setFinancialItems(MOCK_FINANCIAL_ITEMS);
+      setCashflowRecords([]);
+      setBankBalances([]);
       setLoading(false);
       return;
     }
 
     try {
-      const [customersRes, dealsRes, invoicesRes, transactionsRes, financialItemsRes] = await Promise.all([
+      const [customersRes, dealsRes, invoicesRes, transactionsRes, financialItemsRes, cashflowRes, bankBalancesRes] = await Promise.all([
         supabase.from('customers').select('*'),
         supabase.from('deals').select('*'),
         supabase.from('invoices').select('*'),
         supabase.from('transactions').select('*'),
         supabase.from('financial_items').select('*'),
+        supabase.from('cashflow_records').select('*'),
+        supabase.from('bank_balances').select('*'),
       ]);
 
       if (customersRes.error) throw customersRes.error;
@@ -134,12 +151,15 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (invoicesRes.error) throw invoicesRes.error;
       if (transactionsRes.error) throw transactionsRes.error;
       if (financialItemsRes.error) throw financialItemsRes.error;
+      // Cashflow and bank_balances tables may not exist yet, so we don't throw on error
 
       setCustomers(snakeToCamel(customersRes.data || []));
       setDeals(snakeToCamel(dealsRes.data || []));
       setInvoices(snakeToCamel(invoicesRes.data || []));
       setTransactions(snakeToCamel(transactionsRes.data || []));
       setFinancialItems(snakeToCamel(financialItemsRes.data || []));
+      setCashflowRecords(snakeToCamel(cashflowRes.data || []));
+      setBankBalances(snakeToCamel(bankBalancesRes.data || []));
     } catch (err: any) {
       console.error('Error fetching data:', err);
       setError(err.message || 'Error fetching data');
@@ -149,6 +169,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setInvoices(MOCK_INVOICES);
       setTransactions(MOCK_TRANSACTIONS);
       setFinancialItems(MOCK_FINANCIAL_ITEMS);
+      setCashflowRecords([]);
+      setBankBalances([]);
     } finally {
       setLoading(false);
     }
@@ -478,12 +500,133 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return true;
   };
 
+  // Cashflow Record CRUD
+  const addCashflowRecord = async (record: Omit<CashflowRecord, 'id'>): Promise<CashflowRecord | null> => {
+    if (!isSupabaseConfigured) {
+      const newRecord = { ...record, id: `CF-${Date.now()}` } as CashflowRecord;
+      setCashflowRecords(prev => [...prev, newRecord]);
+      return newRecord;
+    }
+
+    const { data, error } = await supabase
+      .from('cashflow_records')
+      .insert(camelToSnake(record))
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error adding cashflow record:', error);
+      return null;
+    }
+
+    const newRecord = snakeToCamel(data) as CashflowRecord;
+    setCashflowRecords(prev => [...prev, newRecord]);
+    return newRecord;
+  };
+
+  const updateCashflowRecord = async (id: string, record: Partial<CashflowRecord>): Promise<boolean> => {
+    if (!isSupabaseConfigured) {
+      setCashflowRecords(prev => prev.map(cf => cf.id === id ? { ...cf, ...record } : cf));
+      return true;
+    }
+
+    const { error } = await supabase
+      .from('cashflow_records')
+      .update(camelToSnake(record))
+      .eq('id', id);
+
+    if (error) {
+      console.error('Error updating cashflow record:', error);
+      return false;
+    }
+
+    setCashflowRecords(prev => prev.map(cf => cf.id === id ? { ...cf, ...record } : cf));
+    return true;
+  };
+
+  const deleteCashflowRecord = async (id: string): Promise<boolean> => {
+    if (!isSupabaseConfigured) {
+      setCashflowRecords(prev => prev.filter(cf => cf.id !== id));
+      return true;
+    }
+
+    const { error } = await supabase
+      .from('cashflow_records')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      console.error('Error deleting cashflow record:', error);
+      return false;
+    }
+
+    setCashflowRecords(prev => prev.filter(cf => cf.id !== id));
+    return true;
+  };
+
+  // Bank Balance functions
+  const setBankBalance = async (anno: number, saldoIniziale: number, note?: string): Promise<BankBalance | null> => {
+    const existingBalance = bankBalances.find(b => b.anno === anno);
+
+    if (!isSupabaseConfigured) {
+      if (existingBalance) {
+        const updated = { ...existingBalance, saldoIniziale, note };
+        setBankBalances(prev => prev.map(b => b.anno === anno ? updated : b));
+        return updated;
+      } else {
+        const newBalance: BankBalance = { id: `BB-${Date.now()}`, anno, saldoIniziale, note };
+        setBankBalances(prev => [...prev, newBalance]);
+        return newBalance;
+      }
+    }
+
+    if (existingBalance) {
+      // Update existing
+      const { data, error } = await supabase
+        .from('bank_balances')
+        .update(camelToSnake({ saldoIniziale, note }))
+        .eq('anno', anno)
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Error updating bank balance:', error);
+        return null;
+      }
+
+      const updated = snakeToCamel(data) as BankBalance;
+      setBankBalances(prev => prev.map(b => b.anno === anno ? updated : b));
+      return updated;
+    } else {
+      // Insert new
+      const { data, error } = await supabase
+        .from('bank_balances')
+        .insert(camelToSnake({ anno, saldoIniziale, note }))
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Error adding bank balance:', error);
+        return null;
+      }
+
+      const newBalance = snakeToCamel(data) as BankBalance;
+      setBankBalances(prev => [...prev, newBalance]);
+      return newBalance;
+    }
+  };
+
+  const getBankBalance = (anno: number): BankBalance | undefined => {
+    return bankBalances.find(b => b.anno === anno);
+  };
+
   const value: DataContextType = {
     customers,
     deals,
     invoices,
     transactions,
     financialItems,
+    cashflowRecords,
     loading,
     error,
     isSupabaseConfigured,
@@ -502,6 +645,12 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     addFinancialItem,
     updateFinancialItem,
     deleteFinancialItem,
+    addCashflowRecord,
+    updateCashflowRecord,
+    deleteCashflowRecord,
+    bankBalances,
+    setBankBalance,
+    getBankBalance,
     refreshData: fetchData,
   };
 

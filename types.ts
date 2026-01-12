@@ -66,6 +66,25 @@ export interface Transaction {
   status: 'Completato' | 'In Attesa';
 }
 
+// Record di cashflow che fa riferimento a una fattura
+export interface CashflowRecord {
+  id: string;
+  invoiceId: string; // Riferimento alla fattura
+  dataPagamento?: string; // Data effettiva del pagamento
+  note?: string; // Note aggiuntive sul movimento
+  createdAt?: string;
+  // Dati derivati dalla fattura (popolati in join)
+  invoice?: Invoice;
+}
+
+// Saldo iniziale banca per anno
+export interface BankBalance {
+  id: string;
+  anno: number;
+  saldoIniziale: number;
+  note?: string;
+}
+
 export interface FinancialItem {
   id: string;
   section: 'Stato Patrimoniale' | 'Conto Economico';
