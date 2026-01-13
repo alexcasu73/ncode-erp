@@ -16,23 +16,10 @@
               sans: ['"Plus Jakarta Sans"', 'sans-serif'],
             },
             colors: {
-              primary: '#F97316', // Orange primary color
-              secondary: '#F9FAFB', // Light gray background
-              dark: '#0F172A', // Dark text (slate-900)
-              'border-light': '#E2E8F0', // Light border (slate-200)
-              muted: '#64748B', // Muted text (slate-500)
-              'text-primary': '#0F172A', // Primary dark text (slate-900)
-              'text-secondary': '#64748B', // Secondary gray text (slate-500)
-              'slate-50': '#F8FAFC',
-              'slate-100': '#F1F5F9',
-              'slate-200': '#E2E8F0',
-              'slate-300': '#CBD5E1',
-              'slate-400': '#94A3B8',
-              'slate-500': '#64748B',
-              'slate-600': '#475569',
-              'slate-700': '#334155',
-              'slate-800': '#1E293B',
-              'slate-900': '#0F172A',
+              primary: '#D1F366', // Zentry green
+              secondary: '#f3f4f6',
+              dark: '#111827',
+              muted: '#9CA3AF',
             }
           }
         }
@@ -40,108 +27,36 @@
     </script>
     <style>
       body {
-        background-color: #F9FAFB;
-        color: #111827;
+        background-color: #EAECE6;
         font-size: 14px;
         line-height: 1.5;
-        -webkit-font-smoothing: antialiased;
-        -moz-osx-font-smoothing: grayscale;
       }
 
-      /* Professional card shadows */
-      .shadow-card {
-        box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.08), 0 1px 2px 0 rgba(0, 0, 0, 0.04);
-      }
+      /* Typography Scale - Sistema Uniforme */
+      .text-page-title { font-size: 1.5rem; font-weight: 700; line-height: 1.2; } /* 24px */
+      .text-page-subtitle { font-size: 0.875rem; color: #6B7280; } /* 14px gray-500 */
+      .text-section-title { font-size: 1rem; font-weight: 600; line-height: 1.4; } /* 16px */
+      .text-card-title { font-size: 0.875rem; font-weight: 500; color: #6B7280; } /* 14px */
+      .text-kpi-value { font-size: 1.5rem; font-weight: 700; line-height: 1.2; } /* 24px */
+      .text-kpi-small { font-size: 1.125rem; font-weight: 700; } /* 18px */
+      .text-body { font-size: 0.875rem; line-height: 1.5; } /* 14px */
+      .text-small { font-size: 0.75rem; color: #9CA3AF; } /* 12px gray-400 */
+      .text-table-header { font-size: 0.75rem; font-weight: 500; text-transform: uppercase; letter-spacing: 0.05em; color: #6B7280; }
 
-      .shadow-card-hover:hover {
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.08), 0 2px 4px -1px rgba(0, 0, 0, 0.04);
-        transition: box-shadow 0.15s ease-in-out;
-      }
-
-      /* Typography Scale - Professional */
-      .text-page-title {
-        font-size: 1.875rem;
-        font-weight: 700;
-        line-height: 1.2;
-        color: #0F172A;
-        letter-spacing: -0.025em;
-      }
-
-      .text-page-subtitle {
-        font-size: 0.875rem;
-        color: #64748B;
-        font-weight: 400;
-      }
-
-      .text-section-title {
-        font-size: 1.125rem;
-        font-weight: 600;
-        line-height: 1.4;
-        color: #1E293B;
-        letter-spacing: -0.01em;
-      }
-
-      .text-card-title {
-        font-size: 0.8125rem;
-        font-weight: 600;
-        color: #64748B;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
-      }
-
-      .text-kpi-value {
-        font-size: 2rem;
-        font-weight: 700;
-        line-height: 1;
-        color: #0F172A;
-        letter-spacing: -0.025em;
-      }
-
-      .text-kpi-small {
-        font-size: 1.5rem;
-        font-weight: 700;
-        color: #0F172A;
-        letter-spacing: -0.02em;
-      }
-
-      .text-body {
-        font-size: 0.875rem;
-        line-height: 1.5;
-        color: #475569;
-      }
-
-      .text-small {
-        font-size: 0.75rem;
-        color: #94A3B8;
-      }
-
-      .text-table-header {
-        font-size: 0.6875rem;
-        font-weight: 600;
-        text-transform: uppercase;
-        letter-spacing: 0.08em;
-        color: #64748B;
-      }
-
-      /* Professional borders */
-      .border-subtle {
-        border-color: #E2E8F0;
-      }
-
-      /* Custom scrollbar - subtle and professional */
+      /* Custom scrollbar for cleaner look */
       ::-webkit-scrollbar {
-        width: 6px;
-        height: 6px;
+        width: 8px;
+        height: 8px;
       }
       ::-webkit-scrollbar-track {
         background: transparent;
       }
       ::-webkit-scrollbar-thumb {
-        background: #CBD5E1;
-        border-radius: 3px;
+        background: #cbd5e1;
+        border-radius: 4px;
       }
       ::-webkit-scrollbar-thumb:hover {
-        background: #94A3B8;
+        background: #94a3b8;
       }
     </style>
   <script type="importmap">

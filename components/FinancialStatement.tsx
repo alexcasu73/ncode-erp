@@ -69,15 +69,15 @@ export const FinancialStatement: React.FC = () => {
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h1 className="text-3xl font-bold text-dark">Bilancio</h1>
-          <p className="text-slate-500 mt-1">Stato Patrimoniale e Conto Economico</p>
+          <p className="text-gray-500 mt-1">Stato Patrimoniale e Conto Economico</p>
         </div>
         <div className="flex gap-2 flex-wrap">
           {/* Filtro Anno */}
-          <div className="bg-white rounded-2xl p-2 flex items-center border border-slate-200" shadow-card>
+          <div className="bg-white rounded-2xl p-2 flex items-center border border-gray-200" shadow-sm>
             <select
               value={filterAnno}
               onChange={(e) => setFilterAnno(Number(e.target.value))}
-              className="border-none outline-none bg-transparent text-sm font-medium text-slate-500 cursor-pointer"
+              className="border-none outline-none bg-transparent text-sm font-medium text-gray-500 cursor-pointer"
             >
               {[2024, 2025, 2026].map(anno => (
                 <option key={anno} value={anno}>{anno}</option>
@@ -87,11 +87,11 @@ export const FinancialStatement: React.FC = () => {
 
           {/* Filtro Stato (solo per Conto Economico) */}
           {activeTab === 'income' && (
-            <div className="bg-white rounded-2xl p-2 flex items-center border border-slate-200" shadow-card>
+            <div className="bg-white rounded-2xl p-2 flex items-center border border-gray-200" shadow-sm>
               <select
                 value={filterStato}
                 onChange={(e) => setFilterStato(e.target.value as 'Stimato' | 'Effettivo')}
-                className="border-none outline-none bg-transparent text-sm font-medium text-slate-500 cursor-pointer"
+                className="border-none outline-none bg-transparent text-sm font-medium text-gray-500 cursor-pointer"
               >
                 <option value="Effettivo">Effettivo</option>
                 <option value="Stimato">Stimato</option>
@@ -99,23 +99,23 @@ export const FinancialStatement: React.FC = () => {
             </div>
           )}
 
-           <button className="bg-white border border-slate-200 text-slate-500 px-4 py-2 rounded-full font-medium hover:bg-slate-50 transition-colors flex items-center gap-2" shadow-card>
+           <button className="bg-white border border-gray-200 text-gray-500 px-4 py-2 rounded-full font-medium hover:bg-gray-50 transition-colors flex items-center gap-2" shadow-sm>
                 <Printer size={18} />
                 Stampa
             </button>
-            <button className="bg-secondary text-white px-6 py-2 rounded-full font-medium hover:bg-black transition-colors flex items-center gap-2">
-                <Download size={18} className="text-primary"/>
+            <button className="bg-primary text-white px-6 py-2 rounded-full font-medium hover:bg-orange-600 transition-colors flex items-center gap-2 shadow-sm">
+                <Download size={18} />
                 Esporta PDF
             </button>
         </div>
       </div>
 
       {/* Tabs */}
-      <div className="flex p-1 bg-white rounded-2xl w-fit border border-slate-200" shadow-card>
+      <div className="flex p-1 bg-white rounded-2xl w-fit border border-gray-200" shadow-sm>
         <button 
           onClick={() => setActiveTab('balance')}
           className={`px-6 py-2 rounded-xl text-sm font-bold transition-all ${
-            activeTab === 'balance' ? 'bg-secondary text-white' : 'text-slate-500 hover:text-dark'
+            activeTab === 'balance' ? 'bg-dark text-white' : 'text-gray-500 hover:text-dark'
           }`}
         >
           Stato Patrimoniale
@@ -123,7 +123,7 @@ export const FinancialStatement: React.FC = () => {
         <button 
           onClick={() => setActiveTab('income')}
           className={`px-6 py-2 rounded-xl text-sm font-bold transition-all ${
-            activeTab === 'income' ? 'bg-secondary text-white' : 'text-slate-500 hover:text-dark'
+            activeTab === 'income' ? 'bg-dark text-white' : 'text-gray-500 hover:text-dark'
           }`}
         >
           Conto Economico
@@ -135,22 +135,22 @@ export const FinancialStatement: React.FC = () => {
         <>
           {/* Balance Sheet KPI */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="bg-white p-6 rounded-[2rem] border-t-4 border-green-500" shadow-card>
-                <div className="flex items-center gap-2 mb-2 text-slate-500">
+            <div className="bg-white p-6 rounded-[2rem] border-t-4 border-green-500" shadow-sm>
+                <div className="flex items-center gap-2 mb-2 text-gray-500">
                     <Building2 size={18} />
                     <h3 className="text-sm font-medium">Totale Attivo</h3>
                 </div>
                 <p className="text-3xl font-bold text-dark">{formatCurrencyNoDecimals(totalAssets)}</p>
             </div>
-            <div className="bg-white p-6 rounded-[2rem] border-t-4 border-red-400" shadow-card>
-                <div className="flex items-center gap-2 mb-2 text-slate-500">
+            <div className="bg-white p-6 rounded-[2rem] border-t-4 border-red-400" shadow-sm>
+                <div className="flex items-center gap-2 mb-2 text-gray-500">
                     <Scale size={18} />
                     <h3 className="text-sm font-medium">Totale Passivo</h3>
                 </div>
                 <p className="text-3xl font-bold text-dark">{formatCurrencyNoDecimals(totalLiabilities)}</p>
             </div>
-            <div className="bg-white p-6 rounded-[2rem] border-t-4 border-primary" shadow-card>
-                <div className="flex items-center gap-2 mb-2 text-slate-500">
+            <div className="bg-white p-6 rounded-[2rem] border-t-4 border-primary" shadow-sm>
+                <div className="flex items-center gap-2 mb-2 text-gray-500">
                     <TrendingUp size={18} />
                     <h3 className="text-sm font-medium">Utile d'Esercizio (Calc)</h3>
                 </div>
@@ -160,8 +160,8 @@ export const FinancialStatement: React.FC = () => {
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Attivo */}
-            <div className="bg-white rounded-[2rem] overflow-hidden h-full" shadow-card>
-              <div className="p-6 border-b border-slate-200 bg-green-50/50 flex justify-between items-center">
+            <div className="bg-white rounded-[2rem] overflow-hidden h-full" shadow-sm>
+              <div className="p-6 border-b border-gray-200 bg-green-50/50 flex justify-between items-center">
                 <h3 className="text-lg font-bold text-dark">Attivo</h3>
                 <button
                   onClick={() => {
@@ -184,19 +184,19 @@ export const FinancialStatement: React.FC = () => {
                   <tbody className="divide-y divide-gray-50">
                     {assets.length === 0 ? (
                       <tr>
-                        <td colSpan={3} className="py-8 text-center text-slate-500 text-sm">
+                        <td colSpan={3} className="py-8 text-center text-gray-500 text-sm">
                           Nessuna voce. Clicca "Aggiungi" per inserire voci.
                         </td>
                       </tr>
                     ) : (
                       assets.map((item) => (
-                        <tr key={item.id} className="hover:bg-slate-50 group">
-                          <td className="py-3 text-sm font-medium text-slate-500">{item.name}</td>
+                        <tr key={item.id} className="hover:bg-gray-50 group">
+                          <td className="py-3 text-sm font-medium text-gray-500">{item.name}</td>
                           <td className="py-3 text-right text-sm font-bold text-dark">{formatCurrencyNoDecimals(item.amount)}</td>
                           <td className="py-3 text-right opacity-0 group-hover:opacity-100 transition-opacity">
                             <button
                               onClick={() => setEditingItem(item)}
-                              className="p-1 hover:bg-slate-50 rounded text-slate-500"
+                              className="p-1 hover:bg-gray-50 rounded text-gray-500"
                             >
                               <Edit2 size={14} />
                             </button>
@@ -214,7 +214,7 @@ export const FinancialStatement: React.FC = () => {
                         </tr>
                       ))
                     )}
-                    <tr className="bg-slate-50">
+                    <tr className="bg-gray-50">
                       <td className="py-4 pl-2 text-base font-bold text-dark">Totale Attivo</td>
                       <td colSpan={2} className="py-4 pr-2 text-right text-base font-bold text-green-600">
                         {formatCurrencyNoDecimals(totalAssets)}
@@ -226,8 +226,8 @@ export const FinancialStatement: React.FC = () => {
             </div>
 
             {/* Passivo */}
-            <div className="bg-white rounded-[2rem] overflow-hidden h-full" shadow-card>
-              <div className="p-6 border-b border-slate-200 bg-red-50/50 flex justify-between items-center">
+            <div className="bg-white rounded-[2rem] overflow-hidden h-full" shadow-sm>
+              <div className="p-6 border-b border-gray-200 bg-red-50/50 flex justify-between items-center">
                 <h3 className="text-lg font-bold text-dark">Passivo e Netto</h3>
                 <button
                   onClick={() => {
@@ -250,19 +250,19 @@ export const FinancialStatement: React.FC = () => {
                   <tbody className="divide-y divide-gray-50">
                     {liabilities.length === 0 ? (
                       <tr>
-                        <td colSpan={3} className="py-8 text-center text-slate-500 text-sm">
+                        <td colSpan={3} className="py-8 text-center text-gray-500 text-sm">
                           Nessuna voce. Clicca "Aggiungi" per inserire voci.
                         </td>
                       </tr>
                     ) : (
                       liabilities.map((item) => (
-                        <tr key={item.id} className="hover:bg-slate-50 group">
-                          <td className="py-3 text-sm font-medium text-slate-500">{item.name}</td>
+                        <tr key={item.id} className="hover:bg-gray-50 group">
+                          <td className="py-3 text-sm font-medium text-gray-500">{item.name}</td>
                           <td className="py-3 text-right text-sm font-bold text-dark">{formatCurrencyNoDecimals(item.amount)}</td>
                           <td className="py-3 text-right opacity-0 group-hover:opacity-100 transition-opacity">
                             <button
                               onClick={() => setEditingItem(item)}
-                              className="p-1 hover:bg-slate-50 rounded text-slate-500"
+                              className="p-1 hover:bg-gray-50 rounded text-gray-500"
                             >
                               <Edit2 size={14} />
                             </button>
@@ -286,7 +286,7 @@ export const FinancialStatement: React.FC = () => {
                         {formatCurrencyNoDecimals(equityGap)}
                       </td>
                     </tr>
-                    <tr className="bg-slate-50">
+                    <tr className="bg-gray-50">
                       <td className="py-4 pl-2 text-base font-bold text-dark">Totale a Pareggio</td>
                       <td colSpan={2} className="py-4 pr-2 text-right text-base font-bold text-red-500">
                         {formatCurrencyNoDecimals(totalLiabilities + equityGap)}
@@ -302,49 +302,49 @@ export const FinancialStatement: React.FC = () => {
         <>
         {/* Income Statement KPI */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="bg-white p-6 rounded-[2rem] border-l-4 border-green-500" shadow-card>
-                <h3 className="text-slate-500 text-sm font-medium">Valore della Produzione (Entrate)</h3>
+            <div className="bg-white p-6 rounded-[2rem] border-l-4 border-green-500" shadow-sm>
+                <h3 className="text-gray-500 text-sm font-medium">Valore della Produzione (Entrate)</h3>
                 <p className="text-3xl font-bold text-dark mt-2">
                   {formatCurrency(incomeStatementData.entrate)}
                 </p>
             </div>
-            <div className="bg-white p-6 rounded-[2rem] border-l-4 border-red-400" shadow-card>
-                <h3 className="text-slate-500 text-sm font-medium">Costi della Produzione (Uscite)</h3>
+            <div className="bg-white p-6 rounded-[2rem] border-l-4 border-red-400" shadow-sm>
+                <h3 className="text-gray-500 text-sm font-medium">Costi della Produzione (Uscite)</h3>
                 <p className="text-3xl font-bold text-dark mt-2">
                   {formatCurrency(incomeStatementData.uscite)}
                 </p>
             </div>
-            <div className="bg-white p-6 rounded-[2rem] border-l-4 border-primary" shadow-card>
-                <h3 className="text-slate-500 text-sm font-medium">Risultato Operativo</h3>
+            <div className="bg-white p-6 rounded-[2rem] border-l-4 border-primary" shadow-sm>
+                <h3 className="text-gray-500 text-sm font-medium">Risultato Operativo</h3>
                 <p className={`text-3xl font-bold mt-2 ${incomeStatementData.risultatoOperativo >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                   {formatCurrency(incomeStatementData.risultatoOperativo)}
                 </p>
-                <p className="text-xs text-slate-500 mt-1">Margine: {incomeStatementData.margine.toFixed(1)}%</p>
+                <p className="text-xs text-gray-500 mt-1">Margine: {incomeStatementData.margine.toFixed(1)}%</p>
             </div>
           </div>
 
-          <div className="bg-white rounded-[2rem] overflow-hidden" shadow-card>
-             <div className="p-6 border-b border-slate-200 flex justify-between items-center">
+          <div className="bg-white rounded-[2rem] overflow-hidden" shadow-sm>
+             <div className="p-6 border-b border-gray-200 flex justify-between items-center">
                  <h3 className="text-lg font-bold text-dark">Dettaglio Conto Economico - Anno {filterAnno}</h3>
-                 <div className="text-xs text-slate-500">
+                 <div className="text-xs text-gray-500">
                    Basato su fatture {filterStato.toLowerCase()}e
                  </div>
              </div>
              <div className="p-6">
                 <table className="w-full">
                   <thead>
-                    <tr className="text-left text-xs font-semibold text-slate-500 uppercase tracking-wider border-b border-slate-200">
+                    <tr className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wider border-b border-gray-200">
                         <th className="pb-4">Voce</th>
                         <th className="pb-4 text-right">Importo</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100">
                      {/* Valore Produzione Section */}
-                     <tr className="bg-slate-50/50">
+                     <tr className="bg-gray-50/50">
                         <td colSpan={2} className="py-3 px-2 text-sm font-bold text-dark uppercase tracking-wide">A) Valore della Produzione (Entrate)</td>
                      </tr>
-                     <tr className="hover:bg-slate-50">
-                        <td className="py-3 pl-6 text-sm text-slate-500">Ricavi da vendite e prestazioni</td>
+                     <tr className="hover:bg-gray-50">
+                        <td className="py-3 pl-6 text-sm text-gray-500">Ricavi da vendite e prestazioni</td>
                         <td className="py-3 pr-2 text-right text-sm font-semibold text-green-700">
                           {formatCurrency(incomeStatementData.entrate)}
                         </td>
@@ -358,11 +358,11 @@ export const FinancialStatement: React.FC = () => {
 
                      {/* Costi Produzione Section */}
                      <tr><td colSpan={2} className="py-4"></td></tr>
-                     <tr className="bg-slate-50/50">
+                     <tr className="bg-gray-50/50">
                         <td colSpan={2} className="py-3 px-2 text-sm font-bold text-dark uppercase tracking-wide">B) Costi della Produzione (Uscite)</td>
                      </tr>
-                     <tr className="hover:bg-slate-50">
-                        <td className="py-3 pl-6 text-sm text-slate-500">Costi per servizi e beni</td>
+                     <tr className="hover:bg-gray-50">
+                        <td className="py-3 pl-6 text-sm text-gray-500">Costi per servizi e beni</td>
                         <td className="py-3 pr-2 text-right text-sm font-semibold text-red-600">
                           ( {formatCurrency(incomeStatementData.uscite)} )
                         </td>
@@ -392,26 +392,26 @@ export const FinancialStatement: React.FC = () => {
       {/* Modal Aggiungi Voce */}
       {isAddingItem && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl p-6 max-w-md w-full" shadow-card>
+          <div className="bg-white rounded-2xl p-6 max-w-md w-full" shadow-sm>
             <h3 className="text-lg font-bold text-dark mb-4">Aggiungi Voce - {newItemForm.category}</h3>
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-slate-500 mb-1">Nome</label>
+                <label className="block text-sm font-medium text-gray-500 mb-1">Nome</label>
                 <input
                   type="text"
                   value={newItemForm.name || ''}
                   onChange={(e) => setNewItemForm({ ...newItemForm, name: e.target.value })}
-                  className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                  className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
                   placeholder="Es. Liquidità, Debiti vs fornitori..."
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-500 mb-1">Importo (€)</label>
+                <label className="block text-sm font-medium text-gray-500 mb-1">Importo (€)</label>
                 <input
                   type="number"
                   value={newItemForm.amount || 0}
                   onChange={(e) => setNewItemForm({ ...newItemForm, amount: parseFloat(e.target.value) || 0 })}
-                  className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                  className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
                   step="0.01"
                 />
               </div>
@@ -436,7 +436,7 @@ export const FinancialStatement: React.FC = () => {
                   setIsAddingItem(false);
                   setNewItemForm({});
                 }}
-                className="flex-1 bg-slate-50 text-slate-500 px-4 py-2 rounded-lg font-medium hover:bg-gray-300"
+                className="flex-1 bg-gray-50 text-gray-500 px-4 py-2 rounded-lg font-medium hover:bg-gray-300"
               >
                 Annulla
               </button>
@@ -448,25 +448,25 @@ export const FinancialStatement: React.FC = () => {
       {/* Modal Modifica Voce */}
       {editingItem && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl p-6 max-w-md w-full" shadow-card>
+          <div className="bg-white rounded-2xl p-6 max-w-md w-full" shadow-sm>
             <h3 className="text-lg font-bold text-dark mb-4">Modifica Voce</h3>
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-slate-500 mb-1">Nome</label>
+                <label className="block text-sm font-medium text-gray-500 mb-1">Nome</label>
                 <input
                   type="text"
                   value={editingItem.name}
                   onChange={(e) => setEditingItem({ ...editingItem, name: e.target.value })}
-                  className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                  className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-500 mb-1">Importo (€)</label>
+                <label className="block text-sm font-medium text-gray-500 mb-1">Importo (€)</label>
                 <input
                   type="number"
                   value={editingItem.amount}
                   onChange={(e) => setEditingItem({ ...editingItem, amount: parseFloat(e.target.value) || 0 })}
-                  className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                  className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
                   step="0.01"
                 />
               </div>
@@ -486,7 +486,7 @@ export const FinancialStatement: React.FC = () => {
               </button>
               <button
                 onClick={() => setEditingItem(null)}
-                className="flex-1 bg-slate-50 text-slate-500 px-4 py-2 rounded-lg font-medium hover:bg-gray-300"
+                className="flex-1 bg-gray-50 text-gray-500 px-4 py-2 rounded-lg font-medium hover:bg-gray-300"
               >
                 Annulla
               </button>

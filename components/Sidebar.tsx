@@ -10,42 +10,43 @@ interface SidebarProps {
 
 export const Sidebar: React.FC<SidebarProps> = ({ currentView, onChangeView }) => {
   return (
-    <div className="w-20 lg:w-64 flex-shrink-0 bg-white m-4 rounded-xl flex flex-col justify-between border border-slate-200 shadow-card h-[calc(100vh-2rem)] transition-all duration-300">
+    <div className="w-64 lg:w-64 flex-shrink-0 bg-white m-0 lg:m-4 rounded-none lg:rounded-3xl flex flex-col justify-between border-r lg:border border-gray-200 shadow-none lg:shadow-sm h-screen lg:h-[calc(100vh-2rem)] transition-all duration-300">
       <div>
-        <div className="h-20 flex items-center justify-center lg:justify-start lg:px-6 border-b border-slate-100">
-          <div className="w-9 h-9 bg-primary rounded-lg flex items-center justify-center text-white font-bold text-lg shadow-sm">
+        <div className="h-24 flex items-center justify-center lg:justify-start lg:px-8">
+          <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center text-dark font-bold text-xl">
             N
           </div>
-          <span className="hidden lg:block ml-3 font-bold text-lg text-slate-900 tracking-tight">{APP_NAME}</span>
+          <span className="hidden lg:block ml-3 font-bold text-xl text-dark tracking-tight">{APP_NAME}</span>
         </div>
 
-        <nav className="mt-2 px-3 space-y-0.5">
+        <nav className="mt-4 px-4 space-y-2">
           {NAV_ITEMS.map((item) => {
             const isActive = currentView === item.id;
             return (
               <button
                 key={item.id}
                 onClick={() => onChangeView(item.id)}
-                className={`w-full flex items-center justify-center lg:justify-start px-3 py-2.5 rounded-lg transition-all duration-150 group ${
+                className={`w-full flex items-center justify-center lg:justify-start p-3 lg:px-4 rounded-full transition-all duration-200 group ${
                   isActive
-                    ? 'bg-primary text-white shadow-sm'
-                    : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+                    ? 'bg-dark text-white shadow-lg shadow-gray-200'
+                    : 'text-gray-500 hover:bg-gray-100 hover:text-dark'
                 }`}
               >
-                <item.icon size={19} className={isActive ? 'text-white' : 'text-slate-500 group-hover:text-slate-700'} />
-                <span className={`hidden lg:block ml-3 font-medium text-sm ${isActive ? 'text-white' : ''}`}>
+                <item.icon size={20} className={isActive ? 'text-primary' : 'text-gray-500 group-hover:text-dark'} />
+                <span className={`hidden lg:block ml-3 font-medium ${isActive ? 'text-white' : ''}`}>
                   {item.label}
                 </span>
+                {isActive && <div className="hidden lg:block ml-auto w-1.5 h-1.5 rounded-full bg-primary" />}
               </button>
             );
           })}
         </nav>
       </div>
 
-      <div className="p-3 border-t border-slate-100">
-        <button className="w-full flex items-center justify-center lg:justify-start px-3 py-2.5 rounded-lg text-slate-600 hover:bg-red-50 hover:text-red-600 transition-all duration-150">
-          <LogOut size={19} />
-          <span className="hidden lg:block ml-3 font-medium text-sm">Esci</span>
+      <div className="p-4">
+        <button className="w-full flex items-center justify-center lg:justify-start p-3 lg:px-4 rounded-full text-gray-500 hover:bg-red-50 hover:text-red-500 transition-colors">
+          <LogOut size={20} />
+          <span className="hidden lg:block ml-3 font-medium">Esci</span>
         </button>
       </div>
     </div>
