@@ -104,8 +104,23 @@ export const Invoicing: React.FC = () => {
   // Sorting state
   type SortColumn = 'id' | 'data' | 'tipo' | 'progetto' | 'stato' | 'flusso' | 'totale';
   type SortDirection = 'asc' | 'desc';
-  const [sortColumn, setSortColumn] = useState<SortColumn>('data');
-  const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
+  const [sortColumn, setSortColumn] = useState<SortColumn>(() => {
+    const saved = localStorage.getItem('invoicing_sortColumn');
+    return (saved as SortColumn) || 'data';
+  });
+  const [sortDirection, setSortDirection] = useState<SortDirection>(() => {
+    const saved = localStorage.getItem('invoicing_sortDirection');
+    return (saved as SortDirection) || 'desc';
+  });
+
+  // Persist sorting to localStorage
+  React.useEffect(() => {
+    localStorage.setItem('invoicing_sortColumn', sortColumn);
+  }, [sortColumn]);
+
+  React.useEffect(() => {
+    localStorage.setItem('invoicing_sortDirection', sortDirection);
+  }, [sortDirection]);
 
   const handleSort = (column: SortColumn) => {
     if (sortColumn === column) {

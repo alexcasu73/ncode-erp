@@ -14,8 +14,23 @@ export const CRM: React.FC = () => {
   // Sorting state
   type SortColumn = 'name' | 'company' | 'status' | 'revenue';
   type SortDirection = 'asc' | 'desc';
-  const [sortColumn, setSortColumn] = useState<SortColumn>('name');
-  const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
+  const [sortColumn, setSortColumn] = useState<SortColumn>(() => {
+    const saved = localStorage.getItem('crm_sortColumn');
+    return (saved as SortColumn) || 'name';
+  });
+  const [sortDirection, setSortDirection] = useState<SortDirection>(() => {
+    const saved = localStorage.getItem('crm_sortDirection');
+    return (saved as SortDirection) || 'asc';
+  });
+
+  // Persist sorting to localStorage
+  React.useEffect(() => {
+    localStorage.setItem('crm_sortColumn', sortColumn);
+  }, [sortColumn]);
+
+  React.useEffect(() => {
+    localStorage.setItem('crm_sortDirection', sortDirection);
+  }, [sortDirection]);
 
   const handleSort = (column: SortColumn) => {
     if (sortColumn === column) {

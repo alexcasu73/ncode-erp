@@ -160,8 +160,23 @@ export const Cashflow: React.FC = () => {
   // Sorting
   type SortColumn = 'mese' | 'progetto' | 'spesa' | 'tipo' | 'stato' | 'totale';
   type SortDirection = 'asc' | 'desc';
-  const [sortColumn, setSortColumn] = useState<SortColumn>('mese');
-  const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
+  const [sortColumn, setSortColumn] = useState<SortColumn>(() => {
+    const saved = localStorage.getItem('cashflow_sortColumn');
+    return (saved as SortColumn) || 'mese';
+  });
+  const [sortDirection, setSortDirection] = useState<SortDirection>(() => {
+    const saved = localStorage.getItem('cashflow_sortDirection');
+    return (saved as SortDirection) || 'asc';
+  });
+
+  // Persist sorting to localStorage
+  React.useEffect(() => {
+    localStorage.setItem('cashflow_sortColumn', sortColumn);
+  }, [sortColumn]);
+
+  React.useEffect(() => {
+    localStorage.setItem('cashflow_sortDirection', sortDirection);
+  }, [sortDirection]);
 
   const handleSort = (column: SortColumn) => {
     if (sortColumn === column) {

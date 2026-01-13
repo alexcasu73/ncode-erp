@@ -1439,8 +1439,20 @@ export const Reconciliation: React.FC = () => {
   React.useEffect(() => {
     if (selectedSession) {
       localStorage.setItem('reconciliation_selectedSession', selectedSession);
+    } else {
+      localStorage.removeItem('reconciliation_selectedSession');
     }
   }, [selectedSession]);
+
+  // Deseleziona sessioni chiuse al caricamento
+  React.useEffect(() => {
+    if (selectedSession) {
+      const session = reconciliationSessions.find(s => s.id === selectedSession);
+      if (session?.status === 'closed') {
+        setSelectedSession(null);
+      }
+    }
+  }, [reconciliationSessions, selectedSession]);
 
   React.useEffect(() => {
     localStorage.setItem('reconciliation_filter', filter);
