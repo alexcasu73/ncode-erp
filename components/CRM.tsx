@@ -125,41 +125,41 @@ export const CRM: React.FC = () => {
 
       {/* KPI Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="bg-white p-5 rounded-2xl shadow-sm border-l-4 border-primary">
+        <div className="bg-secondary p-5 rounded-2xl border-l-4 border-primary">
           <h3 className="text-card-title mb-1">Totale Clienti</h3>
-          <p className="text-kpi-value text-dark">{totals.totale}</p>
+          <p className="text-kpi-value text-text-primary">{totals.totale}</p>
         </div>
-        <div className="bg-white p-5 rounded-2xl shadow-sm border-l-4 border-green-500">
+        <div className="bg-secondary p-5 rounded-2xl border-l-4 border-green-500">
           <h3 className="text-card-title mb-1">Attivi</h3>
           <p className="text-kpi-value text-green-600">{totals.attivi}</p>
         </div>
-        <div className="bg-white p-5 rounded-2xl shadow-sm border-l-4 border-blue-500">
+        <div className="bg-secondary p-5 rounded-2xl border-l-4 border-blue-500">
           <h3 className="text-card-title mb-1">Prospetti</h3>
           <p className="text-kpi-value text-blue-600">{totals.prospetti}</p>
         </div>
-        <div className="bg-white p-5 rounded-2xl shadow-sm border-l-4 border-orange-500">
+        <div className="bg-secondary p-5 rounded-2xl border-l-4 border-orange-500">
           <h3 className="text-card-title mb-1">Fatturato Totale</h3>
-          <p className="text-kpi-value text-dark">{formatCurrency(totals.totaleRevenue)}</p>
+          <p className="text-kpi-value text-text-primary">{formatCurrency(totals.totaleRevenue)}</p>
         </div>
       </div>
 
       {/* Filters */}
-      <div className="bg-white rounded-2xl shadow-sm p-4">
+      <div className="bg-secondary rounded-2xl p-4">
         <div className="flex flex-wrap gap-4 items-center">
           <div className="relative flex-1 min-w-[200px]">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted" size={18} />
             <input
               type="text"
               placeholder="Cerca per nome, azienda, email, P.IVA..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 bg-gray-50 border-none rounded-xl focus:ring-2 focus:ring-primary focus:outline-none"
+              className="w-full pl-10 pr-4 py-2 bg-dark-lighter border-none rounded-xl focus:ring-2 focus:ring-primary focus:outline-none text-text-primary"
             />
           </div>
           <select
             value={filterStato}
             onChange={(e) => setFilterStato(e.target.value as any)}
-            className="px-4 py-2 bg-gray-50 border-none rounded-xl focus:ring-2 focus:ring-primary focus:outline-none"
+            className="px-4 py-2 bg-dark-lighter border-none rounded-xl focus:ring-2 focus:ring-primary focus:outline-none text-text-primary"
           >
             <option value="tutti">Tutti gli stati</option>
             <option value="Attivo">Attivo</option>
@@ -170,42 +170,42 @@ export const CRM: React.FC = () => {
       </div>
 
       {/* Table */}
-      <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
+      <div className="bg-secondary rounded-2xl overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead className="bg-gray-50">
-              <tr className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+            <thead className="bg-dark-lighter">
+              <tr className="text-left text-xs font-semibold text-text-secondary uppercase tracking-wider">
                 <th
-                  className="px-6 py-4 cursor-pointer hover:bg-gray-100 transition-colors"
+                  className="px-6 py-4 cursor-pointer hover:bg-dark-lighter transition-colors"
                   onClick={() => handleSort('name')}
                 >
                   <div className="flex items-center gap-1">
                     Cliente
                     {sortColumn === 'name' ? (
                       sortDirection === 'asc' ? <ChevronUp size={14} /> : <ChevronDown size={14} />
-                    ) : <ChevronsUpDown size={14} className="text-gray-300" />}
+                    ) : <ChevronsUpDown size={14} className="text-muted" />}
                   </div>
                 </th>
                 <th
-                  className="px-6 py-4 cursor-pointer hover:bg-gray-100 transition-colors"
+                  className="px-6 py-4 cursor-pointer hover:bg-dark-lighter transition-colors"
                   onClick={() => handleSort('status')}
                 >
                   <div className="flex items-center gap-1">
                     Stato
                     {sortColumn === 'status' ? (
                       sortDirection === 'asc' ? <ChevronUp size={14} /> : <ChevronDown size={14} />
-                    ) : <ChevronsUpDown size={14} className="text-gray-300" />}
+                    ) : <ChevronsUpDown size={14} className="text-muted" />}
                   </div>
                 </th>
                 <th
-                  className="px-6 py-4 cursor-pointer hover:bg-gray-100 transition-colors"
+                  className="px-6 py-4 cursor-pointer hover:bg-dark-lighter transition-colors"
                   onClick={() => handleSort('company')}
                 >
                   <div className="flex items-center gap-1">
                     Azienda
                     {sortColumn === 'company' ? (
                       sortDirection === 'asc' ? <ChevronUp size={14} /> : <ChevronDown size={14} />
-                    ) : <ChevronsUpDown size={14} className="text-gray-300" />}
+                    ) : <ChevronsUpDown size={14} className="text-muted" />}
                   </div>
                 </th>
                 <th className="px-6 py-4">Sede & Contatti</th>
@@ -217,15 +217,15 @@ export const CRM: React.FC = () => {
                     Fatturato
                     {sortColumn === 'revenue' ? (
                       sortDirection === 'asc' ? <ChevronUp size={14} /> : <ChevronDown size={14} />
-                    ) : <ChevronsUpDown size={14} className="text-gray-300" />}
+                    ) : <ChevronsUpDown size={14} className="text-muted" />}
                   </div>
                 </th>
                 <th className="px-6 py-4 text-center">Azioni</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
+            <tbody className="divide-y divide-dark-lighter">
               {sortedCustomers.map((customer) => (
-                <tr key={customer.id} className="hover:bg-gray-50 transition-colors">
+                <tr key={customer.id} className="hover:bg-dark-lighter transition-colors">
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">
                       <div className="flex-shrink-0 h-10 w-10">
@@ -238,8 +238,8 @@ export const CRM: React.FC = () => {
                         )}
                       </div>
                       <div className="ml-4">
-                        <div className="text-sm font-bold text-dark">{customer.name}</div>
-                        <div className="text-xs text-gray-500">{customer.email}</div>
+                        <div className="text-sm font-bold text-text-primary">{customer.name}</div>
+                        <div className="text-xs text-text-secondary">{customer.email}</div>
                       </div>
                     </div>
                   </td>
@@ -249,52 +249,52 @@ export const CRM: React.FC = () => {
                         ? 'bg-green-100 text-green-800'
                         : customer.status === 'Prospetto'
                         ? 'bg-blue-100 text-blue-800'
-                        : 'bg-gray-100 text-gray-800'
+                        : 'bg-dark-lighter text-text-secondary'
                     }`}>
                       {customer.status}
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-semibold text-dark">{customer.company}</div>
-                    <div className="text-xs text-gray-500 flex flex-col gap-0.5 mt-1">
+                    <div className="text-sm font-semibold text-text-primary">{customer.company}</div>
+                    <div className="text-xs text-text-secondary flex flex-col gap-0.5 mt-1">
                       <span title="P.IVA">P.IVA: {customer.vatId || '-'}</span>
                       <span title="Codice SDI">SDI: {customer.sdiCode || '-'}</span>
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex flex-col gap-1.5">
-                      <div className="flex items-center gap-2 text-xs text-gray-600">
-                        <MapPin size={14} className="text-gray-400" />
+                      <div className="flex items-center gap-2 text-xs text-text-secondary">
+                        <MapPin size={14} className="text-muted" />
                         {customer.address || '-'}
                       </div>
-                      <div className="flex items-center gap-2 text-xs text-gray-600">
-                        <Phone size={14} className="text-gray-400" />
+                      <div className="flex items-center gap-2 text-xs text-text-secondary">
+                        <Phone size={14} className="text-muted" />
                         {customer.phone || '-'}
                       </div>
                     </div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-dark text-right">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-text-primary text-right">
                     {formatCurrency(customer.revenue || 0)}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex justify-center gap-2">
                       <button
                         onClick={() => { setEditingCustomer(customer); setShowModal(true); }}
-                        className="text-gray-400 hover:text-blue-500 p-1"
+                        className="text-muted hover:text-blue-500 p-1"
                         title="Modifica"
                       >
                         <Edit2 size={18} />
                       </button>
                       <button
                         onClick={() => window.location.href = `mailto:${customer.email}`}
-                        className="text-gray-400 hover:text-green-500 p-1"
+                        className="text-muted hover:text-green-500 p-1"
                         title="Invia Email"
                       >
                         <Mail size={18} />
                       </button>
                       <button
                         onClick={() => handleDelete(customer.id)}
-                        className="text-gray-400 hover:text-red-500 p-1"
+                        className="text-muted hover:text-red-500 p-1"
                         title="Elimina"
                       >
                         <Trash2 size={18} />
@@ -306,7 +306,7 @@ export const CRM: React.FC = () => {
             </tbody>
           </table>
           {sortedCustomers.length === 0 && (
-            <div className="text-center py-12 text-gray-500">
+            <div className="text-center py-12 text-text-secondary">
               Nessun cliente trovato
             </div>
           )}
@@ -402,12 +402,12 @@ const CustomerModal: React.FC<CustomerModalProps> = ({ customer, onClose, onSave
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-        <div className="p-6 border-b border-gray-100 flex justify-between items-center">
-          <h2 className="text-xl font-bold text-dark">
+      <div className="bg-secondary rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+        <div className="p-6 border-b border-dark-lighter flex justify-between items-center">
+          <h2 className="text-xl font-bold text-text-primary">
             {customer ? 'Modifica Cliente' : 'Nuovo Cliente'}
           </h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-dark">
+          <button onClick={onClose} className="text-muted hover:text-text-primary">
             <X size={24} />
           </button>
         </div>
@@ -416,24 +416,24 @@ const CustomerModal: React.FC<CustomerModalProps> = ({ customer, onClose, onSave
           {/* Nome e Email */}
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Nome Referente *</label>
+              <label className="block text-sm font-medium text-text-primary mb-1">Nome Referente *</label>
               <input
                 type="text"
                 value={formData.name || ''}
                 onChange={(e) => updateField('name', e.target.value)}
                 placeholder="Mario Rossi"
-                className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:outline-none"
+                className="w-full px-4 py-2 bg-dark-lighter border border-dark-lighter rounded-xl focus:ring-2 focus:ring-primary focus:outline-none text-text-primary"
                 required
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+              <label className="block text-sm font-medium text-text-primary mb-1">Email</label>
               <input
                 type="email"
                 value={formData.email || ''}
                 onChange={(e) => updateField('email', e.target.value)}
                 placeholder="mario@azienda.com"
-                className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:outline-none"
+                className="w-full px-4 py-2 bg-dark-lighter border border-dark-lighter rounded-xl focus:ring-2 focus:ring-primary focus:outline-none text-text-primary"
               />
             </div>
           </div>
@@ -441,22 +441,22 @@ const CustomerModal: React.FC<CustomerModalProps> = ({ customer, onClose, onSave
           {/* Azienda e Stato */}
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Azienda *</label>
+              <label className="block text-sm font-medium text-text-primary mb-1">Azienda *</label>
               <input
                 type="text"
                 value={formData.company || ''}
                 onChange={(e) => updateField('company', e.target.value)}
                 placeholder="Azienda S.r.l."
-                className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:outline-none"
+                className="w-full px-4 py-2 bg-dark-lighter border border-dark-lighter rounded-xl focus:ring-2 focus:ring-primary focus:outline-none text-text-primary"
                 required
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Stato</label>
+              <label className="block text-sm font-medium text-text-primary mb-1">Stato</label>
               <select
                 value={formData.status || 'Prospetto'}
                 onChange={(e) => updateField('status', e.target.value)}
-                className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:outline-none"
+                className="w-full px-4 py-2 bg-dark-lighter border border-dark-lighter rounded-xl focus:ring-2 focus:ring-primary focus:outline-none text-text-primary"
               >
                 <option value="Prospetto">Prospetto</option>
                 <option value="Attivo">Attivo</option>
@@ -468,23 +468,23 @@ const CustomerModal: React.FC<CustomerModalProps> = ({ customer, onClose, onSave
           {/* P.IVA e SDI */}
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">P.IVA</label>
+              <label className="block text-sm font-medium text-text-primary mb-1">P.IVA</label>
               <input
                 type="text"
                 value={formData.vatId || ''}
                 onChange={(e) => updateField('vatId', e.target.value)}
                 placeholder="IT12345678901"
-                className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:outline-none"
+                className="w-full px-4 py-2 bg-dark-lighter border border-dark-lighter rounded-xl focus:ring-2 focus:ring-primary focus:outline-none text-text-primary"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Codice SDI</label>
+              <label className="block text-sm font-medium text-text-primary mb-1">Codice SDI</label>
               <input
                 type="text"
                 value={formData.sdiCode || ''}
                 onChange={(e) => updateField('sdiCode', e.target.value)}
                 placeholder="M5UXCR1"
-                className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:outline-none"
+                className="w-full px-4 py-2 bg-dark-lighter border border-dark-lighter rounded-xl focus:ring-2 focus:ring-primary focus:outline-none text-text-primary"
               />
             </div>
           </div>
@@ -504,23 +504,23 @@ const CustomerModal: React.FC<CustomerModalProps> = ({ customer, onClose, onSave
           {/* Telefono e Fatturato */}
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Telefono</label>
+              <label className="block text-sm font-medium text-text-primary mb-1">Telefono</label>
               <input
                 type="tel"
                 value={formData.phone || ''}
                 onChange={(e) => updateField('phone', e.target.value)}
                 placeholder="+39 06 1234567"
-                className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:outline-none"
+                className="w-full px-4 py-2 bg-dark-lighter border border-dark-lighter rounded-xl focus:ring-2 focus:ring-primary focus:outline-none text-text-primary"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Fatturato</label>
+              <label className="block text-sm font-medium text-text-primary mb-1">Fatturato</label>
               <input
                 type="number"
                 step="0.01"
                 value={formData.revenue || 0}
                 onChange={(e) => updateField('revenue', parseFloat(e.target.value) || 0)}
-                className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:outline-none"
+                className="w-full px-4 py-2 bg-dark-lighter border border-dark-lighter rounded-xl focus:ring-2 focus:ring-primary focus:outline-none text-text-primary"
               />
             </div>
           </div>
@@ -541,7 +541,7 @@ const CustomerModal: React.FC<CustomerModalProps> = ({ customer, onClose, onSave
                   <img
                     src={formData.avatar}
                     alt="Anteprima"
-                    className="w-20 h-20 rounded-xl object-cover border border-gray-200"
+                    className="w-20 h-20 rounded-xl object-cover border border-dark-lighter"
                   />
                   <button
                     type="button"
@@ -554,7 +554,7 @@ const CustomerModal: React.FC<CustomerModalProps> = ({ customer, onClose, onSave
                 <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
-                  className="px-4 py-2 text-sm text-gray-600 border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors"
+                  className="px-4 py-2 text-sm text-text-primary border border-dark-lighter rounded-xl hover:bg-dark-lighter transition-colors"
                 >
                   Cambia immagine
                 </button>
@@ -563,13 +563,13 @@ const CustomerModal: React.FC<CustomerModalProps> = ({ customer, onClose, onSave
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
-                className="w-full p-6 border-2 border-dashed border-gray-200 rounded-xl hover:border-primary hover:bg-primary/5 transition-colors flex flex-col items-center gap-2"
+                className="w-full p-6 border-2 border-dashed border-dark-lighter rounded-xl hover:border-primary hover:bg-primary/5 transition-colors flex flex-col items-center gap-2"
               >
-                <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center">
-                  <ImageIcon size={24} className="text-gray-400" />
+                <div className="w-12 h-12 rounded-full bg-dark-lighter flex items-center justify-center">
+                  <ImageIcon size={24} className="text-muted" />
                 </div>
-                <span className="text-sm text-gray-500">Clicca per caricare un'immagine</span>
-                <span className="text-xs text-gray-400">PNG, JPG, GIF (max 2MB)</span>
+                <span className="text-sm text-text-secondary">Clicca per caricare un'immagine</span>
+                <span className="text-xs text-muted">PNG, JPG, GIF (max 2MB)</span>
               </button>
             )}
           </div>
@@ -579,7 +579,7 @@ const CustomerModal: React.FC<CustomerModalProps> = ({ customer, onClose, onSave
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 px-6 py-3 border border-gray-200 rounded-xl font-medium text-gray-600 hover:bg-gray-50 transition-colors"
+              className="flex-1 px-6 py-3 border border-dark-lighter rounded-xl font-medium text-text-primary hover:bg-dark-lighter transition-colors"
             >
               Annulla
             </button>

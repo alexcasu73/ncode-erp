@@ -17,9 +17,12 @@
             },
             colors: {
               primary: '#8B5CF6', // Purple primary color
-              secondary: '#f3f4f6',
-              dark: '#111827',
-              muted: '#9CA3AF',
+              secondary: '#18181b', // Dark card background
+              dark: '#09090b', // Very dark background
+              'dark-lighter': '#27272a', // Border color
+              muted: '#71717a', // Muted text
+              'text-primary': '#fafafa', // Primary text color
+              'text-secondary': '#a1a1aa', // Secondary text color
             }
           }
         }
@@ -27,23 +30,24 @@
     </script>
     <style>
       body {
-        background-color: #EAECE6;
+        background-color: #09090b;
+        color: #fafafa;
         font-size: 14px;
         line-height: 1.5;
       }
 
-      /* Typography Scale - Sistema Uniforme */
-      .text-page-title { font-size: 1.5rem; font-weight: 700; line-height: 1.2; } /* 24px */
-      .text-page-subtitle { font-size: 0.875rem; color: #6B7280; } /* 14px gray-500 */
-      .text-section-title { font-size: 1rem; font-weight: 600; line-height: 1.4; } /* 16px */
-      .text-card-title { font-size: 0.875rem; font-weight: 500; color: #6B7280; } /* 14px */
-      .text-kpi-value { font-size: 1.5rem; font-weight: 700; line-height: 1.2; } /* 24px */
-      .text-kpi-small { font-size: 1.125rem; font-weight: 700; } /* 18px */
-      .text-body { font-size: 0.875rem; line-height: 1.5; } /* 14px */
-      .text-small { font-size: 0.75rem; color: #9CA3AF; } /* 12px gray-400 */
-      .text-table-header { font-size: 0.75rem; font-weight: 500; text-transform: uppercase; letter-spacing: 0.05em; color: #6B7280; }
+      /* Typography Scale - Dark Theme */
+      .text-page-title { font-size: 1.5rem; font-weight: 700; line-height: 1.2; color: #fafafa; } /* 24px */
+      .text-page-subtitle { font-size: 0.875rem; color: #a1a1aa; } /* 14px */
+      .text-section-title { font-size: 1rem; font-weight: 600; line-height: 1.4; color: #fafafa; } /* 16px */
+      .text-card-title { font-size: 0.875rem; font-weight: 500; color: #a1a1aa; } /* 14px */
+      .text-kpi-value { font-size: 1.5rem; font-weight: 700; line-height: 1.2; color: #fafafa; } /* 24px */
+      .text-kpi-small { font-size: 1.125rem; font-weight: 700; color: #fafafa; } /* 18px */
+      .text-body { font-size: 0.875rem; line-height: 1.5; color: #e4e4e7; } /* 14px */
+      .text-small { font-size: 0.75rem; color: #71717a; } /* 12px */
+      .text-table-header { font-size: 0.75rem; font-weight: 500; text-transform: uppercase; letter-spacing: 0.05em; color: #a1a1aa; }
 
-      /* Custom scrollbar for cleaner look */
+      /* Custom scrollbar for dark theme */
       ::-webkit-scrollbar {
         width: 8px;
         height: 8px;
@@ -52,11 +56,11 @@
         background: transparent;
       }
       ::-webkit-scrollbar-thumb {
-        background: #cbd5e1;
+        background: #27272a;
         border-radius: 4px;
       }
       ::-webkit-scrollbar-thumb:hover {
-        background: #94a3b8;
+        background: #3f3f46;
       }
     </style>
   <script type="importmap">
