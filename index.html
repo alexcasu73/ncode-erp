@@ -17,12 +17,12 @@
             },
             colors: {
               primary: '#8B5CF6', // Purple primary color
-              secondary: '#18181b', // Dark card background
-              dark: '#09090b', // Very dark background
-              'dark-lighter': '#27272a', // Border color
-              muted: '#71717a', // Muted text
-              'text-primary': '#fafafa', // Primary text color
-              'text-secondary': '#a1a1aa', // Secondary text color
+              secondary: '#F9FAFB', // Light gray background
+              dark: '#111827', // Dark text
+              'border-light': '#E5E7EB', // Light border
+              muted: '#6B7280', // Muted text
+              'text-primary': '#111827', // Primary dark text
+              'text-secondary': '#6B7280', // Secondary gray text
             }
           }
         }
@@ -30,24 +30,24 @@
     </script>
     <style>
       body {
-        background-color: #09090b;
-        color: #fafafa;
+        background-color: #F9FAFB;
+        color: #111827;
         font-size: 14px;
         line-height: 1.5;
       }
 
-      /* Typography Scale - Dark Theme */
-      .text-page-title { font-size: 1.5rem; font-weight: 700; line-height: 1.2; color: #fafafa; } /* 24px */
-      .text-page-subtitle { font-size: 0.875rem; color: #a1a1aa; } /* 14px */
-      .text-section-title { font-size: 1rem; font-weight: 600; line-height: 1.4; color: #fafafa; } /* 16px */
-      .text-card-title { font-size: 0.875rem; font-weight: 500; color: #a1a1aa; } /* 14px */
-      .text-kpi-value { font-size: 1.5rem; font-weight: 700; line-height: 1.2; color: #fafafa; } /* 24px */
-      .text-kpi-small { font-size: 1.125rem; font-weight: 700; color: #fafafa; } /* 18px */
-      .text-body { font-size: 0.875rem; line-height: 1.5; color: #e4e4e7; } /* 14px */
-      .text-small { font-size: 0.75rem; color: #71717a; } /* 12px */
-      .text-table-header { font-size: 0.75rem; font-weight: 500; text-transform: uppercase; letter-spacing: 0.05em; color: #a1a1aa; }
+      /* Typography Scale - Light Theme */
+      .text-page-title { font-size: 1.5rem; font-weight: 700; line-height: 1.2; color: #111827; } /* 24px */
+      .text-page-subtitle { font-size: 0.875rem; color: #6B7280; } /* 14px */
+      .text-section-title { font-size: 1rem; font-weight: 600; line-height: 1.4; color: #111827; } /* 16px */
+      .text-card-title { font-size: 0.875rem; font-weight: 500; color: #6B7280; } /* 14px */
+      .text-kpi-value { font-size: 1.5rem; font-weight: 700; line-height: 1.2; color: #111827; } /* 24px */
+      .text-kpi-small { font-size: 1.125rem; font-weight: 700; color: #111827; } /* 18px */
+      .text-body { font-size: 0.875rem; line-height: 1.5; color: #374151; } /* 14px */
+      .text-small { font-size: 0.75rem; color: #6B7280; } /* 12px */
+      .text-table-header { font-size: 0.75rem; font-weight: 500; text-transform: uppercase; letter-spacing: 0.05em; color: #6B7280; }
 
-      /* Custom scrollbar for dark theme */
+      /* Custom scrollbar for light theme */
       ::-webkit-scrollbar {
         width: 8px;
         height: 8px;
@@ -56,11 +56,11 @@
         background: transparent;
       }
       ::-webkit-scrollbar-thumb {
-        background: #27272a;
+        background: #E5E7EB;
         border-radius: 4px;
       }
       ::-webkit-scrollbar-thumb:hover {
-        background: #3f3f46;
+        background: #D1D5DB;
       }
     </style>
   <script type="importmap">

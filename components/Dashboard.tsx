@@ -132,10 +132,10 @@ export const Dashboard: React.FC = () => {
           <p className="text-page-subtitle mt-1">Informazioni dettagliate sulla tua attività</p>
         </div>
         <div className="flex items-center gap-3">
-            <div className="bg-secondary rounded-full px-4 py-2 flex items-center gap-2 border border-dark-lighter">
-                <span className="text-sm font-medium text-text-primary">Anno {new Date().getFullYear()}</span>
+            <div className="bg-white rounded-full px-4 py-2 flex items-center gap-2 border border-light" shadow-sm>
+                <span className="text-sm font-medium text-dark">Anno {new Date().getFullYear()}</span>
             </div>
-            <button className="bg-dark text-white px-6 py-2 rounded-full font-medium hover:bg-black transition-colors flex items-center gap-2">
+            <button className="bg-secondary text-white px-6 py-2 rounded-full font-medium hover:bg-black transition-colors flex items-center gap-2">
                 <ArrowUpRight size={18} className="text-primary"/>
                 Esporta
             </button>
@@ -145,14 +145,14 @@ export const Dashboard: React.FC = () => {
       {/* KPI Grid */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* Revenue Card */}
-        <div className="bg-secondary p-6 rounded-[2rem] flex flex-col justify-between min-h-[180px]">
+        <div className="bg-white p-6 rounded-[2rem] flex flex-col justify-between min-h-[180px]" shadow-sm>
           <div>
             <h3 className="text-card-title">Fatturato Totale</h3>
             <div className="flex items-center gap-3 mt-2">
-              <span className="text-kpi-value text-text-primary">
+              <span className="text-kpi-value text-dark">
                 {formatCurrencyNoDecimals(dashboardData.currentRevenue)}
               </span>
-              <span className={`text-white text-xs px-2 py-1 rounded-full ${dashboardData.revenueChange >= 0 ? 'bg-dark' : 'bg-red-600'}`}>
+              <span className={`text-white text-xs px-2 py-1 rounded-full ${dashboardData.revenueChange >= 0 ? 'bg-secondary' : 'bg-red-600'}`}>
                 {dashboardData.revenueChange >= 0 ? '+' : ''}{dashboardData.revenueChange.toFixed(1)}%
               </span>
             </div>
@@ -170,12 +170,12 @@ export const Dashboard: React.FC = () => {
         </div>
 
         {/* Customers Card */}
-        <div className="bg-secondary p-6 rounded-[2rem] flex flex-col justify-between min-h-[180px]">
+        <div className="bg-white p-6 rounded-[2rem] flex flex-col justify-between min-h-[180px]" shadow-sm>
           <div>
              <h3 className="text-card-title">Progetti Attivi</h3>
              <div className="flex items-center gap-3 mt-2">
-                 <span className="text-kpi-value text-text-primary">{dashboardData.currentProjects}</span>
-                 <span className={`text-white text-xs px-2 py-1 rounded-full ${dashboardData.projectsChange >= 0 ? 'bg-dark' : 'bg-red-600'}`}>
+                 <span className="text-kpi-value text-dark">{dashboardData.currentProjects}</span>
+                 <span className={`text-white text-xs px-2 py-1 rounded-full ${dashboardData.projectsChange >= 0 ? 'bg-secondary' : 'bg-red-600'}`}>
                    {dashboardData.projectsChange >= 0 ? '+' : ''}{dashboardData.projectsChange.toFixed(1)}%
                  </span>
              </div>
@@ -184,12 +184,12 @@ export const Dashboard: React.FC = () => {
         </div>
 
         {/* Orders Card */}
-        <div className="bg-secondary p-6 rounded-[2rem] flex flex-col justify-between min-h-[180px]">
+        <div className="bg-white p-6 rounded-[2rem] flex flex-col justify-between min-h-[180px]" shadow-sm>
             <div>
                 <h3 className="text-card-title">Fatture Totali</h3>
                 <div className="flex items-center gap-3 mt-2">
-                    <span className="text-kpi-value text-text-primary">{dashboardData.currentTransactions}</span>
-                    <span className={`text-white text-xs px-2 py-1 rounded-full ${dashboardData.transactionsChange >= 0 ? 'bg-dark' : 'bg-red-600'}`}>
+                    <span className="text-kpi-value text-dark">{dashboardData.currentTransactions}</span>
+                    <span className={`text-white text-xs px-2 py-1 rounded-full ${dashboardData.transactionsChange >= 0 ? 'bg-secondary' : 'bg-red-600'}`}>
                       {dashboardData.transactionsChange >= 0 ? '+' : ''}{dashboardData.transactionsChange.toFixed(1)}%
                     </span>
                 </div>
@@ -206,10 +206,10 @@ export const Dashboard: React.FC = () => {
       </div>
 
       {/* Andamento Mensile Fatturato */}
-      <div className="bg-secondary p-8 rounded-[2rem]">
+      <div className="bg-white p-8 rounded-[2rem]" shadow-sm>
         <div className="flex justify-between items-center mb-8">
-          <h3 className="text-section-title text-text-primary">Andamento Mensile Fatturato</h3>
-          <div className="text-sm text-text-secondary">
+          <h3 className="text-section-title text-dark">Andamento Mensile Fatturato</h3>
+          <div className="text-sm text-gray-500">
             Anno {new Date().getFullYear()}
           </div>
         </div>

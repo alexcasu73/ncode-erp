@@ -26,27 +26,27 @@ const App: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col lg:flex-row min-h-screen bg-dark font-sans text-text-primary overflow-hidden">
+    <div className="flex flex-col lg:flex-row min-h-screen bg-secondary font-sans text-dark overflow-hidden">
       <Sidebar currentView={currentView} onChangeView={setCurrentView} />
 
       <div className="flex-1 flex flex-col h-screen overflow-hidden">
         {/* Top Bar */}
-        <header className="h-24 flex items-center justify-between px-4 lg:px-8 bg-dark border-b border-dark-lighter flex-shrink-0">
-          <div className="flex items-center bg-secondary rounded-full px-4 py-2.5 w-full max-w-md border border-dark-lighter">
-            <Search size={20} className="text-muted mr-3" />
+        <header className="h-24 flex items-center justify-between px-4 lg:px-8 bg-white border-b border-light flex-shrink-0">
+          <div className="flex items-center bg-gray-50 rounded-full px-4 py-2.5 w-full max-w-md border border-light">
+            <Search size={20} className="text-gray-400 mr-3" />
             <input
               type="text"
               placeholder="Cerca qualsiasi cosa..."
-              className="bg-transparent border-none outline-none w-full text-sm text-text-primary placeholder-muted"
+              className="bg-transparent border-none outline-none w-full text-sm text-dark placeholder-gray-400"
             />
           </div>
 
           <div className="flex items-center gap-4 ml-4">
-            <button className="relative w-10 h-10 bg-secondary rounded-full flex items-center justify-center border border-dark-lighter hover:bg-dark-lighter transition-colors">
-              <Bell size={20} className="text-text-primary" />
-              <span className="absolute top-2 right-2.5 w-2 h-2 bg-primary rounded-full border border-secondary"></span>
+            <button className="relative w-10 h-10 bg-white rounded-full flex items-center justify-center border border-light hover:bg-gray-50 transition-colors shadow-sm">
+              <Bell size={20} className="text-dark" />
+              <span className="absolute top-2 right-2.5 w-2 h-2 bg-primary rounded-full border-2 border-white"></span>
             </button>
-            <button className="w-10 h-10 bg-primary rounded-full flex items-center justify-center overflow-hidden">
+            <button className="w-10 h-10 bg-primary rounded-full flex items-center justify-center overflow-hidden shadow-sm">
                <img src="https://picsum.photos/100/100?random=user" alt="Profile" className="w-full h-full object-cover" />
             </button>
           </div>
