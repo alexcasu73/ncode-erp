@@ -666,7 +666,7 @@ export const Cashflow: React.FC = () => {
                 return (
                   <tr key={record.id} className="hover:bg-gray-50 transition-colors">
                     <td className="px-4 py-3 text-sm text-gray-600">{formatDate(record.dataPagamento)}</td>
-                    <td className="px-4 py-3 text-sm font-medium text-dark">{inv.nomeProgetto || '-'}</td>
+                    <td className="px-4 py-3 text-sm text-gray-600">{inv.nomeProgetto || '-'}</td>
                     <td className="px-4 py-3 text-sm text-gray-600">{inv.spesa || '-'}</td>
                     <td className="px-4 py-3 text-sm text-gray-600">{inv.tipoSpesa || '-'}</td>
                     <td className="px-4 py-3 text-sm text-gray-500 max-w-[200px] truncate" title={record.note || inv.note}>{record.note || inv.note || '-'}</td>
