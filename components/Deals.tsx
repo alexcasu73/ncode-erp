@@ -30,24 +30,24 @@ export const Deals: React.FC = () => {
 
   const getStageColor = (stage: DealStage) => {
     switch (stage) {
-      case DealStage.LEAD: return 'border-t-4 border-gray-400';
-      case DealStage.QUALIFICATION: return 'border-t-4 border-yellow-400';
-      case DealStage.PROPOSAL: return 'border-t-4 border-purple-400';
-      case DealStage.NEGOTIATION: return 'border-t-4 border-blue-400';
-      case DealStage.WON: return 'border-t-4 border-green-500';
-      case DealStage.LOST: return 'border-t-4 border-red-400';
+      case DealStage.LEAD: return 'border-t-4 border-indigo-500';
+      case DealStage.QUALIFICATION: return 'border-t-4 border-orange-500';
+      case DealStage.PROPOSAL: return 'border-t-4 border-fuchsia-500';
+      case DealStage.NEGOTIATION: return 'border-t-4 border-cyan-500';
+      case DealStage.WON: return 'border-t-4 border-emerald-500';
+      case DealStage.LOST: return 'border-t-4 border-rose-500';
       default: return 'border-t-4 border-light';
     }
   };
 
   const getStageHeaderColor = (stage: DealStage) => {
     switch (stage) {
-      case DealStage.LEAD: return 'bg-gray-50 text-gray-500';
-      case DealStage.QUALIFICATION: return 'bg-yellow-100 text-yellow-700';
-      case DealStage.PROPOSAL: return 'bg-purple-100 text-purple-700';
-      case DealStage.NEGOTIATION: return 'bg-blue-100 text-blue-700';
-      case DealStage.WON: return 'bg-green-100 text-green-700';
-      case DealStage.LOST: return 'bg-red-100 text-red-700';
+      case DealStage.LEAD: return 'bg-indigo-100 text-indigo-700';
+      case DealStage.QUALIFICATION: return 'bg-orange-100 text-orange-700';
+      case DealStage.PROPOSAL: return 'bg-fuchsia-100 text-fuchsia-700';
+      case DealStage.NEGOTIATION: return 'bg-cyan-100 text-cyan-700';
+      case DealStage.WON: return 'bg-emerald-100 text-emerald-700';
+      case DealStage.LOST: return 'bg-rose-100 text-rose-700';
       default: return 'bg-gray-50 text-gray-500';
     }
   };
