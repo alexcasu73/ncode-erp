@@ -52,6 +52,14 @@ const formatInvoiceNumber = (id: string, anno?: number): string => {
   return anno ? `N. ${numero}/${anno}` : `N. ${numero}`;
 };
 
+// Ottiene l'importo effettivo del movimento (importo personalizzato o totale fattura)
+const getImportoEffettivo = (cf: { importo?: number; invoice?: { flusso?: number; iva?: number } }): number => {
+  if (cf.importo !== undefined && cf.importo !== null) {
+    return cf.importo;
+  }
+  return (cf.invoice?.flusso || 0) + (cf.invoice?.iva || 0);
+};
+
 // Formatta data emissione fattura (può essere Date o string)
 const formatInvoiceDate = (data?: Date | string): string => {
   if (!data) return '-';
@@ -93,6 +101,7 @@ export const Cashflow: React.FC = () => {
   // Form state
   const [formInvoiceId, setFormInvoiceId] = useState('');
   const [formDataPagamento, setFormDataPagamento] = useState('');
+  const [formImporto, setFormImporto] = useState<string>('');
   const [formNote, setFormNote] = useState('');
 
   // Sorting
@@ -190,20 +199,20 @@ export const Cashflow: React.FC = () => {
           comparison = (invA.statoFatturazione || '').localeCompare(invB.statoFatturazione || '');
           break;
         case 'totale':
-          comparison = ((invA.flusso || 0) + (invA.iva || 0)) - ((invB.flusso || 0) + (invB.iva || 0));
+          comparison = getImportoEffettivo(a) - getImportoEffettivo(b);
           break;
       }
       return sortDirection === 'asc' ? comparison : -comparison;
     });
   }, [recordsPerTabella, sortColumn, sortDirection]);
 
-  // Calcola totali (flusso + iva)
+  // Calcola totali (usa importo personalizzato se presente, altrimenti flusso + iva)
   const totals = useMemo(() => {
     const entrate = recordsFiltrati.filter(cf => cf.invoice?.tipo === 'Entrata');
     const uscite = recordsFiltrati.filter(cf => cf.invoice?.tipo === 'Uscita');
 
-    const totaleEntrate = entrate.reduce((acc, cf) => acc + (cf.invoice?.flusso || 0) + (cf.invoice?.iva || 0), 0);
-    const totaleUscite = uscite.reduce((acc, cf) => acc + (cf.invoice?.flusso || 0) + (cf.invoice?.iva || 0), 0);
+    const totaleEntrate = entrate.reduce((acc, cf) => acc + getImportoEffettivo(cf), 0);
+    const totaleUscite = uscite.reduce((acc, cf) => acc + getImportoEffettivo(cf), 0);
 
     return {
       entrate: totaleEntrate,
@@ -253,7 +262,7 @@ export const Cashflow: React.FC = () => {
       const meseIndex = getMeseIndexFromDate(cf.dataPagamento);
       if (inv && meseIndex !== -1) {
         const meseAbr = MESI_ABR[meseIndex];
-        const totale = (inv.flusso || 0) + (inv.iva || 0);
+        const totale = getImportoEffettivo(cf);
         if (inv.tipo === 'Entrata') {
           monthlyData[meseAbr].entrate += totale;
         } else {
@@ -280,6 +289,7 @@ export const Cashflow: React.FC = () => {
     setEditingRecord(null);
     setFormInvoiceId('');
     setFormDataPagamento('');
+    setFormImporto('');
     setFormNote('');
     setShowModal(true);
   };
@@ -288,6 +298,13 @@ export const Cashflow: React.FC = () => {
     setEditingRecord(record);
     setFormInvoiceId(record.invoiceId);
     setFormDataPagamento(record.dataPagamento || '');
+    // Se c'è un importo personalizzato, mostralo; altrimenti mostra il totale fattura
+    if (record.importo !== undefined && record.importo !== null) {
+      setFormImporto(record.importo.toString());
+    } else {
+      const totale = (record.invoice?.flusso || 0) + (record.invoice?.iva || 0);
+      setFormImporto(totale.toString());
+    }
     setFormNote(record.note || '');
     setShowModal(true);
   };
@@ -297,12 +314,34 @@ export const Cashflow: React.FC = () => {
     setEditingRecord(null);
   };
 
+  // Quando cambia la fattura selezionata, pre-popola l'importo
+  const handleInvoiceChange = (invoiceId: string) => {
+    setFormInvoiceId(invoiceId);
+    if (invoiceId) {
+      const inv = invoices.find(i => i.id === invoiceId);
+      if (inv) {
+        const totale = (inv.flusso || 0) + (inv.iva || 0);
+        setFormImporto(totale.toString());
+      }
+    } else {
+      setFormImporto('');
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    const importoValue = parseFloat(formImporto) || 0;
+    const invoice = invoices.find(i => i.id === formInvoiceId);
+    const totaleInvoice = invoice ? (invoice.flusso || 0) + (invoice.iva || 0) : 0;
+
+    // Salva importo solo se diverso dal totale fattura
+    const importoToSave = Math.abs(importoValue - totaleInvoice) < 0.01 ? undefined : importoValue;
 
     const recordData = {
       invoiceId: formInvoiceId,
       dataPagamento: formDataPagamento || undefined,
+      importo: importoToSave,
       note: formNote || undefined,
     };
 
@@ -618,7 +657,9 @@ export const Cashflow: React.FC = () => {
               {sortedRecords.map((record) => {
                 const inv = record.invoice;
                 if (!inv) return null;
-                const totale = (inv.flusso || 0) + (inv.iva || 0);
+                const totale = getImportoEffettivo(record);
+                const totaleFattura = (inv.flusso || 0) + (inv.iva || 0);
+                const isParziale = record.importo !== undefined && record.importo !== null && Math.abs(record.importo - totaleFattura) > 0.01;
                 return (
                   <tr key={record.id} className="hover:bg-gray-50 transition-colors">
                     <td className="px-4 py-3 text-sm text-gray-600">{formatDate(record.dataPagamento)}</td>
@@ -649,7 +690,10 @@ export const Cashflow: React.FC = () => {
                     <td className={`px-4 py-3 text-sm font-bold text-right ${
                       inv.tipo === 'Entrata' ? 'text-green-600' : 'text-orange-600'
                     }`}>
-                      {inv.tipo === 'Entrata' ? '+' : '-'}{formatCurrency(totale)}
+                      <div className="flex items-center justify-end gap-1">
+                        {isParziale && <span className="text-xs text-gray-400" title={`Totale fattura: ${formatCurrency(totaleFattura)}`}>*</span>}
+                        {inv.tipo === 'Entrata' ? '+' : '-'}{formatCurrency(totale)}
+                      </div>
                     </td>
                     <td className="px-4 py-3 text-right">
                       <div className="flex justify-end gap-2">
@@ -704,7 +748,7 @@ export const Cashflow: React.FC = () => {
                 </label>
                 <select
                   value={formInvoiceId}
-                  onChange={(e) => setFormInvoiceId(e.target.value)}
+                  onChange={(e) => handleInvoiceChange(e.target.value)}
                   required
                   disabled={!!editingRecord}
                   className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/50 disabled:bg-gray-100"
@@ -729,9 +773,10 @@ export const Cashflow: React.FC = () => {
                     <div><span className="text-gray-500">Tipo:</span> {selectedInvoice.tipo}</div>
                     <div><span className="text-gray-500">Progetto:</span> {selectedInvoice.nomeProgetto || '-'}</div>
                     <div><span className="text-gray-500">Stato:</span> {selectedInvoice.statoFatturazione}</div>
-                    <div><span className="text-gray-500">Spesa:</span> {selectedInvoice.spesa || '-'}</div>
-                    <div>
-                      <span className="text-gray-500">Totale:</span>{' '}
+                    <div><span className="text-gray-500">Netto:</span> {formatCurrency(selectedInvoice.flusso || 0)}</div>
+                    <div><span className="text-gray-500">IVA:</span> {formatCurrency(selectedInvoice.iva || 0)}</div>
+                    <div className="col-span-2">
+                      <span className="text-gray-500">Totale Fattura:</span>{' '}
                       <span className={`font-bold ${selectedInvoice.tipo === 'Entrata' ? 'text-green-600' : 'text-orange-600'}`}>
                         {formatCurrency((selectedInvoice.flusso || 0) + (selectedInvoice.iva || 0))}
                       </span>
@@ -751,6 +796,28 @@ export const Cashflow: React.FC = () => {
                   onChange={(e) => setFormDataPagamento(e.target.value)}
                   className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/50"
                 />
+              </div>
+
+              {/* Importo */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Importo Movimento *
+                </label>
+                <div className="relative">
+                  <span className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400">€</span>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={formImporto}
+                    onChange={(e) => setFormImporto(e.target.value)}
+                    required
+                    className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/50"
+                    placeholder="0,00"
+                  />
+                </div>
+                <p className="text-xs text-gray-500 mt-1">
+                  Modifica se il pagamento è parziale (es. solo IVA o solo netto)
+                </p>
               </div>
 
               {/* Note */}

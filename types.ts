@@ -71,6 +71,7 @@ export interface CashflowRecord {
   id: string;
   invoiceId: string; // Riferimento alla fattura
   dataPagamento?: string; // Data effettiva del pagamento
+  importo?: number; // Importo personalizzato (se diverso dal totale fattura)
   note?: string; // Note aggiuntive sul movimento
   createdAt?: string;
   // Dati derivati dalla fattura (popolati in join)
