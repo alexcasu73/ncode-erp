@@ -132,7 +132,7 @@ export const Dashboard: React.FC = () => {
           <p className="text-page-subtitle mt-1">Informazioni dettagliate sulla tua attività</p>
         </div>
         <div className="flex items-center gap-3">
-            <div className="bg-white rounded-full px-4 py-2 flex items-center gap-2 border border-light" shadow-sm>
+            <div className="bg-white rounded-full px-4 py-2 flex items-center gap-2 border border-slate-200" shadow-card>
                 <span className="text-sm font-medium text-dark">Anno {new Date().getFullYear()}</span>
             </div>
             <button className="bg-secondary text-white px-6 py-2 rounded-full font-medium hover:bg-black transition-colors flex items-center gap-2">
@@ -145,7 +145,7 @@ export const Dashboard: React.FC = () => {
       {/* KPI Grid */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* Revenue Card */}
-        <div className="bg-white p-6 rounded-[2rem] flex flex-col justify-between min-h-[180px]" shadow-sm>
+        <div className="bg-white p-6 rounded-[2rem] flex flex-col justify-between min-h-[180px]" shadow-card>
           <div>
             <h3 className="text-card-title">Fatturato Totale</h3>
             <div className="flex items-center gap-3 mt-2">
@@ -170,7 +170,7 @@ export const Dashboard: React.FC = () => {
         </div>
 
         {/* Customers Card */}
-        <div className="bg-white p-6 rounded-[2rem] flex flex-col justify-between min-h-[180px]" shadow-sm>
+        <div className="bg-white p-6 rounded-[2rem] flex flex-col justify-between min-h-[180px]" shadow-card>
           <div>
              <h3 className="text-card-title">Progetti Attivi</h3>
              <div className="flex items-center gap-3 mt-2">
@@ -184,7 +184,7 @@ export const Dashboard: React.FC = () => {
         </div>
 
         {/* Orders Card */}
-        <div className="bg-white p-6 rounded-[2rem] flex flex-col justify-between min-h-[180px]" shadow-sm>
+        <div className="bg-white p-6 rounded-[2rem] flex flex-col justify-between min-h-[180px]" shadow-card>
             <div>
                 <h3 className="text-card-title">Fatture Totali</h3>
                 <div className="flex items-center gap-3 mt-2">
@@ -206,10 +206,10 @@ export const Dashboard: React.FC = () => {
       </div>
 
       {/* Andamento Mensile Fatturato */}
-      <div className="bg-white p-8 rounded-[2rem]" shadow-sm>
+      <div className="bg-white p-8 rounded-[2rem]" shadow-card>
         <div className="flex justify-between items-center mb-8">
           <h3 className="text-section-title text-dark">Andamento Mensile Fatturato</h3>
-          <div className="text-sm text-gray-500">
+          <div className="text-sm text-slate-500">
             Anno {new Date().getFullYear()}
           </div>
         </div>

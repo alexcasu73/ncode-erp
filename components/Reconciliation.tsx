@@ -42,7 +42,7 @@ const TransactionRow: React.FC<{
   const getStatusColor = () => {
     switch (transaction.matchStatus) {
       case 'matched': return 'bg-green-100 text-green-800';
-      case 'ignored': return 'bg-gray-50 text-gray-500';
+      case 'ignored': return 'bg-slate-50 text-slate-500';
       case 'manual': return 'bg-blue-100 text-blue-800';
       default: return 'bg-yellow-100 text-yellow-800';
     }
@@ -64,9 +64,9 @@ const TransactionRow: React.FC<{
   };
 
   return (
-    <div className={`border-b border-light last:border-b-0 ${isSelected ? 'bg-primary/5' : ''}`}>
+    <div className={`border-b border-slate-200 last:border-b-0 ${isSelected ? 'bg-primary/5' : ''}`}>
       <div
-        className={`p-4 hover:bg-gray-50 transition-colors cursor-pointer ${expanded ? 'bg-gray-50' : ''}`}
+        className={`p-4 hover:bg-slate-50 transition-colors cursor-pointer ${expanded ? 'bg-slate-50' : ''}`}
         onClick={() => setExpanded(!expanded)}
       >
         <div className="flex items-center justify-between">
@@ -74,7 +74,7 @@ const TransactionRow: React.FC<{
             <button
               onClick={(e) => { e.stopPropagation(); onToggleSelect(); }}
               disabled={disabled}
-              className="text-gray-500 hover:text-dark transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="text-slate-500 hover:text-dark transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isSelected ? (
                 <CheckSquare size={18} className="text-primary" />
@@ -82,13 +82,13 @@ const TransactionRow: React.FC<{
                 <Square size={18} />
               )}
             </button>
-            <div className="w-24 text-sm text-gray-500">{formatDate(transaction.data)}</div>
+            <div className="w-24 text-sm text-slate-500">{formatDate(transaction.data)}</div>
             <div className="flex-1">
               <div className="font-medium text-dark text-sm truncate max-w-md">
                 {transaction.descrizione || transaction.causale || 'Movimento senza descrizione'}
               </div>
               {transaction.causale && transaction.descrizione && (
-                <div className="text-xs text-gray-500">{transaction.causale}</div>
+                <div className="text-xs text-slate-500">{transaction.causale}</div>
               )}
             </div>
           </div>
@@ -114,11 +114,11 @@ const TransactionRow: React.FC<{
       </div>
 
       {expanded && (
-        <div className="px-4 pb-4 bg-gray-50">
-          <div className="bg-white rounded-lg p-4" shadow-sm>
+        <div className="px-4 pb-4 bg-slate-50">
+          <div className="bg-white rounded-lg p-4" shadow-card>
             {/* Transaction details */}
-            <div className="mb-4 p-3 bg-gray-50 rounded-lg">
-              <div className="text-xs font-medium text-gray-500 mb-2">DETTAGLI TRANSAZIONE</div>
+            <div className="mb-4 p-3 bg-slate-50 rounded-lg">
+              <div className="text-xs font-medium text-slate-500 mb-2">DETTAGLI TRANSAZIONE</div>
               <div className="space-y-1">
                 {transaction.descrizione && (
                   <div className="text-sm text-dark">
@@ -131,12 +131,12 @@ const TransactionRow: React.FC<{
                   </div>
                 )}
                 {transaction.dataValuta && (
-                  <div className="text-sm text-gray-500">
+                  <div className="text-sm text-slate-500">
                     <span className="font-medium">Data Valuta:</span> {formatDate(transaction.dataValuta)}
                   </div>
                 )}
                 {transaction.saldo !== undefined && (
-                  <div className="text-sm text-gray-500">
+                  <div className="text-sm text-slate-500">
                     <span className="font-medium">Saldo dopo operazione:</span> {formatCurrency(transaction.saldo)}
                   </div>
                 )}
@@ -155,7 +155,7 @@ const TransactionRow: React.FC<{
 
             {/* Matched invoice */}
             {matchedInvoice && (
-              <div className="mb-4 p-3 border-2 border-green-500 bg-white rounded-lg" shadow-sm>
+              <div className="mb-4 p-3 border-2 border-green-500 bg-white rounded-lg" shadow-card>
                 <div className="flex items-center gap-2 mb-2">
                   <Link2 size={16} className="text-green-600" />
                   <span className="text-sm font-medium text-dark">FATTURA ABBINATA</span>
@@ -163,13 +163,13 @@ const TransactionRow: React.FC<{
                 <div className="space-y-2">
                   <div className="text-sm text-dark">
                     <span className="font-semibold">{formatInvoiceId(matchedInvoice.id, matchedInvoice.anno)}</span>
-                    <span className="mx-2 text-gray-500">•</span>
+                    <span className="mx-2 text-slate-500">•</span>
                     <span className="font-medium">{matchedInvoice.nomeProgetto || matchedInvoice.spesa || 'N/A'}</span>
-                    <span className="mx-2 text-gray-500">•</span>
+                    <span className="mx-2 text-slate-500">•</span>
                     <span className="font-semibold text-green-600">{formatCurrency((matchedInvoice.flusso || 0) + (matchedInvoice.iva || 0))}</span>
                   </div>
                   {matchedInvoice.note && (
-                    <div className="text-sm text-dark bg-gray-50 rounded p-2 border border-light">
+                    <div className="text-sm text-dark bg-slate-50 rounded p-2 border border-slate-200">
                       <span className="font-medium text-dark">Descrizione:</span> {matchedInvoice.note}
                     </div>
                   )}
@@ -208,7 +208,7 @@ const TransactionRow: React.FC<{
                 <button
                   onClick={(e) => { e.stopPropagation(); onIgnore(); }}
                   disabled={disabled}
-                  className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-50 text-gray-500 rounded-lg text-sm font-medium hover:bg-gray-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-50 text-slate-500 rounded-lg text-sm font-medium hover:bg-gray-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <X size={14} />
                   Ignora
@@ -237,7 +237,7 @@ const TransactionRow: React.FC<{
               <button
                 onClick={(e) => { e.stopPropagation(); onManualMatch(); }}
                 disabled={disabled}
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-50 text-gray-500 rounded-lg text-sm font-medium hover:bg-gray-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-50 text-slate-500 rounded-lg text-sm font-medium hover:bg-gray-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <RefreshCw size={14} />
                 Modifica Abbinamento
@@ -314,26 +314,26 @@ const ManualMatchModal: React.FC<{
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={onClose}>
       <div
-        className="bg-white rounded-2xl w-full max-w-2xl max-h-[80vh] overflow-hidden shadow-xl" shadow-sm
+        className="bg-white rounded-2xl w-full max-w-2xl max-h-[80vh] overflow-hidden shadow-xl" shadow-card
         onClick={e => e.stopPropagation()}
       >
-        <div className="p-6 border-b border-light">
+        <div className="p-6 border-b border-slate-200">
           <h3 className="text-xl font-semibold text-dark">Abbina Transazione</h3>
-          <p className="text-sm text-gray-500 mt-1">
+          <p className="text-sm text-slate-500 mt-1">
             {formatDate(transaction.data)} | {transaction.tipo === 'Entrata' ? '+' : '-'}{formatCurrency(transaction.importo)}
           </p>
-          <p className="text-sm text-gray-500 mt-1">{transaction.descrizione}</p>
+          <p className="text-sm text-slate-500 mt-1">{transaction.descrizione}</p>
         </div>
 
-        <div className="p-4 border-b border-light space-y-3">
+        <div className="p-4 border-b border-slate-200 space-y-3">
           <div className="relative">
-            <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
+            <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
             <input
               type="text"
               value={search}
               onChange={e => setSearch(e.target.value)}
               placeholder="Cerca per ID, progetto, importo..."
-              className="w-full pl-10 pr-4 py-2.5 border border-light rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+              className="w-full pl-10 pr-4 py-2.5 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
             />
           </div>
           <label className="flex items-center gap-2 cursor-pointer">
@@ -341,15 +341,15 @@ const ManualMatchModal: React.FC<{
               type="checkbox"
               checked={showPaid}
               onChange={e => setShowPaid(e.target.checked)}
-              className="w-4 h-4 text-primary border-light rounded focus:ring-2 focus:ring-primary/50"
+              className="w-4 h-4 text-primary border-slate-200 rounded focus:ring-2 focus:ring-primary/50"
             />
-            <span className="text-sm text-gray-500">Mostra anche fatture già pagate</span>
+            <span className="text-sm text-slate-500">Mostra anche fatture già pagate</span>
           </label>
         </div>
 
         <div className="overflow-y-auto max-h-96">
           {filteredInvoices.length === 0 ? (
-            <div className="p-8 text-center text-gray-500">
+            <div className="p-8 text-center text-slate-500">
               Nessuna fattura trovata
             </div>
           ) : (
@@ -364,7 +364,7 @@ const ManualMatchModal: React.FC<{
                 <div
                   key={inv.id}
                   onClick={() => onMatch(inv.id)}
-                  className={`p-4 border-b border-light last:border-b-0 cursor-pointer hover:bg-gray-50 transition-colors ${
+                  className={`p-4 border-b border-slate-200 last:border-b-0 cursor-pointer hover:bg-slate-50 transition-colors ${
                     isExactMatch ? 'bg-green-50' :
                     isResidualMatch ? 'bg-yellow-50' :
                     paymentInfo.status === 'parziale' ? 'bg-yellow-50/30' : ''
@@ -384,11 +384,11 @@ const ManualMatchModal: React.FC<{
                           {paymentInfo.status === 'pagato' ? 'Pagato' : paymentInfo.status === 'parziale' ? `Parziale ${paymentInfo.percentuale.toFixed(0)}%` : 'Non Pagato'}
                         </span>
                       </div>
-                      <div className="text-sm text-gray-500 mt-1">
+                      <div className="text-sm text-slate-500 mt-1">
                         {inv.nomeProgetto || inv.spesa || 'N/A'} | {inv.data instanceof Date ? formatDate(inv.data.toISOString()) : formatDate(inv.data)}
                       </div>
                       {paymentInfo.status === 'parziale' && (
-                        <div className="text-xs text-gray-500 mt-1">
+                        <div className="text-xs text-slate-500 mt-1">
                           Pagato: {formatCurrency(paymentInfo.totalePagato)} | Residuo: <span className="font-semibold text-orange-600">{formatCurrency(residuo)}</span>
                         </div>
                       )}
@@ -411,10 +411,10 @@ const ManualMatchModal: React.FC<{
           )}
         </div>
 
-        <div className="p-4 border-t border-light flex justify-end">
+        <div className="p-4 border-t border-slate-200 flex justify-end">
           <button
             onClick={onClose}
-            className="px-4 py-2 text-gray-500 hover:bg-gray-50 rounded-lg transition-colors"
+            className="px-4 py-2 text-slate-500 hover:bg-slate-50 rounded-lg transition-colors"
           >
             Annulla
           </button>
@@ -458,12 +458,12 @@ const CreateInvoiceModal: React.FC<{
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={onClose}>
       <div
-        className="bg-white rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-xl" shadow-sm
+        className="bg-white rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-xl" shadow-card
         onClick={e => e.stopPropagation()}
       >
-        <div className="p-6 border-b border-light">
+        <div className="p-6 border-b border-slate-200">
           <h3 className="text-xl font-semibold text-dark">Crea Fattura da Transazione</h3>
-          <p className="text-sm text-gray-500 mt-1">
+          <p className="text-sm text-slate-500 mt-1">
             {formatDate(transaction.data)} | {transaction.tipo === 'Entrata' ? '+' : '-'}{formatCurrency(transaction.importo)}
           </p>
         </div>
@@ -471,22 +471,22 @@ const CreateInvoiceModal: React.FC<{
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-500 mb-1">Tipo *</label>
+              <label className="block text-sm font-medium text-slate-500 mb-1">Tipo *</label>
               <select
                 value={formData.tipo}
                 onChange={(e) => setFormData({ ...formData, tipo: e.target.value as 'Entrata' | 'Uscita' })}
-                className="w-full px-4 py-2 border border-light rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/50"
+                className="w-full px-4 py-2 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/50"
               >
                 <option value="Entrata">Entrata</option>
                 <option value="Uscita">Uscita</option>
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-500 mb-1">Stato *</label>
+              <label className="block text-sm font-medium text-slate-500 mb-1">Stato *</label>
               <select
                 value={formData.statoFatturazione}
                 onChange={(e) => setFormData({ ...formData, statoFatturazione: e.target.value as 'Stimato' | 'Effettivo' | 'Nessuno' })}
-                className="w-full px-4 py-2 border border-light rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/50"
+                className="w-full px-4 py-2 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/50"
               >
                 <option value="Effettivo">Effettivo</option>
                 <option value="Stimato">Stimato</option>
@@ -496,34 +496,34 @@ const CreateInvoiceModal: React.FC<{
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-500 mb-1">Progetto</label>
+            <label className="block text-sm font-medium text-slate-500 mb-1">Progetto</label>
             <input
               type="text"
               value={formData.nomeProgetto}
               onChange={(e) => setFormData({ ...formData, nomeProgetto: e.target.value })}
-              className="w-full px-4 py-2 border border-light rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/50"
+              className="w-full px-4 py-2 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/50"
               placeholder="Nome progetto..."
             />
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-500 mb-1">Categoria Spesa</label>
+              <label className="block text-sm font-medium text-slate-500 mb-1">Categoria Spesa</label>
               <input
                 type="text"
                 value={formData.spesa}
                 onChange={(e) => setFormData({ ...formData, spesa: e.target.value })}
-                className="w-full px-4 py-2 border border-light rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/50"
+                className="w-full px-4 py-2 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/50"
                 placeholder="Es: Utenze, Tools..."
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-500 mb-1">Tipo Spesa</label>
+              <label className="block text-sm font-medium text-slate-500 mb-1">Tipo Spesa</label>
               <input
                 type="text"
                 value={formData.tipoSpesa}
                 onChange={(e) => setFormData({ ...formData, tipoSpesa: e.target.value })}
-                className="w-full px-4 py-2 border border-light rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/50"
+                className="w-full px-4 py-2 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/50"
                 placeholder="Es: Costi per servizi..."
               />
             </div>
@@ -531,35 +531,35 @@ const CreateInvoiceModal: React.FC<{
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-500 mb-1">Importo Netto *</label>
+              <label className="block text-sm font-medium text-slate-500 mb-1">Importo Netto *</label>
               <input
                 type="number"
                 step="0.01"
                 value={formData.flusso}
                 onChange={(e) => setFormData({ ...formData, flusso: parseFloat(e.target.value) || 0 })}
                 required
-                className="w-full px-4 py-2 border border-light rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/50"
+                className="w-full px-4 py-2 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/50"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-500 mb-1">IVA</label>
+              <label className="block text-sm font-medium text-slate-500 mb-1">IVA</label>
               <input
                 type="number"
                 step="0.01"
                 value={formData.iva}
                 onChange={(e) => setFormData({ ...formData, iva: parseFloat(e.target.value) || 0 })}
-                className="w-full px-4 py-2 border border-light rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/50"
+                className="w-full px-4 py-2 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/50"
               />
             </div>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-500 mb-1">Note</label>
+            <label className="block text-sm font-medium text-slate-500 mb-1">Note</label>
             <textarea
               value={formData.note}
               onChange={(e) => setFormData({ ...formData, note: e.target.value })}
               rows={3}
-              className="w-full px-4 py-2 border border-light rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/50 resize-none"
+              className="w-full px-4 py-2 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/50 resize-none"
             />
           </div>
 
@@ -567,7 +567,7 @@ const CreateInvoiceModal: React.FC<{
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 px-4 py-2 border border-light rounded-xl text-gray-500 hover:bg-gray-50 transition-colors"
+              className="flex-1 px-4 py-2 border border-slate-200 rounded-xl text-slate-500 hover:bg-slate-50 transition-colors"
             >
               Annulla
             </button>
@@ -607,12 +607,12 @@ const CreateCashflowModal: React.FC<{
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={onClose}>
       <div
-        className="bg-white rounded-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-xl" shadow-sm
+        className="bg-white rounded-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-xl" shadow-card
         onClick={e => e.stopPropagation()}
       >
-        <div className="p-6 border-b border-light">
+        <div className="p-6 border-b border-slate-200">
           <h3 className="text-xl font-semibold text-dark">Crea Movimento da Transazione</h3>
-          <p className="text-sm text-gray-500 mt-1">
+          <p className="text-sm text-slate-500 mt-1">
             {formatDate(transaction.data)} | {transaction.tipo === 'Entrata' ? '+' : '-'}{formatCurrency(transaction.importo)}
           </p>
         </div>
@@ -620,21 +620,21 @@ const CreateCashflowModal: React.FC<{
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-500 mb-1">Data *</label>
+              <label className="block text-sm font-medium text-slate-500 mb-1">Data *</label>
               <input
                 type="date"
                 value={formData.dataPagamento}
                 onChange={(e) => setFormData({ ...formData, dataPagamento: e.target.value })}
                 required
-                className="w-full px-4 py-2 border border-light rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/50"
+                className="w-full px-4 py-2 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/50"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-500 mb-1">Tipo *</label>
+              <label className="block text-sm font-medium text-slate-500 mb-1">Tipo *</label>
               <select
                 value={formData.tipo}
                 onChange={(e) => setFormData({ ...formData, tipo: e.target.value as 'Entrata' | 'Uscita' })}
-                className="w-full px-4 py-2 border border-light rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/50"
+                className="w-full px-4 py-2 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/50"
               >
                 <option value="Entrata">Entrata</option>
                 <option value="Uscita">Uscita</option>
@@ -643,48 +643,48 @@ const CreateCashflowModal: React.FC<{
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-500 mb-1">Descrizione *</label>
+            <label className="block text-sm font-medium text-slate-500 mb-1">Descrizione *</label>
             <input
               type="text"
               value={formData.descrizione}
               onChange={(e) => setFormData({ ...formData, descrizione: e.target.value })}
               required
-              className="w-full px-4 py-2 border border-light rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/50"
+              className="w-full px-4 py-2 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/50"
               placeholder="Descrizione movimento..."
             />
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-500 mb-1">Importo *</label>
+              <label className="block text-sm font-medium text-slate-500 mb-1">Importo *</label>
               <input
                 type="number"
                 step="0.01"
                 value={formData.importo}
                 onChange={(e) => setFormData({ ...formData, importo: parseFloat(e.target.value) || 0 })}
                 required
-                className="w-full px-4 py-2 border border-light rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/50"
+                className="w-full px-4 py-2 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/50"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-500 mb-1">Categoria</label>
+              <label className="block text-sm font-medium text-slate-500 mb-1">Categoria</label>
               <input
                 type="text"
                 value={formData.categoria}
                 onChange={(e) => setFormData({ ...formData, categoria: e.target.value })}
-                className="w-full px-4 py-2 border border-light rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/50"
+                className="w-full px-4 py-2 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/50"
                 placeholder="Es: Banca, Altro..."
               />
             </div>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-500 mb-1">Note</label>
+            <label className="block text-sm font-medium text-slate-500 mb-1">Note</label>
             <textarea
               value={formData.note}
               onChange={(e) => setFormData({ ...formData, note: e.target.value })}
               rows={2}
-              className="w-full px-4 py-2 border border-light rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/50 resize-none"
+              className="w-full px-4 py-2 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/50 resize-none"
               placeholder="Note aggiuntive..."
             />
           </div>
@@ -693,7 +693,7 @@ const CreateCashflowModal: React.FC<{
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 px-4 py-2 border border-light rounded-xl text-gray-500 hover:bg-gray-50 transition-colors"
+              className="flex-1 px-4 py-2 border border-slate-200 rounded-xl text-slate-500 hover:bg-slate-50 transition-colors"
             >
               Annulla
             </button>
@@ -995,15 +995,15 @@ const UnmatchedView: React.FC<UnmatchedViewProps> = ({ unmatchedBankTransactions
   return (
     <div className="grid grid-cols-2 gap-6">
       {/* Transazioni Bancarie Non Abbinate */}
-      <div className="bg-white rounded-2xl border border-light p-6" shadow-sm>
+      <div className="bg-white rounded-2xl border border-slate-200 p-6" shadow-card>
         <div className="mb-4">
           <h3 className="text-lg font-semibold text-dark">Transazioni Bancarie Non Abbinate</h3>
-          <p className="text-sm text-gray-500 mt-1">Totale: {formatCurrency(totalBankAmount)}</p>
+          <p className="text-sm text-slate-500 mt-1">Totale: {formatCurrency(totalBankAmount)}</p>
         </div>
 
         <div className="space-y-3">
           {unmatchedBankTransactions.length === 0 ? (
-            <div className="text-center py-8 text-gray-500">
+            <div className="text-center py-8 text-slate-500">
               <Check className="w-12 h-12 mx-auto mb-2" />
               <p>Tutte le transazioni bancarie sono state riconciliate</p>
             </div>
@@ -1013,9 +1013,9 @@ const UnmatchedView: React.FC<UnmatchedViewProps> = ({ unmatchedBankTransactions
                 <div className="flex items-start justify-between mb-2">
                   <div className="flex-1">
                     <p className="font-medium text-dark">{tx.descrizione}</p>
-                    <p className="text-sm text-gray-500">{new Date(tx.data).toLocaleDateString('it-IT')}</p>
+                    <p className="text-sm text-slate-500">{new Date(tx.data).toLocaleDateString('it-IT')}</p>
                     {tx.causale && (
-                      <p className="text-xs text-gray-500 mt-1">{tx.causale}</p>
+                      <p className="text-xs text-slate-500 mt-1">{tx.causale}</p>
                     )}
                   </div>
                   <div className="text-right ml-4">
@@ -1039,15 +1039,15 @@ const UnmatchedView: React.FC<UnmatchedViewProps> = ({ unmatchedBankTransactions
       </div>
 
       {/* Flussi di Cassa Non Abbinati */}
-      <div className="bg-white rounded-2xl border border-light p-6" shadow-sm>
+      <div className="bg-white rounded-2xl border border-slate-200 p-6" shadow-card>
         <div className="mb-4">
           <h3 className="text-lg font-semibold text-dark">Flussi di Cassa Non Abbinati</h3>
-          <p className="text-sm text-gray-500 mt-1">Totale: {formatCurrency(totalCashflowAmount)}</p>
+          <p className="text-sm text-slate-500 mt-1">Totale: {formatCurrency(totalCashflowAmount)}</p>
         </div>
 
         <div className="space-y-3">
           {unmatchedCashflows.length === 0 ? (
-            <div className="text-center py-8 text-gray-500">
+            <div className="text-center py-8 text-slate-500">
               <Check className="w-12 h-12 mx-auto mb-2" />
               <p>Tutti i flussi di cassa sono stati riconciliati</p>
             </div>
@@ -1063,10 +1063,10 @@ const UnmatchedView: React.FC<UnmatchedViewProps> = ({ unmatchedBankTransactions
                     <div className="flex-1">
                       <p className="font-medium text-dark">{descrizione}</p>
                       {cf.dataPagamento && (
-                        <p className="text-sm text-gray-500">{new Date(cf.dataPagamento).toLocaleDateString('it-IT')}</p>
+                        <p className="text-sm text-slate-500">{new Date(cf.dataPagamento).toLocaleDateString('it-IT')}</p>
                       )}
                       {cf.invoice && (
-                        <p className="text-xs text-gray-500 mt-1">Da Fattura: {formatInvoiceId(cf.invoice.id, cf.invoice.anno)}</p>
+                        <p className="text-xs text-slate-500 mt-1">Da Fattura: {formatInvoiceId(cf.invoice.id, cf.invoice.anno)}</p>
                       )}
                     </div>
                     <div className="text-right ml-4">
@@ -1107,7 +1107,7 @@ const SideBySideView: React.FC<SideBySideViewProps> = ({ rows }) => {
       return 'bg-orange-100 text-orange-700';
     }
     if (status === 'unmatched') return 'bg-red-100 text-red-700';
-    return 'bg-gray-50 text-gray-500';
+    return 'bg-slate-50 text-slate-500';
   };
 
   const getMatchStatusLabel = (status: string) => {
@@ -1121,24 +1121,24 @@ const SideBySideView: React.FC<SideBySideViewProps> = ({ rows }) => {
   };
 
   return (
-    <div className="bg-white rounded-2xl border border-light" shadow-sm>
+    <div className="bg-white rounded-2xl border border-slate-200" shadow-card>
       <div className="overflow-x-auto">
         <table className="w-full">
           <thead>
-            <tr className="border-b border-light bg-gray-50">
-              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-500">Data</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-500">Descrizione Banca</th>
-              <th className="px-4 py-3 text-right text-sm font-semibold text-gray-500">Importo Banca</th>
-              <th className="px-4 py-3 text-center text-sm font-semibold text-gray-500">Match</th>
-              <th className="px-4 py-3 text-right text-sm font-semibold text-gray-500">Importo Cashflow</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-500">Descrizione Cashflow</th>
-              <th className="px-4 py-3 text-center text-sm font-semibold text-gray-500">Stato</th>
+            <tr className="border-b border-slate-200 bg-slate-50">
+              <th className="px-4 py-3 text-left text-sm font-semibold text-slate-500">Data</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold text-slate-500">Descrizione Banca</th>
+              <th className="px-4 py-3 text-right text-sm font-semibold text-slate-500">Importo Banca</th>
+              <th className="px-4 py-3 text-center text-sm font-semibold text-slate-500">Match</th>
+              <th className="px-4 py-3 text-right text-sm font-semibold text-slate-500">Importo Cashflow</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold text-slate-500">Descrizione Cashflow</th>
+              <th className="px-4 py-3 text-center text-sm font-semibold text-slate-500">Stato</th>
             </tr>
           </thead>
           <tbody>
             {rows.length === 0 ? (
               <tr>
-                <td colSpan={7} className="px-4 py-8 text-center text-gray-500">
+                <td colSpan={7} className="px-4 py-8 text-center text-slate-500">
                   Nessun dato disponibile
                 </td>
               </tr>
@@ -1153,8 +1153,8 @@ const SideBySideView: React.FC<SideBySideViewProps> = ({ rows }) => {
                 const cashflowTipo = row.cashflow?.tipo || row.cashflow?.invoice?.tipo;
 
                 return (
-                  <tr key={idx} className="border-b border-light hover:bg-gray-50">
-                    <td className="px-4 py-3 text-sm text-gray-500">
+                  <tr key={idx} className="border-b border-slate-200 hover:bg-slate-50">
+                    <td className="px-4 py-3 text-sm text-slate-500">
                       {row.bankTransaction?.data
                         ? new Date(row.bankTransaction.data).toLocaleDateString('it-IT')
                         : row.cashflow?.dataPagamento
@@ -1168,7 +1168,7 @@ const SideBySideView: React.FC<SideBySideViewProps> = ({ rows }) => {
                             {row.bankTransaction.descrizione || '-'}
                           </div>
                           {row.bankTransaction.causale && (
-                            <div className="text-xs text-gray-500 mt-0.5">
+                            <div className="text-xs text-slate-500 mt-0.5">
                               {row.bankTransaction.causale}
                             </div>
                           )}
@@ -1181,7 +1181,7 @@ const SideBySideView: React.FC<SideBySideViewProps> = ({ rows }) => {
                           {bankTipo === 'Entrata' ? '+' : '-'}{formatCurrency(bankAmount)}
                         </span>
                       ) : (
-                        <span className="text-gray-500">-</span>
+                        <span className="text-slate-500">-</span>
                       )}
                     </td>
                     <td className="px-4 py-3 text-center">
@@ -1189,13 +1189,13 @@ const SideBySideView: React.FC<SideBySideViewProps> = ({ rows }) => {
                         <div className="flex items-center justify-center">
                           <Check className="w-5 h-5 text-green-600" />
                           {row.confidence && (
-                            <span className="ml-1 text-xs text-gray-500">{row.confidence}%</span>
+                            <span className="ml-1 text-xs text-slate-500">{row.confidence}%</span>
                           )}
                         </div>
                       ) : row.matchStatus === 'unmatched' ? (
                         <AlertCircle className="w-5 h-5 text-red-500 mx-auto" />
                       ) : (
-                        <span className="text-gray-500">-</span>
+                        <span className="text-slate-500">-</span>
                       )}
                     </td>
                     <td className="px-4 py-3 text-sm text-right">
@@ -1204,7 +1204,7 @@ const SideBySideView: React.FC<SideBySideViewProps> = ({ rows }) => {
                           {cashflowTipo === 'Entrata' ? '+' : '-'}{formatCurrency(cashflowAmount)}
                         </span>
                       ) : (
-                        <span className="text-gray-500">-</span>
+                        <span className="text-slate-500">-</span>
                       )}
                     </td>
                     <td className="px-4 py-3 text-sm">
@@ -1214,7 +1214,7 @@ const SideBySideView: React.FC<SideBySideViewProps> = ({ rows }) => {
                             {row.cashflow.invoice?.nomeProgetto || row.cashflow.invoice?.spesa || row.cashflow.descrizione || '-'}
                           </div>
                           {(row.cashflow.invoice?.note || row.cashflow.note) && (
-                            <div className="text-xs text-gray-500 mt-0.5">
+                            <div className="text-xs text-slate-500 mt-0.5">
                               {row.cashflow.invoice?.note || row.cashflow.note}
                             </div>
                           )}
@@ -1276,22 +1276,22 @@ const ReportView: React.FC<ReportViewProps> = ({ report }) => {
       </div>
 
       {/* Comparison Table */}
-      <div className="bg-white rounded-2xl border border-light overflow-hidden" shadow-sm>
-        <div className="px-6 py-4 border-b border-light">
+      <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden" shadow-card>
+        <div className="px-6 py-4 border-b border-slate-200">
           <h3 className="text-lg font-semibold text-dark">Confronto Totali</h3>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
-              <tr className="bg-gray-50 border-b border-light">
-                <th className="px-6 py-3 text-left text-sm font-semibold text-gray-500">Categoria</th>
-                <th className="px-6 py-3 text-right text-sm font-semibold text-gray-500">Banca</th>
-                <th className="px-6 py-3 text-right text-sm font-semibold text-gray-500">Registrato</th>
-                <th className="px-6 py-3 text-right text-sm font-semibold text-gray-500">Differenza</th>
+              <tr className="bg-slate-50 border-b border-slate-200">
+                <th className="px-6 py-3 text-left text-sm font-semibold text-slate-500">Categoria</th>
+                <th className="px-6 py-3 text-right text-sm font-semibold text-slate-500">Banca</th>
+                <th className="px-6 py-3 text-right text-sm font-semibold text-slate-500">Registrato</th>
+                <th className="px-6 py-3 text-right text-sm font-semibold text-slate-500">Differenza</th>
               </tr>
             </thead>
             <tbody>
-              <tr className="border-b border-light">
+              <tr className="border-b border-slate-200">
                 <td className="px-6 py-4 text-sm font-medium text-dark">Entrate Totali</td>
                 <td className="px-6 py-4 text-sm text-right text-green-600 font-medium">
                   {formatCurrency(report.totalBankEntrate)}
@@ -1300,7 +1300,7 @@ const ReportView: React.FC<ReportViewProps> = ({ report }) => {
                   {formatCurrency(report.totalCashflowEntrate)}
                 </td>
                 <td className={`px-6 py-4 text-sm text-right font-medium ${
-                  hasDifference(report.differenceEntrate) ? 'text-red-600' : 'text-gray-500'
+                  hasDifference(report.differenceEntrate) ? 'text-red-600' : 'text-slate-500'
                 }`}>
                   {report.differenceEntrate >= 0 ? '+' : ''}{formatCurrency(report.differenceEntrate)}
                   {hasDifference(report.differenceEntrate) && (
@@ -1308,7 +1308,7 @@ const ReportView: React.FC<ReportViewProps> = ({ report }) => {
                   )}
                 </td>
               </tr>
-              <tr className="border-b border-light">
+              <tr className="border-b border-slate-200">
                 <td className="px-6 py-4 text-sm font-medium text-dark">Uscite Totali</td>
                 <td className="px-6 py-4 text-sm text-right text-red-600 font-medium">
                   {formatCurrency(report.totalBankUscite)}
@@ -1317,7 +1317,7 @@ const ReportView: React.FC<ReportViewProps> = ({ report }) => {
                   {formatCurrency(report.totalCashflowUscite)}
                 </td>
                 <td className={`px-6 py-4 text-sm text-right font-medium ${
-                  hasDifference(report.differenceUscite) ? 'text-red-600' : 'text-gray-500'
+                  hasDifference(report.differenceUscite) ? 'text-red-600' : 'text-slate-500'
                 }`}>
                   {report.differenceUscite >= 0 ? '+' : ''}{formatCurrency(report.differenceUscite)}
                   {hasDifference(report.differenceUscite) && (
@@ -1325,7 +1325,7 @@ const ReportView: React.FC<ReportViewProps> = ({ report }) => {
                   )}
                 </td>
               </tr>
-              <tr className="bg-gray-50 font-semibold">
+              <tr className="bg-slate-50 font-semibold">
                 <td className="px-6 py-4 text-sm text-dark">Saldo Netto</td>
                 <td className={`px-6 py-4 text-sm text-right ${
                   report.totalBankNet >= 0 ? 'text-green-600' : 'text-red-600'
@@ -1338,7 +1338,7 @@ const ReportView: React.FC<ReportViewProps> = ({ report }) => {
                   {formatCurrency(report.totalCashflowNet)}
                 </td>
                 <td className={`px-6 py-4 text-sm text-right ${
-                  hasDifference(report.differenceNet) ? 'text-red-600' : 'text-gray-500'
+                  hasDifference(report.differenceNet) ? 'text-red-600' : 'text-slate-500'
                 }`}>
                   {report.differenceNet >= 0 ? '+' : ''}{formatCurrency(report.differenceNet)}
                   {hasDifference(report.differenceNet) && (
@@ -1364,7 +1364,7 @@ const ReportView: React.FC<ReportViewProps> = ({ report }) => {
           <div className="p-6">
             <div className="space-y-3">
               {report.anomalies.map((anomaly, idx) => (
-                <div key={idx} className="bg-white border border-red-200 rounded-xl p-4" shadow-sm>
+                <div key={idx} className="bg-white border border-red-200 rounded-xl p-4" shadow-card>
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-2">
@@ -1375,7 +1375,7 @@ const ReportView: React.FC<ReportViewProps> = ({ report }) => {
                           {anomaly.type === 'no_bank_transaction' ? 'Transazione Mancante' : 'Importo Discrepante'}
                         </span>
                       </div>
-                      <div className="text-sm text-gray-500 mb-1">
+                      <div className="text-sm text-slate-500 mb-1">
                         {anomaly.invoice.nomeProgetto || anomaly.invoice.spesa || 'N/A'}
                       </div>
                       <div className="text-sm text-red-600 font-medium">
@@ -1383,13 +1383,13 @@ const ReportView: React.FC<ReportViewProps> = ({ report }) => {
                       </div>
                     </div>
                     <div className="text-right ml-4">
-                      <div className="text-xs text-gray-500 mb-1">Registrato</div>
+                      <div className="text-xs text-slate-500 mb-1">Registrato</div>
                       <div className="text-lg font-bold text-dark">
                         {formatCurrency(anomaly.cashflowAmount)}
                       </div>
                       {anomaly.bankTransactionAmount !== undefined && (
                         <>
-                          <div className="text-xs text-gray-500 mt-2 mb-1">Banca</div>
+                          <div className="text-xs text-slate-500 mt-2 mb-1">Banca</div>
                           <div className="text-lg font-bold text-red-600">
                             {formatCurrency(anomaly.bankTransactionAmount)}
                           </div>
@@ -1874,7 +1874,7 @@ export const Reconciliation: React.FC = () => {
       <div className="mb-6 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
         <div>
           <h1 className="text-2xl lg:text-3xl font-bold text-dark">Riconciliazione Bancaria</h1>
-          <p className="text-gray-500 mt-1">Carica l'estratto conto e riconcilia le transazioni con Claude AI</p>
+          <p className="text-slate-500 mt-1">Carica l'estratto conto e riconcilia le transazioni con Claude AI</p>
         </div>
         <div className="flex items-center gap-3">
           <input
@@ -1921,7 +1921,7 @@ export const Reconciliation: React.FC = () => {
                 className={`flex-shrink-0 px-4 py-2.5 rounded-xl border transition-colors relative ${
                   selectedSession === session.id
                     ? 'bg-primary text-white border-primary'
-                    : 'bg-white text-gray-500 border-light hover:border-primary'
+                    : 'bg-white text-slate-500 border-slate-200 hover:border-primary'
                 }`}
               >
                 <div className="flex items-center gap-2">
@@ -1930,7 +1930,7 @@ export const Reconciliation: React.FC = () => {
                     <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${
                       selectedSession === session.id
                         ? 'bg-white/20 text-white'
-                        : 'bg-gray-50 text-gray-500'
+                        : 'bg-slate-50 text-slate-500'
                     }`}>
                       Chiusa
                     </span>
@@ -1950,34 +1950,34 @@ export const Reconciliation: React.FC = () => {
         <>
           {/* KPI Cards */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-            <div className="bg-white rounded-2xl p-4" shadow-sm>
-              <div className="text-gray-500 text-sm mb-1">Totale Transazioni</div>
+            <div className="bg-white rounded-2xl p-4" shadow-card>
+              <div className="text-slate-500 text-sm mb-1">Totale Transazioni</div>
               <div className="text-2xl font-bold text-dark">{stats.total}</div>
             </div>
-            <div className="bg-white rounded-2xl p-4" shadow-sm>
+            <div className="bg-white rounded-2xl p-4" shadow-card>
               <div className="text-yellow-600 text-sm mb-1">Da Verificare</div>
               <div className="text-2xl font-bold text-yellow-600">{stats.pending}</div>
             </div>
-            <div className="bg-white rounded-2xl p-4" shadow-sm>
+            <div className="bg-white rounded-2xl p-4" shadow-card>
               <div className="text-green-600 text-sm mb-1">Riconciliati</div>
               <div className="text-2xl font-bold text-green-600">{stats.matched}</div>
             </div>
-            <div className="bg-white rounded-2xl p-4" shadow-sm>
-              <div className="text-gray-500 text-sm mb-1">Ignorati</div>
-              <div className="text-2xl font-bold text-gray-500">{stats.ignored}</div>
+            <div className="bg-white rounded-2xl p-4" shadow-card>
+              <div className="text-slate-500 text-sm mb-1">Ignorati</div>
+              <div className="text-2xl font-bold text-slate-500">{stats.ignored}</div>
             </div>
           </div>
 
           {/* Session status and actions */}
           {currentSession.status === 'closed' && (
-            <div className="mb-6 p-4 bg-gray-50 border border-light rounded-xl flex items-center justify-between">
+            <div className="mb-6 p-4 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 bg-gray-600 rounded-full flex items-center justify-center">
                   <FileCheck size={20} className="text-white" />
                 </div>
                 <div>
                   <div className="font-medium text-dark">Sessione Chiusa</div>
-                  <div className="text-sm text-gray-500">
+                  <div className="text-sm text-slate-500">
                     {currentSession.closedDate && `Chiusa il ${formatDate(currentSession.closedDate)}`}
                   </div>
                 </div>
@@ -2029,13 +2029,13 @@ export const Reconciliation: React.FC = () => {
           )}
 
           {/* Tab Navigation */}
-          <div className="flex items-center gap-2 mb-6 border-b border-light bg-white" shadow-sm>
+          <div className="flex items-center gap-2 mb-6 border-b border-slate-200 bg-white" shadow-card>
             <button
               onClick={() => setComparisonView('transactions')}
               className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 ${
                 comparisonView === 'transactions'
                   ? 'border-blue-600 text-dark bg-blue-50'
-                  : 'border-transparent text-gray-500 hover:text-dark hover:bg-gray-50'
+                  : 'border-transparent text-slate-500 hover:text-dark hover:bg-slate-50'
               }`}
             >
               Transazioni
@@ -2045,7 +2045,7 @@ export const Reconciliation: React.FC = () => {
               className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 ${
                 comparisonView === 'unmatched'
                   ? 'border-blue-600 text-dark bg-blue-50'
-                  : 'border-transparent text-gray-500 hover:text-dark hover:bg-gray-50'
+                  : 'border-transparent text-slate-500 hover:text-dark hover:bg-slate-50'
               }`}
             >
               Voci Mancanti
@@ -2055,7 +2055,7 @@ export const Reconciliation: React.FC = () => {
               className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 ${
                 comparisonView === 'sidebyside'
                   ? 'border-blue-600 text-dark bg-blue-50'
-                  : 'border-transparent text-gray-500 hover:text-dark hover:bg-gray-50'
+                  : 'border-transparent text-slate-500 hover:text-dark hover:bg-slate-50'
               }`}
             >
               Vista Affiancata
@@ -2065,7 +2065,7 @@ export const Reconciliation: React.FC = () => {
               className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 ${
                 comparisonView === 'report'
                   ? 'border-blue-600 text-dark bg-blue-50'
-                  : 'border-transparent text-gray-500 hover:text-dark hover:bg-gray-50'
+                  : 'border-transparent text-slate-500 hover:text-dark hover:bg-slate-50'
               }`}
             >
               Report Differenze
@@ -2080,7 +2080,7 @@ export const Reconciliation: React.FC = () => {
               <button
                 onClick={handleSelectAll}
                 disabled={currentSession.status === 'closed'}
-                className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium bg-gray-50 text-gray-500 hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium bg-slate-50 text-slate-500 hover:bg-slate-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {selectionState === 'all' ? (
                   <CheckSquare size={16} className="text-primary" />
@@ -2100,7 +2100,7 @@ export const Reconciliation: React.FC = () => {
                   className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
                     filter === f
                       ? 'bg-primary text-white'
-                      : 'bg-gray-50 text-gray-500 hover:bg-gray-50'
+                      : 'bg-slate-50 text-slate-500 hover:bg-slate-50'
                   }`}
                 >
                   {f === 'all' && 'Tutti'}
@@ -2128,7 +2128,7 @@ export const Reconciliation: React.FC = () => {
               <button
                 onClick={handleDeleteSession}
                 disabled={isDeleting || currentSession.status === 'closed'}
-                className="flex items-center gap-2 px-4 py-2 bg-gray-50 text-gray-500 rounded-lg font-medium hover:bg-gray-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex items-center gap-2 px-4 py-2 bg-slate-50 text-slate-500 rounded-lg font-medium hover:bg-gray-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <Trash2 size={16} />
                 Elimina Sessione
@@ -2153,9 +2153,9 @@ export const Reconciliation: React.FC = () => {
 
           {/* Conditional View Rendering */}
           {comparisonView === 'transactions' && (
-            <div className="bg-white rounded-2xl overflow-hidden" shadow-sm>
+            <div className="bg-white rounded-2xl overflow-hidden" shadow-card>
               {filteredTransactions.length === 0 ? (
-                <div className="p-8 text-center text-gray-500">
+                <div className="p-8 text-center text-slate-500">
                   {filter === 'all'
                     ? 'Nessuna transazione in questa sessione'
                     : `Nessuna transazione ${filter === 'pending' ? 'da verificare' : filter === 'matched' ? 'riconciliata' : 'ignorata'}`
@@ -2200,10 +2200,10 @@ export const Reconciliation: React.FC = () => {
         </>
       ) : (
         // Empty state
-        <div className="bg-white rounded-2xl p-12 text-center" shadow-sm>
+        <div className="bg-white rounded-2xl p-12 text-center" shadow-card>
           <FileCheck size={64} className="mx-auto text-gray-300 mb-4" />
           <h3 className="text-xl font-semibold text-dark mb-2">Nessun estratto conto caricato</h3>
-          <p className="text-gray-500 mb-6">
+          <p className="text-slate-500 mb-6">
             Carica un file Excel (.xlsx) con le transazioni bancarie per iniziare la riconciliazione
           </p>
           <button
