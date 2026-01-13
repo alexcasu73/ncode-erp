@@ -199,7 +199,8 @@ export const Cashflow: React.FC = () => {
           comparison = (invA.statoFatturazione || '').localeCompare(invB.statoFatturazione || '');
           break;
         case 'totale':
-          comparison = getImportoEffettivo(a) - getImportoEffettivo(b);
+          // Ordina per valore assoluto (ignora il segno +/-)
+          comparison = Math.abs(getImportoEffettivo(a)) - Math.abs(getImportoEffettivo(b));
           break;
       }
       return sortDirection === 'asc' ? comparison : -comparison;
