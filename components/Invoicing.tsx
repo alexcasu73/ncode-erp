@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { useData } from '../context/DataContext';
 import { Invoice, Deal, DealStage } from '../types';
-import { Plus, Download, Filter, ArrowUpCircle, ArrowDownCircle, Search, Calendar, Eye, Edit2, Trash2, X, Check, ChevronUp, ChevronDown, ChevronsUpDown } from 'lucide-react';
+import { Plus, Download, Filter, ArrowUpCircle, ArrowDownCircle, Search, Calendar, Eye, Edit2, Trash2, X, Check, ChevronUp, ChevronDown, ChevronsUpDown, RotateCcw } from 'lucide-react';
 
 // Mesi italiani
 const MESI = ['Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno', 'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre'];
@@ -49,7 +49,7 @@ export const Invoicing: React.FC = () => {
   });
   const [filterAnno, setFilterAnno] = useState<number | 'tutti'>(() => {
     const saved = localStorage.getItem('invoicing_filterAnno');
-    return saved ? (saved === 'tutti' ? 'tutti' : parseInt(saved)) : 'tutti';
+    return saved ? (saved === 'tutti' ? 'tutti' : parseInt(saved)) : new Date().getFullYear();
   });
   const [filterMeseTabella, setFilterMeseTabella] = useState<string>(() => {
     return localStorage.getItem('invoicing_filterMeseTabella') || 'tutti';
@@ -77,6 +77,17 @@ export const Invoicing: React.FC = () => {
   React.useEffect(() => {
     localStorage.setItem('invoicing_filterMeseTabella', filterMeseTabella);
   }, [filterMeseTabella]);
+
+  // Reset tutti i filtri
+  const resetAllFilters = () => {
+    setFilterAnno('tutti');
+    setFilterMese('tutti');
+    setVistaStato('tutti');
+    setSearchTerm('');
+    setFilterTipo('tutti');
+    setFilterStato('tutti');
+    setFilterMeseTabella('tutti');
+  };
 
   // Anni disponibili
   const anniDisponibili = useMemo((): number[] => {
@@ -316,6 +327,16 @@ export const Invoicing: React.FC = () => {
             Stimato ({totals.countStimate})
           </button>
         </div>
+
+        {/* Reset filtri */}
+        <button
+          onClick={resetAllFilters}
+          className="bg-white rounded-2xl shadow-sm p-2 hover:bg-gray-50 transition-colors flex items-center gap-2"
+          title="Reset tutti i filtri"
+        >
+          <RotateCcw size={16} className="text-gray-400 ml-2" />
+          <span className="px-3 py-2 font-medium text-dark text-sm">Reset</span>
+        </button>
       </div>
 
       {/* KPI Cards */}

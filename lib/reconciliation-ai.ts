@@ -20,15 +20,18 @@ function formatInvoice(inv: Invoice): string {
     ? inv.data.toISOString().split('T')[0]
     : inv.data;
 
-  return `ID: ${inv.id} | Data: ${data} | Totale: €${totale.toFixed(2)} | Progetto: ${inv.nomeProgetto || inv.spesa || 'N/A'} | Stato: ${inv.statoFatturazione}`;
+  const note = inv.note ? ` | Note: "${inv.note}"` : '';
+  return `ID: ${inv.id} | Data: ${data} | Totale: €${totale.toFixed(2)} | Progetto: ${inv.nomeProgetto || inv.spesa || 'N/A'} | Stato: ${inv.statoFatturazione}${note}`;
 }
 
 // Format cashflow record for AI context
 function formatCashflow(cf: CashflowRecord, invoice?: Invoice): string {
   const importo = cf.importo || (invoice ? (invoice.flusso || 0) + (invoice.iva || 0) : 0);
   const progetto = invoice?.nomeProgetto || invoice?.spesa || 'N/A';
+  const noteFattura = invoice?.note ? ` | Note Fattura: "${invoice.note}"` : '';
+  const noteCashflow = cf.note ? ` | Note Movimento: "${cf.note}"` : '';
 
-  return `ID: ${cf.id} | Data Pag: ${cf.dataPagamento || 'N/D'} | Importo: €${importo.toFixed(2)} | Fattura: ${cf.invoiceId} | Progetto: ${progetto}`;
+  return `ID: ${cf.id} | Data Pag: ${cf.dataPagamento || 'N/D'} | Importo: €${importo.toFixed(2)} | Fattura: ${cf.invoiceId} | Progetto: ${progetto}${noteFattura}${noteCashflow}`;
 }
 
 // Format bank transaction for AI context
@@ -79,11 +82,12 @@ ${cashflowWithInvoices.length > 0
 ISTRUZIONI:
 1. Cerca prima tra i movimenti di cassa già registrati - se trovi una corrispondenza esatta o molto probabile, usa il cashflowId
 2. Se non c'è un movimento di cassa corrispondente, cerca tra le fatture non ancora pagate
-3. Per la corrispondenza considera:
-   - L'importo (deve essere uguale o molto simile, tolleranza massima 1€)
-   - La data (la transazione bancaria dovrebbe essere vicina alla data fattura o data pagamento prevista)
-   - La descrizione (cerca riferimenti al progetto, numero fattura, o nome cliente)
-4. Se non trovi corrispondenze affidabili, rispondi con confidence 0
+3. Per la corrispondenza considera IN ORDINE DI IMPORTANZA:
+   - **Descrizione/Note**: Confronta la descrizione della transazione bancaria con le note delle fatture e dei movimenti. Cerca parole chiave comuni, nomi di progetti, riferimenti, numeri di fattura. Questo è il criterio PIÙ IMPORTANTE.
+   - **Importo**: Deve essere uguale o molto simile (tolleranza massima 1€). Se descrizione e importo matchano, confidence alta.
+   - **Data**: La transazione bancaria dovrebbe essere vicina alla data fattura o data pagamento prevista (tolleranza ±30 giorni).
+4. PRIORITÀ AL MATCHING SEMANTICO: Se la descrizione della transazione bancaria contiene parole chiave che matchano con le note della fattura/movimento (es. nome progetto, cliente, servizio), questo è un match molto probabile anche se le date non sono perfettamente allineate.
+5. Se non trovi corrispondenze affidabili (né per descrizione né per importo), rispondi con confidence 0
 
 Rispondi ESCLUSIVAMENTE con un oggetto JSON valido (senza markdown, senza backticks) nel seguente formato:
 {"invoiceId": "id_fattura_o_null", "cashflowId": "id_cashflow_o_null", "confidence": numero_da_0_a_100, "reason": "breve spiegazione in italiano"}
@@ -160,7 +164,22 @@ export async function suggestMatchesBatch(
   return results;
 }
 
-// Quick match without AI (exact amount match)
+// Helper to check if description matches notes
+function hasDescriptionMatch(description: string, notes: string | undefined): boolean {
+  if (!notes || !description) return false;
+
+  const descLower = description.toLowerCase();
+  const notesLower = notes.toLowerCase();
+
+  // Extract significant words (longer than 3 chars)
+  const descWords = descLower.split(/\s+/).filter(w => w.length > 3);
+  const notesWords = notesLower.split(/\s+/).filter(w => w.length > 3);
+
+  // Check if any significant word appears in both
+  return descWords.some(dw => notesWords.some(nw => nw.includes(dw) || dw.includes(nw)));
+}
+
+// Quick match without AI (exact amount match + optional description match)
 export function quickMatch(
   transaction: BankTransaction,
   invoices: Invoice[],
@@ -168,6 +187,7 @@ export function quickMatch(
 ): MatchSuggestion | null {
   const amount = transaction.importo;
   const tipo = transaction.tipo;
+  const description = transaction.descrizione || '';
 
   // First check cashflow records
   for (const cf of cashflowRecords) {
@@ -176,13 +196,16 @@ export function quickMatch(
 
     const cfAmount = cf.importo || ((invoice.flusso || 0) + (invoice.iva || 0));
 
-    // Exact match
+    // Exact match on amount
     if (Math.abs(cfAmount - amount) < 0.01) {
+      const hasDescMatch = hasDescriptionMatch(description, invoice.note) || hasDescriptionMatch(description, cf.note);
       return {
         invoiceId: invoice.id,
         cashflowId: cf.id,
-        confidence: 95,
-        reason: 'Corrispondenza esatta dell\'importo con movimento di cassa esistente'
+        confidence: hasDescMatch ? 98 : 95,
+        reason: hasDescMatch
+          ? 'Corrispondenza esatta dell\'importo e della descrizione con movimento esistente'
+          : 'Corrispondenza esatta dell\'importo con movimento di cassa esistente'
       };
     }
   }
@@ -196,13 +219,16 @@ export function quickMatch(
 
     const invAmount = (inv.flusso || 0) + (inv.iva || 0);
 
-    // Exact match
+    // Exact match on amount
     if (Math.abs(invAmount - amount) < 0.01) {
+      const hasDescMatch = hasDescriptionMatch(description, inv.note);
       return {
         invoiceId: inv.id,
         cashflowId: null,
-        confidence: 85,
-        reason: 'Corrispondenza esatta dell\'importo con fattura non ancora pagata'
+        confidence: hasDescMatch ? 90 : 85,
+        reason: hasDescMatch
+          ? 'Corrispondenza esatta dell\'importo e della descrizione con fattura non ancora pagata'
+          : 'Corrispondenza esatta dell\'importo con fattura non ancora pagata'
       };
     }
   }

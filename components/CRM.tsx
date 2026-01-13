@@ -1,7 +1,7 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import { useData } from '../context/DataContext';
 import { Customer } from '../types';
-import { Search, Plus, Filter, Mail, Phone, MapPin, Edit2, Trash2, X, Check, Building2, ChevronUp, ChevronDown, ChevronsUpDown } from 'lucide-react';
+import { Search, Plus, Filter, Mail, Phone, MapPin, Edit2, Trash2, X, Check, Building2, ChevronUp, ChevronDown, ChevronsUpDown, Upload, Image as ImageIcon } from 'lucide-react';
 
 // Helper per formattare valuta
 const formatCurrency = (value: number): string => {
@@ -343,13 +343,15 @@ const CustomerModal: React.FC<CustomerModalProps> = ({ customer, onClose, onSave
       email: '',
       status: 'Prospetto',
       revenue: 0,
-      avatar: '',
+      avatar: undefined,
       vatId: '',
       sdiCode: '',
       address: '',
       phone: ''
     };
   });
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -358,6 +360,37 @@ const CustomerModal: React.FC<CustomerModalProps> = ({ customer, onClose, onSave
 
   const updateField = (field: keyof Customer, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      alert('Seleziona un file immagine valido');
+      return;
+    }
+
+    // Validate file size (max 2MB)
+    if (file.size > 2 * 1024 * 1024) {
+      alert('L\'immagine deve essere inferiore a 2MB');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const base64 = event.target?.result as string;
+      updateField('avatar', base64);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const removeImage = () => {
+    updateField('avatar', undefined);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
   };
 
   return (
@@ -485,16 +518,53 @@ const CustomerModal: React.FC<CustomerModalProps> = ({ customer, onClose, onSave
             </div>
           </div>
 
-          {/* Avatar URL */}
+          {/* Immagine */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">URL Immagine (opzionale)</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Immagine (opzionale)</label>
             <input
-              type="url"
-              value={formData.avatar || ''}
-              onChange={(e) => updateField('avatar', e.target.value)}
-              placeholder="https://esempio.com/avatar.jpg"
-              className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:outline-none"
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handleImageUpload}
+              className="hidden"
             />
+            {formData.avatar ? (
+              <div className="flex items-center gap-4">
+                <div className="relative">
+                  <img
+                    src={formData.avatar}
+                    alt="Anteprima"
+                    className="w-20 h-20 rounded-xl object-cover border border-gray-200"
+                  />
+                  <button
+                    type="button"
+                    onClick={removeImage}
+                    className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 transition-colors"
+                  >
+                    <X size={14} />
+                  </button>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="px-4 py-2 text-sm text-gray-600 border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors"
+                >
+                  Cambia immagine
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="w-full p-6 border-2 border-dashed border-gray-200 rounded-xl hover:border-primary hover:bg-primary/5 transition-colors flex flex-col items-center gap-2"
+              >
+                <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center">
+                  <ImageIcon size={24} className="text-gray-400" />
+                </div>
+                <span className="text-sm text-gray-500">Clicca per caricare un'immagine</span>
+                <span className="text-xs text-gray-400">PNG, JPG, GIF (max 2MB)</span>
+              </button>
+            )}
           </div>
 
           {/* Actions */}

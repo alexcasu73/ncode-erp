@@ -21,6 +21,12 @@ const formatDate = (dateStr: string): string => {
   return date.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' });
 };
 
+// Format invoice ID: "Fattura_xyz" -> "xyz/anno"
+const formatInvoiceId = (id: string, anno: number): string => {
+  const numero = id.replace('Fattura_', '');
+  return `${numero}/${anno}`;
+};
+
 // Transaction row component
 const TransactionRow: React.FC<{
   transaction: BankTransaction;
@@ -34,7 +40,8 @@ const TransactionRow: React.FC<{
   onToggleSelect: () => void;
   onCreateInvoice: () => void;
   onCreateCashflow: () => void;
-}> = ({ transaction, invoices, onConfirm, onIgnore, onManualMatch, onRunAI, isProcessing, isSelected, onToggleSelect, onCreateInvoice, onCreateCashflow }) => {
+  disabled?: boolean;
+}> = ({ transaction, invoices, onConfirm, onIgnore, onManualMatch, onRunAI, isProcessing, isSelected, onToggleSelect, onCreateInvoice, onCreateCashflow, disabled = false }) => {
   const [expanded, setExpanded] = useState(false);
 
   const matchedInvoice = transaction.matchedInvoiceId
@@ -75,7 +82,8 @@ const TransactionRow: React.FC<{
           <div className="flex items-center gap-4 flex-1">
             <button
               onClick={(e) => { e.stopPropagation(); onToggleSelect(); }}
-              className="text-gray-400 hover:text-dark transition-colors"
+              disabled={disabled}
+              className="text-gray-400 hover:text-dark transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isSelected ? (
                 <CheckSquare size={18} className="text-primary" />
@@ -117,6 +125,33 @@ const TransactionRow: React.FC<{
       {expanded && (
         <div className="px-4 pb-4 bg-gray-50">
           <div className="bg-white rounded-lg p-4 shadow-sm">
+            {/* Transaction details */}
+            <div className="mb-4 p-3 bg-gray-50 rounded-lg">
+              <div className="text-xs font-medium text-gray-500 mb-2">DETTAGLI TRANSAZIONE</div>
+              <div className="space-y-1">
+                {transaction.descrizione && (
+                  <div className="text-sm text-gray-900">
+                    <span className="font-medium">Descrizione:</span> {transaction.descrizione}
+                  </div>
+                )}
+                {transaction.causale && (
+                  <div className="text-sm text-gray-900">
+                    <span className="font-medium">Causale:</span> {transaction.causale}
+                  </div>
+                )}
+                {transaction.dataValuta && (
+                  <div className="text-sm text-gray-600">
+                    <span className="font-medium">Data Valuta:</span> {formatDate(transaction.dataValuta)}
+                  </div>
+                )}
+                {transaction.saldo !== undefined && (
+                  <div className="text-sm text-gray-600">
+                    <span className="font-medium">Saldo dopo operazione:</span> {formatCurrency(transaction.saldo)}
+                  </div>
+                )}
+              </div>
+            </div>
+
             {/* Match info */}
             {transaction.matchReason && (
               <div className="mb-4 p-3 bg-blue-50 rounded-lg">
@@ -129,13 +164,24 @@ const TransactionRow: React.FC<{
 
             {/* Matched invoice */}
             {matchedInvoice && (
-              <div className="mb-4 p-3 bg-green-50 rounded-lg">
+              <div className="mb-4 p-3 border-2 border-green-500 bg-white rounded-lg">
                 <div className="flex items-center gap-2 mb-2">
                   <Link2 size={16} className="text-green-600" />
-                  <span className="text-sm font-medium text-green-800">Abbinato a:</span>
+                  <span className="text-sm font-medium text-gray-900">FATTURA ABBINATA</span>
                 </div>
-                <div className="text-sm text-green-800">
-                  {matchedInvoice.id} | {matchedInvoice.nomeProgetto || matchedInvoice.spesa || 'N/A'} | {formatCurrency((matchedInvoice.flusso || 0) + (matchedInvoice.iva || 0))}
+                <div className="space-y-2">
+                  <div className="text-sm text-gray-900">
+                    <span className="font-semibold">{formatInvoiceId(matchedInvoice.id, matchedInvoice.anno)}</span>
+                    <span className="mx-2 text-gray-400">•</span>
+                    <span className="font-medium">{matchedInvoice.nomeProgetto || matchedInvoice.spesa || 'N/A'}</span>
+                    <span className="mx-2 text-gray-400">•</span>
+                    <span className="font-semibold text-green-600">{formatCurrency((matchedInvoice.flusso || 0) + (matchedInvoice.iva || 0))}</span>
+                  </div>
+                  {matchedInvoice.note && (
+                    <div className="text-sm text-gray-800 bg-gray-100 rounded p-2 border border-gray-200">
+                      <span className="font-medium text-gray-900">Descrizione:</span> {matchedInvoice.note}
+                    </div>
+                  )}
                 </div>
               </div>
             )}
@@ -154,22 +200,24 @@ const TransactionRow: React.FC<{
                 )}
                 <button
                   onClick={(e) => { e.stopPropagation(); onManualMatch(); }}
-                  className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
+                  disabled={disabled}
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <Link2 size={14} />
                   Abbina Manualmente
                 </button>
                 <button
                   onClick={(e) => { e.stopPropagation(); onRunAI(); }}
-                  disabled={isProcessing}
-                  className="flex items-center gap-1.5 px-3 py-1.5 bg-purple-600 text-white rounded-lg text-sm font-medium hover:bg-purple-700 transition-colors disabled:opacity-50"
+                  disabled={isProcessing || disabled}
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-purple-600 text-white rounded-lg text-sm font-medium hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <RefreshCw size={14} className={isProcessing ? 'animate-spin' : ''} />
                   Analizza AI
                 </button>
                 <button
                   onClick={(e) => { e.stopPropagation(); onIgnore(); }}
-                  className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-200 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-300 transition-colors"
+                  disabled={disabled}
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-200 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <X size={14} />
                   Ignora
@@ -177,14 +225,16 @@ const TransactionRow: React.FC<{
                 <div className="w-px h-6 bg-gray-300 mx-1"></div>
                 <button
                   onClick={(e) => { e.stopPropagation(); onCreateInvoice(); }}
-                  className="flex items-center gap-1.5 px-3 py-1.5 bg-orange-100 text-orange-700 rounded-lg text-sm font-medium hover:bg-orange-200 transition-colors"
+                  disabled={disabled}
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-orange-100 text-orange-700 rounded-lg text-sm font-medium hover:bg-orange-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <FilePlus size={14} />
                   Crea Fattura
                 </button>
                 <button
                   onClick={(e) => { e.stopPropagation(); onCreateCashflow(); }}
-                  className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-100 text-indigo-700 rounded-lg text-sm font-medium hover:bg-indigo-200 transition-colors"
+                  disabled={disabled}
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-100 text-indigo-700 rounded-lg text-sm font-medium hover:bg-indigo-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <PlusCircle size={14} />
                   Crea Movimento
@@ -195,7 +245,8 @@ const TransactionRow: React.FC<{
             {transaction.matchStatus !== 'pending' && (
               <button
                 onClick={(e) => { e.stopPropagation(); onManualMatch(); }}
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-200 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-300 transition-colors"
+                disabled={disabled}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-200 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <RefreshCw size={14} />
                 Modifica Abbinamento
@@ -331,7 +382,7 @@ const ManualMatchModal: React.FC<{
                   <div className="flex items-center justify-between">
                     <div className="flex-1">
                       <div className="flex items-center gap-2">
-                        <div className="font-medium text-gray-900">{inv.id}</div>
+                        <div className="font-medium text-gray-900">{formatInvoiceId(inv.id, inv.anno)}</div>
                         <span className={`px-2 py-0.5 text-xs font-semibold rounded-full ${
                           paymentInfo.status === 'pagato'
                             ? 'bg-green-100 text-green-700'
@@ -1024,7 +1075,7 @@ const UnmatchedView: React.FC<UnmatchedViewProps> = ({ unmatchedBankTransactions
                         <p className="text-sm text-gray-500">{new Date(cf.dataPagamento).toLocaleDateString('it-IT')}</p>
                       )}
                       {cf.invoice && (
-                        <p className="text-xs text-gray-400 mt-1">Da Fattura: {cf.invoice.id}</p>
+                        <p className="text-xs text-gray-400 mt-1">Da Fattura: {formatInvoiceId(cf.invoice.id, cf.invoice.anno)}</p>
                       )}
                     </div>
                     <div className="text-right ml-4">
@@ -1119,8 +1170,19 @@ const SideBySideView: React.FC<SideBySideViewProps> = ({ rows }) => {
                           ? new Date(row.cashflow.dataPagamento).toLocaleDateString('it-IT')
                           : '-'}
                     </td>
-                    <td className="px-4 py-3 text-sm text-gray-900">
-                      {row.bankTransaction?.descrizione || '-'}
+                    <td className="px-4 py-3 text-sm">
+                      {row.bankTransaction ? (
+                        <div>
+                          <div className="text-gray-900 font-medium">
+                            {row.bankTransaction.descrizione || '-'}
+                          </div>
+                          {row.bankTransaction.causale && (
+                            <div className="text-xs text-gray-500 mt-0.5">
+                              {row.bankTransaction.causale}
+                            </div>
+                          )}
+                        </div>
+                      ) : '-'}
                     </td>
                     <td className="px-4 py-3 text-sm text-right">
                       {bankAmount !== undefined ? (
@@ -1154,10 +1216,19 @@ const SideBySideView: React.FC<SideBySideViewProps> = ({ rows }) => {
                         <span className="text-gray-400">-</span>
                       )}
                     </td>
-                    <td className="px-4 py-3 text-sm text-gray-900">
-                      {row.cashflow
-                        ? row.cashflow.descrizione || row.cashflow.invoice?.nomeProgetto || row.cashflow.invoice?.spesa || '-'
-                        : '-'}
+                    <td className="px-4 py-3 text-sm">
+                      {row.cashflow ? (
+                        <div>
+                          <div className="text-gray-900 font-medium">
+                            {row.cashflow.invoice?.nomeProgetto || row.cashflow.invoice?.spesa || row.cashflow.descrizione || '-'}
+                          </div>
+                          {(row.cashflow.invoice?.note || row.cashflow.note) && (
+                            <div className="text-xs text-gray-500 mt-0.5">
+                              {row.cashflow.invoice?.note || row.cashflow.note}
+                            </div>
+                          )}
+                        </div>
+                      ) : '-'}
                     </td>
                     <td className="px-4 py-3 text-center">
                       <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getMatchStatusColor(row.matchStatus, row.confidence)}`}>
@@ -1307,7 +1378,7 @@ const ReportView: React.FC<ReportViewProps> = ({ report }) => {
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-2">
                         <span className="font-semibold text-gray-900">
-                          {anomaly.invoice.id}
+                          {formatInvoiceId(anomaly.invoice.id, anomaly.invoice.anno)}
                         </span>
                         <span className="px-2 py-0.5 bg-red-100 text-red-700 text-xs font-semibold rounded-full">
                           {anomaly.type === 'no_bank_transaction' ? 'Transazione Mancante' : 'Importo Discrepante'}
@@ -1479,7 +1550,10 @@ export const Reconciliation: React.FC = () => {
         totalTransactions: parsed.transactions.length,
         matchedCount: 0,
         pendingCount: parsed.transactions.length,
-        ignoredCount: 0
+        ignoredCount: 0,
+        status: 'open',
+        periodoDal: parsed.periodoDal,
+        periodoAl: parsed.periodoAl
       };
 
       console.log('Adding session:', session);
@@ -1696,6 +1770,44 @@ export const Reconciliation: React.FC = () => {
     }
   };
 
+  // Handle close/reopen session
+  const handleCloseSession = async () => {
+    if (!currentSession) return;
+
+    if (currentSession.status === 'closed') {
+      // Reopen session
+      if (!confirm('Riaprire questa sessione per modifiche?')) {
+        return;
+      }
+      try {
+        await updateReconciliationSession(currentSession.id, {
+          status: 'open',
+          closedDate: undefined
+        });
+      } catch (err) {
+        console.error('Error reopening session:', err);
+        setError('Errore durante la riapertura della sessione');
+      }
+    } else {
+      // Close session
+      if (!confirm('Chiudere questa sessione? Non sarà più possibile modificare le riconciliazioni.')) {
+        return;
+      }
+      try {
+        await updateReconciliationSession(currentSession.id, {
+          status: 'closed',
+          closedDate: new Date().toISOString()
+        });
+        // Deseleziona la sessione per svuotare le tabelle
+        setSelectedSession(null);
+        setSelectedIds(new Set());
+      } catch (err) {
+        console.error('Error closing session:', err);
+        setError('Errore durante la chiusura della sessione');
+      }
+    }
+  };
+
   const selectionState = filteredTransactions.length === 0
     ? 'none'
     : selectedIds.size === 0
@@ -1803,13 +1915,24 @@ export const Reconciliation: React.FC = () => {
               <button
                 key={session.id}
                 onClick={() => setSelectedSession(session.id)}
-                className={`flex-shrink-0 px-4 py-2.5 rounded-xl border transition-colors ${
+                className={`flex-shrink-0 px-4 py-2.5 rounded-xl border transition-colors relative ${
                   selectedSession === session.id
                     ? 'bg-primary text-white border-primary'
                     : 'bg-white text-gray-700 border-gray-200 hover:border-primary'
                 }`}
               >
-                <div className="font-medium text-sm">{session.periodo || session.fileName}</div>
+                <div className="flex items-center gap-2">
+                  <div className="font-medium text-sm">{session.periodo || session.fileName}</div>
+                  {session.status === 'closed' && (
+                    <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${
+                      selectedSession === session.id
+                        ? 'bg-white/20 text-white'
+                        : 'bg-gray-200 text-gray-700'
+                    }`}>
+                      Chiusa
+                    </span>
+                  )}
+                </div>
                 <div className="text-xs opacity-75 mt-0.5">
                   {session.matchedCount}/{session.totalTransactions} riconciliati
                 </div>
@@ -1842,6 +1965,42 @@ export const Reconciliation: React.FC = () => {
             </div>
           </div>
 
+          {/* Session status and actions */}
+          {currentSession.status === 'closed' && (
+            <div className="mb-6 p-4 bg-gray-100 border border-gray-300 rounded-xl flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-gray-600 rounded-full flex items-center justify-center">
+                  <FileCheck size={20} className="text-white" />
+                </div>
+                <div>
+                  <div className="font-medium text-gray-900">Sessione Chiusa</div>
+                  <div className="text-sm text-gray-600">
+                    {currentSession.closedDate && `Chiusa il ${formatDate(currentSession.closedDate)}`}
+                  </div>
+                </div>
+              </div>
+              <button
+                onClick={handleCloseSession}
+                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors"
+              >
+                <RefreshCw size={16} />
+                Riapri Sessione
+              </button>
+            </div>
+          )}
+
+          {currentSession.status !== 'closed' && (
+            <div className="mb-6 flex justify-end">
+              <button
+                onClick={handleCloseSession}
+                className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors"
+              >
+                <FileCheck size={16} />
+                Chiudi Sessione
+              </button>
+            </div>
+          )}
+
           {/* Session info */}
           {(currentSession.saldoIniziale !== undefined || currentSession.saldoFinale !== undefined) && (
             <div className="bg-blue-50 rounded-xl p-4 mb-6 flex flex-wrap gap-6">
@@ -1867,13 +2026,13 @@ export const Reconciliation: React.FC = () => {
           )}
 
           {/* Tab Navigation */}
-          <div className="flex items-center gap-2 mb-6 border-b border-gray-200">
+          <div className="flex items-center gap-2 mb-6 border-b border-gray-200 bg-white">
             <button
               onClick={() => setComparisonView('transactions')}
               className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 ${
                 comparisonView === 'transactions'
-                  ? 'border-primary text-primary'
-                  : 'border-transparent text-gray-600 hover:text-gray-900'
+                  ? 'border-blue-600 text-gray-900 bg-blue-50'
+                  : 'border-transparent text-gray-600 hover:text-gray-900 hover:bg-gray-50'
               }`}
             >
               Transazioni
@@ -1882,8 +2041,8 @@ export const Reconciliation: React.FC = () => {
               onClick={() => setComparisonView('unmatched')}
               className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 ${
                 comparisonView === 'unmatched'
-                  ? 'border-primary text-primary'
-                  : 'border-transparent text-gray-600 hover:text-gray-900'
+                  ? 'border-blue-600 text-gray-900 bg-blue-50'
+                  : 'border-transparent text-gray-600 hover:text-gray-900 hover:bg-gray-50'
               }`}
             >
               Voci Mancanti
@@ -1892,8 +2051,8 @@ export const Reconciliation: React.FC = () => {
               onClick={() => setComparisonView('sidebyside')}
               className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 ${
                 comparisonView === 'sidebyside'
-                  ? 'border-primary text-primary'
-                  : 'border-transparent text-gray-600 hover:text-gray-900'
+                  ? 'border-blue-600 text-gray-900 bg-blue-50'
+                  : 'border-transparent text-gray-600 hover:text-gray-900 hover:bg-gray-50'
               }`}
             >
               Vista Affiancata
@@ -1902,8 +2061,8 @@ export const Reconciliation: React.FC = () => {
               onClick={() => setComparisonView('report')}
               className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 ${
                 comparisonView === 'report'
-                  ? 'border-primary text-primary'
-                  : 'border-transparent text-gray-600 hover:text-gray-900'
+                  ? 'border-blue-600 text-gray-900 bg-blue-50'
+                  : 'border-transparent text-gray-600 hover:text-gray-900 hover:bg-gray-50'
               }`}
             >
               Report Differenze
@@ -1917,7 +2076,8 @@ export const Reconciliation: React.FC = () => {
               {/* Select all button */}
               <button
                 onClick={handleSelectAll}
-                className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors"
+                disabled={currentSession.status === 'closed'}
+                className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {selectionState === 'all' ? (
                   <CheckSquare size={16} className="text-primary" />
@@ -1953,8 +2113,8 @@ export const Reconciliation: React.FC = () => {
               {selectedIds.size > 0 && (
                 <button
                   onClick={handleBulkDelete}
-                  disabled={isDeleting}
-                  className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg font-medium hover:bg-red-700 transition-colors disabled:opacity-50"
+                  disabled={isDeleting || currentSession.status === 'closed'}
+                  className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg font-medium hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <Trash2 size={16} />
                   {isDeleting ? 'Eliminazione...' : `Elimina (${selectedIds.size})`}
@@ -1964,8 +2124,8 @@ export const Reconciliation: React.FC = () => {
               {/* Delete session button */}
               <button
                 onClick={handleDeleteSession}
-                disabled={isDeleting}
-                className="flex items-center gap-2 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg font-medium hover:bg-gray-300 transition-colors disabled:opacity-50"
+                disabled={isDeleting || currentSession.status === 'closed'}
+                className="flex items-center gap-2 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg font-medium hover:bg-gray-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <Trash2 size={16} />
                 Elimina Sessione
@@ -1974,8 +2134,8 @@ export const Reconciliation: React.FC = () => {
               {stats.pending > 0 && (
                 <button
                   onClick={handleRunAIAll}
-                  disabled={isProcessingAI}
-                  className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg font-medium hover:bg-purple-700 transition-colors disabled:opacity-50"
+                  disabled={isProcessingAI || currentSession.status === 'closed'}
+                  className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg font-medium hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <RefreshCw size={16} className={isProcessingAI ? 'animate-spin' : ''} />
                   {isProcessingAI
@@ -2013,6 +2173,7 @@ export const Reconciliation: React.FC = () => {
                     onToggleSelect={() => handleToggleSelect(tx.id)}
                     onCreateInvoice={() => setCreateInvoiceTransaction(tx)}
                     onCreateCashflow={() => setCreateCashflowTransaction(tx)}
+                    disabled={currentSession.status === 'closed'}
                   />
                 ))
               )}

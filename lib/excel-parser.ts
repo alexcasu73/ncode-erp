@@ -175,6 +175,8 @@ function extractMetadata(rows: any[][]): Partial<ParsedBankStatement> {
 function findHeaders(rows: any[][]): { headerRowIndex: number; columnMap: Record<string, number> } {
   const expectedHeaders = ['data op', 'data val', 'causale', 'descrizione', 'importo', 'saldo'];
 
+  console.log('🔍 Searching for headers in first 15 rows...');
+
   for (let i = 0; i < Math.min(rows.length, 15); i++) {
     const row = rows[i];
     if (!row) continue;
@@ -205,11 +207,14 @@ function findHeaders(rows: any[][]): { headerRowIndex: number; columnMap: Record
         else if (cell.includes('saldo')) columnMap.saldo = j;
       }
 
+      console.log(`✅ Found headers at row ${i}:`, normalizedRow);
+      console.log('📍 Column mapping:', columnMap);
       return { headerRowIndex: i, columnMap };
     }
   }
 
   // Default fallback (Crédit Agricole standard positions)
+  console.log('⚠️ Headers not found, using default Crédit Agricole positions');
   return {
     headerRowIndex: 6, // Row 7 (0-indexed)
     columnMap: {
@@ -226,20 +231,49 @@ function findHeaders(rows: any[][]): { headerRowIndex: number; columnMap: Record
 // Parse transactions from data rows
 function parseTransactions(rows: any[][], startRow: number, columnMap: Record<string, number>): ParsedTransaction[] {
   const transactions: ParsedTransaction[] = [];
+  let skippedNoDate = 0;
+  let skippedInvalidDate = 0;
+  let skippedZeroAmount = 0;
+  let consecutiveEmptyRows = 0;
+
+  console.log(`📊 Parsing transactions starting from row ${startRow}, total rows: ${rows.length}`);
+  console.log('Column mapping:', columnMap);
 
   for (let i = startRow; i < rows.length; i++) {
     const row = rows[i];
-    if (!row) continue;
 
-    // Skip empty rows or rows without date
+    // Stop if we hit 3 consecutive empty rows (likely end of transactions)
+    if (!row || !row.some(cell => cell !== null && cell !== undefined && cell !== '')) {
+      consecutiveEmptyRows++;
+      if (consecutiveEmptyRows >= 3) {
+        console.log(`🛑 Stopped at row ${i}: 3 consecutive empty rows (end of transactions)`);
+        break;
+      }
+      continue;
+    }
+
+    consecutiveEmptyRows = 0;
+
+    // Skip rows without date (but don't count them as empty)
     const dataOp = row[columnMap.dataOp];
-    if (!dataOp) continue;
+    if (!dataOp) {
+      skippedNoDate++;
+      continue;
+    }
 
     const parsedDate = parseDate(dataOp);
-    if (!parsedDate) continue;
+    if (!parsedDate) {
+      skippedInvalidDate++;
+      console.log(`⚠️ Row ${i}: Invalid date format:`, dataOp);
+      continue;
+    }
 
     const importo = parseAmount(row[columnMap.importo]);
-    if (importo === 0) continue; // Skip zero-amount transactions
+    if (importo === 0) {
+      skippedZeroAmount++;
+      console.log(`⚠️ Row ${i}: Zero amount, raw value:`, row[columnMap.importo]);
+      continue;
+    }
 
     const transaction: ParsedTransaction = {
       data: parsedDate,
@@ -253,6 +287,9 @@ function parseTransactions(rows: any[][], startRow: number, columnMap: Record<st
 
     transactions.push(transaction);
   }
+
+  console.log(`✅ Parsed ${transactions.length} transactions`);
+  console.log(`⏭️  Skipped: ${skippedNoDate} (no date), ${skippedInvalidDate} (invalid date), ${skippedZeroAmount} (zero amount)`);
 
   return transactions;
 }
@@ -271,20 +308,56 @@ export function parseBankStatementExcel(file: File): Promise<ParsedBankStatement
         const sheetName = workbook.SheetNames[0];
         const sheet = workbook.Sheets[sheetName];
 
-        // Convert to 2D array
+        // Get the actual range of the sheet
+        const range = XLSX.utils.decode_range(sheet['!ref'] || 'A1');
+        console.log(`📐 Original sheet range: ${sheet['!ref']}, rows: ${range.e.r + 1}`);
+
+        // FORCE reading up to row 200 to capture all transactions (Crédit Agricole files can have gaps)
+        const forceRange = `A1:L200`;
+        console.log(`🔧 Forcing extended range: ${forceRange}`);
+
+        // Convert to 2D array with extended range to avoid stopping at empty rows
         const rows = XLSX.utils.sheet_to_json(sheet, {
           header: 1,
           defval: null,
-          raw: false
+          raw: false,
+          range: forceRange
         }) as any[][];
+
+        console.log(`📄 Excel file "${file.name}" - Total rows read: ${rows.length}`);
+        console.log('First 10 rows:', rows.slice(0, 10));
 
         // Extract metadata from header rows
         const metadata = extractMetadata(rows);
 
-        // Find headers and column positions
-        const { headerRowIndex, columnMap } = findHeaders(rows);
+        // Header is ALWAYS at row 9 (index 8) for Crédit Agricole
+        const headerRowIndex = 8;
+        const headerRow = rows[headerRowIndex];
 
-        // Parse transactions starting from row after headers
+        if (!headerRow) {
+          throw new Error('Header row (row 9) not found in Excel file');
+        }
+
+        // Build column map from row 9
+        const columnMap: Record<string, number> = {};
+        const normalizedHeader = headerRow.map(cell =>
+          cell ? String(cell).toLowerCase().trim() : ''
+        );
+
+        for (let j = 0; j < normalizedHeader.length; j++) {
+          const cell = normalizedHeader[j];
+          if (cell.includes('data op')) columnMap.dataOp = j;
+          else if (cell.includes('data val')) columnMap.dataVal = j;
+          else if (cell.includes('causale')) columnMap.causale = j;
+          else if (cell.includes('descrizione')) columnMap.descrizione = j;
+          else if (cell.includes('importo')) columnMap.importo = j;
+          else if (cell.includes('saldo')) columnMap.saldo = j;
+        }
+
+        console.log(`✅ Using fixed header at row 9 (index 8):`, normalizedHeader);
+        console.log('📍 Column mapping:', columnMap);
+
+        // Parse transactions starting from row 10 (index 9)
         const transactions = parseTransactions(rows, headerRowIndex + 1, columnMap);
 
         const result: ParsedBankStatement = {

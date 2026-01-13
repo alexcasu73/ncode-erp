@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, BarChart, Bar } from 'recharts';
 import { useData } from '../context/DataContext';
 import { CashflowRecord, Invoice } from '../types';
-import { Plus, ArrowUpCircle, ArrowDownCircle, Calendar, Search, ChevronUp, ChevronDown, ChevronsUpDown, X, Edit2, Trash2, Wallet, Settings } from 'lucide-react';
+import { Plus, ArrowUpCircle, ArrowDownCircle, Calendar, Search, ChevronUp, ChevronDown, ChevronsUpDown, X, Edit2, Trash2, Wallet, Settings, RotateCcw } from 'lucide-react';
 
 // Helper per formattare valuta
 const formatCurrency = (value: number): string => {
@@ -91,7 +91,7 @@ export const Cashflow: React.FC = () => {
 
   const [filterAnno, setFilterAnno] = useState<number | 'tutti'>(() => {
     const saved = localStorage.getItem('cashflow_filterAnno');
-    return saved ? (saved === 'tutti' ? 'tutti' : parseInt(saved)) : 'tutti';
+    return saved ? (saved === 'tutti' ? 'tutti' : parseInt(saved)) : new Date().getFullYear();
   });
   const [filterMese, setFilterMese] = useState<string>(() => {
     return localStorage.getItem('cashflow_filterMese') || 'tutti';
@@ -141,6 +141,17 @@ export const Cashflow: React.FC = () => {
   React.useEffect(() => {
     localStorage.setItem('cashflow_filterStatoTabella', filterStatoTabella);
   }, [filterStatoTabella]);
+
+  // Reset tutti i filtri
+  const resetAllFilters = () => {
+    setFilterAnno('tutti');
+    setFilterMese('tutti');
+    setVistaStato('tutti');
+    setSearchTerm('');
+    setFilterTipo('tutti');
+    setFilterMeseTabella('tutti');
+    setFilterStatoTabella('tutti');
+  };
 
   // Form state
   const [formInvoiceId, setFormInvoiceId] = useState('');
@@ -420,10 +431,12 @@ export const Cashflow: React.FC = () => {
         const totale = (inv.flusso || 0) + (inv.iva || 0);
         setFormImporto(totale.toString());
         setFormStatoFatturazione(inv.statoFatturazione || 'Effettivo');
+        setFormNote(inv.note || '');
       }
     } else {
       setFormImporto('');
       setFormStatoFatturazione('Effettivo');
+      setFormNote('');
     }
   };
 
@@ -577,6 +590,16 @@ export const Cashflow: React.FC = () => {
             Stimato ({countByStato.stimate})
           </button>
         </div>
+
+        {/* Reset filtri */}
+        <button
+          onClick={resetAllFilters}
+          className="bg-white rounded-2xl shadow-sm p-2 hover:bg-gray-50 transition-colors flex items-center gap-2"
+          title="Reset tutti i filtri"
+        >
+          <RotateCcw size={16} className="text-gray-400 ml-2" />
+          <span className="px-3 py-2 font-medium text-dark text-sm">Reset</span>
+        </button>
       </div>
 
       {/* KPI Cards */}

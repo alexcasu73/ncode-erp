@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
-import { Customer, Deal, Invoice, Transaction, FinancialItem, DealStage, CashflowRecord, BankBalance } from '../types';
+import { Customer, Deal, Invoice, Transaction, FinancialItem, DealStage, CashflowRecord, BankBalance, BankTransaction, ReconciliationSession } from '../types';
 import {
   MOCK_CUSTOMERS,
   MOCK_DEALS,
@@ -28,6 +28,10 @@ const camelToSnake = (obj: any): any => {
   if (Array.isArray(obj)) {
     return obj.map(camelToSnake);
   }
+  // Handle Date objects - convert to ISO string for PostgreSQL
+  if (obj instanceof Date) {
+    return obj.toISOString().split('T')[0]; // YYYY-MM-DD format
+  }
   if (obj !== null && typeof obj === 'object') {
     return Object.keys(obj).reduce((acc, key) => {
       const snakeKey = key.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`);
@@ -47,6 +51,8 @@ interface DataContextType {
   financialItems: FinancialItem[];
   cashflowRecords: CashflowRecord[];
   bankBalances: BankBalance[];
+  reconciliationSessions: ReconciliationSession[];
+  bankTransactions: BankTransaction[];
 
   // Loading states
   loading: boolean;
@@ -87,6 +93,16 @@ interface DataContextType {
   setBankBalance: (anno: number, saldoIniziale: number, note?: string) => Promise<BankBalance | null>;
   getBankBalance: (anno: number) => BankBalance | undefined;
 
+  // Reconciliation Session CRUD
+  addReconciliationSession: (session: ReconciliationSession) => Promise<ReconciliationSession | null>;
+  updateReconciliationSession: (id: string, session: Partial<ReconciliationSession>) => Promise<boolean>;
+  deleteReconciliationSession: (id: string) => Promise<boolean>;
+
+  // Bank Transaction CRUD
+  addBankTransaction: (transaction: BankTransaction) => Promise<BankTransaction | null>;
+  updateBankTransaction: (id: string, transaction: Partial<BankTransaction>) => Promise<boolean>;
+  deleteBankTransaction: (id: string) => Promise<boolean>;
+
   // Refresh
   refreshData: () => Promise<void>;
 }
@@ -109,6 +125,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [financialItems, setFinancialItems] = useState<FinancialItem[]>([]);
   const [cashflowRecords, setCashflowRecords] = useState<CashflowRecord[]>([]);
   const [bankBalances, setBankBalances] = useState<BankBalance[]>([]);
+  const [reconciliationSessions, setReconciliationSessions] = useState<ReconciliationSession[]>([]);
+  const [bankTransactions, setBankTransactions] = useState<BankTransaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -131,12 +149,14 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setFinancialItems(MOCK_FINANCIAL_ITEMS);
       setCashflowRecords([]);
       setBankBalances([]);
+      setReconciliationSessions([]);
+      setBankTransactions([]);
       setLoading(false);
       return;
     }
 
     try {
-      const [customersRes, dealsRes, invoicesRes, transactionsRes, financialItemsRes, cashflowRes, bankBalancesRes] = await Promise.all([
+      const [customersRes, dealsRes, invoicesRes, transactionsRes, financialItemsRes, cashflowRes, bankBalancesRes, reconciliationSessionsRes, bankTransactionsRes] = await Promise.all([
         supabase.from('customers').select('*'),
         supabase.from('deals').select('*'),
         supabase.from('invoices').select('*'),
@@ -144,6 +164,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         supabase.from('financial_items').select('*'),
         supabase.from('cashflow_records').select('*'),
         supabase.from('bank_balances').select('*'),
+        supabase.from('reconciliation_sessions').select('*'),
+        supabase.from('bank_transactions').select('*'),
       ]);
 
       if (customersRes.error) throw customersRes.error;
@@ -160,6 +182,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setFinancialItems(snakeToCamel(financialItemsRes.data || []));
       setCashflowRecords(snakeToCamel(cashflowRes.data || []));
       setBankBalances(snakeToCamel(bankBalancesRes.data || []));
+      setReconciliationSessions(snakeToCamel(reconciliationSessionsRes.data || []));
+      setBankTransactions(snakeToCamel(bankTransactionsRes.data || []));
     } catch (err: any) {
       console.error('Error fetching data:', err);
       setError(err.message || 'Error fetching data');
@@ -171,6 +195,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setFinancialItems(MOCK_FINANCIAL_ITEMS);
       setCashflowRecords([]);
       setBankBalances([]);
+      setReconciliationSessions([]);
+      setBankTransactions([]);
     } finally {
       setLoading(false);
     }
@@ -310,23 +336,42 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Invoice CRUD
   const addInvoice = async (invoice: Omit<Invoice, 'id'>): Promise<Invoice | null> => {
+    // Generate invoice ID: Fattura_XXX where XXX is sequential number
+    const maxNum = invoices.reduce((max, inv) => {
+      const match = inv.id.match(/Fattura_(\d+)/);
+      if (match) {
+        const num = parseInt(match[1], 10);
+        return num > max ? num : max;
+      }
+      return max;
+    }, 0);
+    const newId = `Fattura_${String(maxNum + 1).padStart(3, '0')}`;
+    const invoiceWithId = { ...invoice, id: newId };
+
+    console.log('Adding invoice:', invoiceWithId);
+
     if (!isSupabaseConfigured) {
-      const newInvoice = { ...invoice, id: `INV-${Date.now()}` } as Invoice;
+      const newInvoice = invoiceWithId as Invoice;
       setInvoices(prev => [...prev, newInvoice]);
       return newInvoice;
     }
 
+    const dataToInsert = camelToSnake(invoiceWithId);
+    console.log('Data to insert:', dataToInsert);
+
     const { data, error } = await supabase
       .from('invoices')
-      .insert(camelToSnake(invoice))
+      .insert(dataToInsert)
       .select()
       .single();
 
     if (error) {
       console.error('Error adding invoice:', error);
+      console.error('Error details:', JSON.stringify(error, null, 2));
       return null;
     }
 
+    console.log('Invoice created:', data);
     const newInvoice = snakeToCamel(data) as Invoice;
     setInvoices(prev => [...prev, newInvoice]);
     return newInvoice;
@@ -620,6 +665,134 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return bankBalances.find(b => b.anno === anno);
   };
 
+  // Reconciliation Session CRUD
+  const addReconciliationSession = async (session: ReconciliationSession): Promise<ReconciliationSession | null> => {
+    if (!isSupabaseConfigured) {
+      setReconciliationSessions(prev => [...prev, session]);
+      return session;
+    }
+
+    const { data, error } = await supabase
+      .from('reconciliation_sessions')
+      .insert(camelToSnake(session))
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error adding reconciliation session:', error);
+      return null;
+    }
+
+    const newSession = snakeToCamel(data) as ReconciliationSession;
+    setReconciliationSessions(prev => [...prev, newSession]);
+    return newSession;
+  };
+
+  const updateReconciliationSession = async (id: string, session: Partial<ReconciliationSession>): Promise<boolean> => {
+    if (!isSupabaseConfigured) {
+      setReconciliationSessions(prev => prev.map(s => s.id === id ? { ...s, ...session } : s));
+      return true;
+    }
+
+    const { error } = await supabase
+      .from('reconciliation_sessions')
+      .update(camelToSnake(session))
+      .eq('id', id);
+
+    if (error) {
+      console.error('Error updating reconciliation session:', error);
+      return false;
+    }
+
+    setReconciliationSessions(prev => prev.map(s => s.id === id ? { ...s, ...session } : s));
+    return true;
+  };
+
+  const deleteReconciliationSession = async (id: string): Promise<boolean> => {
+    if (!isSupabaseConfigured) {
+      setReconciliationSessions(prev => prev.filter(s => s.id !== id));
+      setBankTransactions(prev => prev.filter(t => t.sessionId !== id));
+      return true;
+    }
+
+    const { error } = await supabase
+      .from('reconciliation_sessions')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      console.error('Error deleting reconciliation session:', error);
+      return false;
+    }
+
+    setReconciliationSessions(prev => prev.filter(s => s.id !== id));
+    setBankTransactions(prev => prev.filter(t => t.sessionId !== id));
+    return true;
+  };
+
+  // Bank Transaction CRUD
+  const addBankTransaction = async (transaction: BankTransaction): Promise<BankTransaction | null> => {
+    if (!isSupabaseConfigured) {
+      setBankTransactions(prev => [...prev, transaction]);
+      return transaction;
+    }
+
+    const { data, error } = await supabase
+      .from('bank_transactions')
+      .insert(camelToSnake(transaction))
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error adding bank transaction:', error);
+      return null;
+    }
+
+    const newTransaction = snakeToCamel(data) as BankTransaction;
+    setBankTransactions(prev => [...prev, newTransaction]);
+    return newTransaction;
+  };
+
+  const updateBankTransaction = async (id: string, transaction: Partial<BankTransaction>): Promise<boolean> => {
+    if (!isSupabaseConfigured) {
+      setBankTransactions(prev => prev.map(t => t.id === id ? { ...t, ...transaction } : t));
+      return true;
+    }
+
+    const { error } = await supabase
+      .from('bank_transactions')
+      .update(camelToSnake(transaction))
+      .eq('id', id);
+
+    if (error) {
+      console.error('Error updating bank transaction:', error);
+      return false;
+    }
+
+    setBankTransactions(prev => prev.map(t => t.id === id ? { ...t, ...transaction } : t));
+    return true;
+  };
+
+  const deleteBankTransaction = async (id: string): Promise<boolean> => {
+    if (!isSupabaseConfigured) {
+      setBankTransactions(prev => prev.filter(t => t.id !== id));
+      return true;
+    }
+
+    const { error } = await supabase
+      .from('bank_transactions')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      console.error('Error deleting bank transaction:', error);
+      return false;
+    }
+
+    setBankTransactions(prev => prev.filter(t => t.id !== id));
+    return true;
+  };
+
   const value: DataContextType = {
     customers,
     deals,
@@ -651,6 +824,14 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     bankBalances,
     setBankBalance,
     getBankBalance,
+    reconciliationSessions,
+    bankTransactions,
+    addReconciliationSession,
+    updateReconciliationSession,
+    deleteReconciliationSession,
+    addBankTransaction,
+    updateBankTransaction,
+    deleteBankTransaction,
     refreshData: fetchData,
   };
 

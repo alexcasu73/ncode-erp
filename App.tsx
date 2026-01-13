@@ -6,6 +6,7 @@ import { Deals } from './components/Deals';
 import { Invoicing } from './components/Invoicing';
 import { Cashflow } from './components/Cashflow';
 import { FinancialStatement } from './components/FinancialStatement';
+import { Reconciliation } from './components/Reconciliation';
 import { Search, Bell, User } from 'lucide-react';
 
 const App: React.FC = () => {
@@ -18,6 +19,7 @@ const App: React.FC = () => {
       case 'deals': return <Deals />;
       case 'invoicing': return <Invoicing />;
       case 'cashflow': return <Cashflow />;
+      case 'reconciliation': return <Reconciliation />;
       case 'financials': return <FinancialStatement />;
       default: return <Dashboard />;
     }

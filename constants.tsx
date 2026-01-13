@@ -1,5 +1,5 @@
 import { Deal, DealStage, Customer, Invoice, Transaction, FinancialItem } from './types';
-import { LayoutDashboard, Users, Briefcase, Receipt, PieChart, Wallet, BookOpen } from 'lucide-react';
+import { LayoutDashboard, Users, Briefcase, Receipt, PieChart, Wallet, BookOpen, FileCheck } from 'lucide-react';
 
 export const APP_NAME = "Ncode ERP";
 
@@ -9,58 +9,54 @@ export const NAV_ITEMS = [
   { id: 'deals', label: 'Opportunità', icon: Briefcase },
   { id: 'invoicing', label: 'Fatture', icon: Receipt },
   { id: 'cashflow', label: 'Flusso di Cassa', icon: Wallet },
+  { id: 'reconciliation', label: 'Riconciliazione', icon: FileCheck },
   { id: 'financials', label: 'Bilancio', icon: BookOpen },
-  { id: 'analytics', label: 'Analisi', icon: PieChart },
 ];
 
 export const MOCK_CUSTOMERS: Customer[] = [
-  { 
-    id: '1', 
-    name: 'Alia Bonner', 
-    company: 'TechFlow S.r.l.', 
-    email: 'alia@techflow.com', 
-    status: 'Attivo', 
-    revenue: 15600, 
-    avatar: 'https://picsum.photos/100/100?random=1',
+  {
+    id: '1',
+    name: 'Alia Bonner',
+    company: 'TechFlow S.r.l.',
+    email: 'alia@techflow.com',
+    status: 'Attivo',
+    revenue: 15600,
     vatId: 'IT0123456001',
     sdiCode: 'M5UXCR1',
     address: 'Via Roma 10, Milano',
     phone: '+39 02 1234567'
   },
-  { 
-    id: '2', 
-    name: 'Millie Tran', 
-    company: 'SoftCorp SpA', 
-    email: 'millie@softcorp.com', 
-    status: 'Attivo', 
-    revenue: 8400, 
-    avatar: 'https://picsum.photos/100/100?random=2',
+  {
+    id: '2',
+    name: 'Millie Tran',
+    company: 'SoftCorp SpA',
+    email: 'millie@softcorp.com',
+    status: 'Attivo',
+    revenue: 8400,
     vatId: 'IT9876543002',
     sdiCode: 'KRRH6B9',
     address: 'Corso Italia 45, Torino',
     phone: '+39 011 9876543'
   },
-  { 
-    id: '3', 
-    name: 'Natalia Bloggs', 
-    company: 'Innovate Ltd', 
-    email: 'nat@innovate.com', 
-    status: 'Prospetto', 
-    revenue: 0, 
-    avatar: 'https://picsum.photos/100/100?random=3',
+  {
+    id: '3',
+    name: 'Natalia Bloggs',
+    company: 'Innovate Ltd',
+    email: 'nat@innovate.com',
+    status: 'Prospetto',
+    revenue: 0,
     vatId: 'IT1122334003',
     sdiCode: '0000000',
     address: 'Piazza Navona 3, Roma',
     phone: '+39 06 1122334'
   },
-  { 
-    id: '4', 
-    name: 'John Doe', 
-    company: 'Acme Inc', 
-    email: 'john@acme.com', 
-    status: 'Attivo', 
-    revenue: 22000, 
-    avatar: 'https://picsum.photos/100/100?random=4',
+  {
+    id: '4',
+    name: 'John Doe',
+    company: 'Acme Inc',
+    email: 'john@acme.com',
+    status: 'Attivo',
+    revenue: 22000,
     vatId: 'IT5566778004',
     sdiCode: 'SUBM70N',
     address: 'Via Napoli 88, Napoli',
