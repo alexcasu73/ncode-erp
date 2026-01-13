@@ -16,7 +16,8 @@ const TIPI_SPESA = ['Costi per servizi', 'Altri costi', 'Team'];
 const formatCurrency = (value: number): string => {
   return new Intl.NumberFormat('it-IT', {
     style: 'currency',
-    currency: 'EUR'
+    currency: 'EUR',
+    useGrouping: true
   }).format(value);
 };
 

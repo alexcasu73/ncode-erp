@@ -7,7 +7,8 @@ import { Search, Plus, Filter, Mail, Phone, MapPin, Edit2, Trash2, X, Check, Bui
 const formatCurrency = (value: number): string => {
   return new Intl.NumberFormat('it-IT', {
     style: 'currency',
-    currency: 'EUR'
+    currency: 'EUR',
+    useGrouping: true
   }).format(value);
 };
 

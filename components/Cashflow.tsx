@@ -8,7 +8,8 @@ import { Plus, ArrowUpCircle, ArrowDownCircle, Calendar, Search, ChevronUp, Chev
 const formatCurrency = (value: number): string => {
   return new Intl.NumberFormat('it-IT', {
     style: 'currency',
-    currency: 'EUR'
+    currency: 'EUR',
+    useGrouping: true
   }).format(value);
 };
 

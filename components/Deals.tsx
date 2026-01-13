@@ -7,7 +7,8 @@ import { Plus, Calendar, DollarSign, Edit2, Trash2, X, Check, GripVertical, Tren
 const formatCurrency = (value: number): string => {
   return new Intl.NumberFormat('it-IT', {
     style: 'currency',
-    currency: 'EUR'
+    currency: 'EUR',
+    useGrouping: true
   }).format(value);
 };
 
