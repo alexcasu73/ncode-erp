@@ -36,12 +36,47 @@ const formatInvoiceId = (id: string, anno: number): string => {
 export const Invoicing: React.FC = () => {
   const { invoices, deals, loading, addInvoice, updateInvoice, deleteInvoice } = useData();
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterTipo, setFilterTipo] = useState<'tutti' | 'Entrata' | 'Uscita'>('tutti');
-  const [filterStato, setFilterStato] = useState<'tutti' | 'Stimato' | 'Effettivo' | 'Nessuno'>('tutti');
-  const [filterMese, setFilterMese] = useState<string>('tutti');
-  const [filterAnno, setFilterAnno] = useState<number | 'tutti'>('tutti');
+  const [filterTipo, setFilterTipo] = useState<'tutti' | 'Entrata' | 'Uscita'>(() => {
+    const saved = localStorage.getItem('invoicing_filterTipo');
+    return (saved as 'tutti' | 'Entrata' | 'Uscita') || 'tutti';
+  });
+  const [filterStato, setFilterStato] = useState<'tutti' | 'Stimato' | 'Effettivo' | 'Nessuno'>(() => {
+    const saved = localStorage.getItem('invoicing_filterStato');
+    return (saved as 'tutti' | 'Stimato' | 'Effettivo' | 'Nessuno') || 'tutti';
+  });
+  const [filterMese, setFilterMese] = useState<string>(() => {
+    return localStorage.getItem('invoicing_filterMese') || 'tutti';
+  });
+  const [filterAnno, setFilterAnno] = useState<number | 'tutti'>(() => {
+    const saved = localStorage.getItem('invoicing_filterAnno');
+    return saved ? (saved === 'tutti' ? 'tutti' : parseInt(saved)) : 'tutti';
+  });
+  const [filterMeseTabella, setFilterMeseTabella] = useState<string>(() => {
+    return localStorage.getItem('invoicing_filterMeseTabella') || 'tutti';
+  });
   const [showModal, setShowModal] = useState(false);
   const [editingInvoice, setEditingInvoice] = useState<Invoice | null>(null);
+
+  // Persist filters to localStorage
+  React.useEffect(() => {
+    localStorage.setItem('invoicing_filterTipo', filterTipo);
+  }, [filterTipo]);
+
+  React.useEffect(() => {
+    localStorage.setItem('invoicing_filterStato', filterStato);
+  }, [filterStato]);
+
+  React.useEffect(() => {
+    localStorage.setItem('invoicing_filterMese', filterMese);
+  }, [filterMese]);
+
+  React.useEffect(() => {
+    localStorage.setItem('invoicing_filterAnno', String(filterAnno));
+  }, [filterAnno]);
+
+  React.useEffect(() => {
+    localStorage.setItem('invoicing_filterMeseTabella', filterMeseTabella);
+  }, [filterMeseTabella]);
 
   // Anni disponibili
   const anniDisponibili = useMemo((): number[] => {
@@ -50,11 +85,18 @@ export const Invoicing: React.FC = () => {
     return uniqueAnni.sort((a, b) => b - a); // Ordine decrescente
   }, [invoices]);
 
-  // Fatture filtrate per anno (usate per i totali)
-  const invoicesFiltratePorAnno = useMemo(() => {
-    if (filterAnno === 'tutti') return invoices;
-    return invoices.filter(i => i.anno === filterAnno);
-  }, [invoices, filterAnno]);
+  // Fatture per dashboard (KPI) - filtrate solo per anno e mese dalla dashboard top bar
+  const invoicesForDashboard = useMemo(() => {
+    let filtered = invoices;
+    // Applica filtri Anno e Mese dalla dashboard
+    if (filterAnno !== 'tutti') {
+      filtered = filtered.filter(i => i.anno === filterAnno);
+    }
+    if (filterMese !== 'tutti') {
+      filtered = filtered.filter(i => i.mese === filterMese);
+    }
+    return filtered;
+  }, [invoices, filterAnno, filterMese]);
 
   // Sorting state
   type SortColumn = 'id' | 'data' | 'tipo' | 'progetto' | 'stato' | 'flusso' | 'totale';
@@ -72,11 +114,18 @@ export const Invoicing: React.FC = () => {
   };
 
   // Stato per la vista bilancio
-  const [vistaStato, setVistaStato] = useState<'tutti' | 'effettivo' | 'stimato'>('tutti');
+  const [vistaStato, setVistaStato] = useState<'tutti' | 'effettivo' | 'stimato'>(() => {
+    const saved = localStorage.getItem('invoicing_vistaStato');
+    return (saved as 'tutti' | 'effettivo' | 'stimato') || 'tutti';
+  });
 
-  // Calcola totali separati per Effettivo e Stimato (filtrati per anno)
+  React.useEffect(() => {
+    localStorage.setItem('invoicing_vistaStato', vistaStato);
+  }, [vistaStato]);
+
+  // Calcola totali separati per Effettivo e Stimato (filtrati solo per anno dalla dashboard)
   const totals = useMemo(() => {
-    const baseInvoices = invoicesFiltratePorAnno;
+    const baseInvoices = invoicesForDashboard;
 
     const calcTotals = (filterFn: (i: Invoice) => boolean) => {
       const filtered = baseInvoices.filter(filterFn);
@@ -104,12 +153,12 @@ export const Invoicing: React.FC = () => {
       countStimate: baseInvoices.filter(i => i.statoFatturazione === 'Stimato').length,
       countEffettive: baseInvoices.filter(i => i.statoFatturazione === 'Effettivo').length,
     };
-  }, [invoicesFiltratePorAnno]);
+  }, [invoicesForDashboard]);
 
   // Dati attivi in base alla vista selezionata
   const activeData = totals[vistaStato];
 
-  // Filtra fatture
+  // Filtra fatture per tabella (NON include filtri Anno/Mese della dashboard)
   const filteredInvoices = useMemo(() => {
     return invoices.filter(inv => {
       const matchesSearch = searchTerm === '' ||
@@ -120,12 +169,11 @@ export const Invoicing: React.FC = () => {
 
       const matchesTipo = filterTipo === 'tutti' || inv.tipo === filterTipo;
       const matchesStato = filterStato === 'tutti' || inv.statoFatturazione === filterStato;
-      const matchesMese = filterMese === 'tutti' || inv.mese === filterMese;
-      const matchesAnno = filterAnno === 'tutti' || inv.anno === filterAnno;
+      const matchesMeseTabella = filterMeseTabella === 'tutti' || inv.mese === filterMeseTabella;
 
-      return matchesSearch && matchesTipo && matchesStato && matchesMese && matchesAnno;
+      return matchesSearch && matchesTipo && matchesStato && matchesMeseTabella;
     });
-  }, [invoices, searchTerm, filterTipo, filterStato, filterMese, filterAnno]);
+  }, [invoices, searchTerm, filterTipo, filterStato, filterMeseTabella]);
 
   // Ordina fatture
   const sortedInvoices = useMemo(() => {
@@ -216,6 +264,21 @@ export const Invoicing: React.FC = () => {
             <option value="tutti">Tutti gli anni</option>
             {anniDisponibili.map(anno => (
               <option key={anno} value={anno}>{anno}</option>
+            ))}
+          </select>
+        </div>
+
+        {/* Selettore Mese */}
+        <div className="bg-white rounded-2xl shadow-sm p-2 flex items-center">
+          <Calendar size={16} className="text-gray-400 ml-2" />
+          <select
+            value={filterMese}
+            onChange={(e) => setFilterMese(e.target.value)}
+            className="px-3 py-2 bg-transparent border-none font-medium text-dark text-sm focus:ring-0 focus:outline-none cursor-pointer"
+          >
+            <option value="tutti">Tutti i mesi</option>
+            {MESI.map(mese => (
+              <option key={mese} value={mese}>{mese}</option>
             ))}
           </select>
         </div>
@@ -424,13 +487,13 @@ export const Invoicing: React.FC = () => {
             <option value="Nessuno">Nessuno</option>
           </select>
           <select
-            value={filterMese}
-            onChange={(e) => setFilterMese(e.target.value)}
+            value={filterMeseTabella}
+            onChange={(e) => setFilterMeseTabella(e.target.value)}
             className="px-4 py-2 bg-gray-50 border-none rounded-xl focus:ring-2 focus:ring-primary focus:outline-none"
           >
             <option value="tutti">Tutti i mesi</option>
-            {mesiDisponibili.map(m => (
-              <option key={m} value={m}>{m}</option>
+            {MESI.map(mese => (
+              <option key={mese} value={mese}>{mese}</option>
             ))}
           </select>
         </div>
@@ -527,7 +590,7 @@ export const Invoicing: React.FC = () => {
             <tbody className="divide-y divide-gray-100">
               {sortedInvoices.map((inv) => (
                 <tr key={inv.id} className={`hover:bg-gray-50 transition-colors ${inv.tipo === 'Uscita' ? 'bg-orange-50/30' : ''}`}>
-                  <td className="px-4 py-3 text-sm text-gray-500 font-mono">
+                  <td className="px-4 py-3 text-sm text-gray-900 font-semibold">
                     {formatInvoiceId(inv.id, inv.anno)}
                   </td>
                   <td className="px-4 py-3">

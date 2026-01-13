@@ -84,25 +84,75 @@ export const Cashflow: React.FC = () => {
     addCashflowRecord,
     updateCashflowRecord,
     deleteCashflowRecord,
+    updateInvoice,
     getBankBalance,
     setBankBalance
   } = useData();
 
-  const [filterAnno, setFilterAnno] = useState<number | 'tutti'>('tutti');
-  const [filterMese, setFilterMese] = useState<string>('tutti');
-  const [vistaStato, setVistaStato] = useState<'tutti' | 'effettivo' | 'stimato'>('tutti');
+  const [filterAnno, setFilterAnno] = useState<number | 'tutti'>(() => {
+    const saved = localStorage.getItem('cashflow_filterAnno');
+    return saved ? (saved === 'tutti' ? 'tutti' : parseInt(saved)) : 'tutti';
+  });
+  const [filterMese, setFilterMese] = useState<string>(() => {
+    return localStorage.getItem('cashflow_filterMese') || 'tutti';
+  });
+  const [vistaStato, setVistaStato] = useState<'tutti' | 'effettivo' | 'stimato'>(() => {
+    const saved = localStorage.getItem('cashflow_vistaStato');
+    return (saved as 'tutti' | 'effettivo' | 'stimato') || 'tutti';
+  });
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterTipo, setFilterTipo] = useState<'tutti' | 'Entrata' | 'Uscita'>('tutti');
+  const [filterTipo, setFilterTipo] = useState<'tutti' | 'Entrata' | 'Uscita'>(() => {
+    const saved = localStorage.getItem('cashflow_filterTipo');
+    return (saved as 'tutti' | 'Entrata' | 'Uscita') || 'tutti';
+  });
+  const [filterMeseTabella, setFilterMeseTabella] = useState<string>(() => {
+    return localStorage.getItem('cashflow_filterMeseTabella') || 'tutti';
+  });
+  const [filterStatoTabella, setFilterStatoTabella] = useState<'tutti' | 'Stimato' | 'Effettivo' | 'Nessuno'>(() => {
+    const saved = localStorage.getItem('cashflow_filterStatoTabella');
+    return (saved as 'tutti' | 'Stimato' | 'Effettivo' | 'Nessuno') || 'tutti';
+  });
   const [showModal, setShowModal] = useState(false);
   const [editingRecord, setEditingRecord] = useState<CashflowRecord | null>(null);
   const [showBankBalanceModal, setShowBankBalanceModal] = useState(false);
   const [bankBalanceInput, setBankBalanceInput] = useState<string>('');
+
+  // Persist filters to localStorage
+  React.useEffect(() => {
+    localStorage.setItem('cashflow_filterAnno', String(filterAnno));
+  }, [filterAnno]);
+
+  React.useEffect(() => {
+    localStorage.setItem('cashflow_filterMese', filterMese);
+  }, [filterMese]);
+
+  React.useEffect(() => {
+    localStorage.setItem('cashflow_vistaStato', vistaStato);
+  }, [vistaStato]);
+
+  React.useEffect(() => {
+    localStorage.setItem('cashflow_filterTipo', filterTipo);
+  }, [filterTipo]);
+
+  React.useEffect(() => {
+    localStorage.setItem('cashflow_filterMeseTabella', filterMeseTabella);
+  }, [filterMeseTabella]);
+
+  React.useEffect(() => {
+    localStorage.setItem('cashflow_filterStatoTabella', filterStatoTabella);
+  }, [filterStatoTabella]);
 
   // Form state
   const [formInvoiceId, setFormInvoiceId] = useState('');
   const [formDataPagamento, setFormDataPagamento] = useState('');
   const [formImporto, setFormImporto] = useState<string>('');
   const [formNote, setFormNote] = useState('');
+  const [formStatoFatturazione, setFormStatoFatturazione] = useState<'Stimato' | 'Effettivo' | 'Nessuno'>('Effettivo');
+
+  // Filtri per la selezione fatture nel modal
+  const [invoiceSearchTerm, setInvoiceSearchTerm] = useState('');
+  const [invoiceFilterTipo, setInvoiceFilterTipo] = useState<'tutti' | 'Entrata' | 'Uscita'>('tutti');
+  const [invoiceFilterAnno, setInvoiceFilterAnno] = useState<number | 'tutti'>('tutti');
 
   // Sorting
   type SortColumn = 'mese' | 'progetto' | 'spesa' | 'tipo' | 'stato' | 'totale';
@@ -141,8 +191,8 @@ export const Cashflow: React.FC = () => {
     }).filter(cf => cf.invoice); // Solo record con fattura valida
   }, [cashflowRecords, invoices]);
 
-  // Records filtrati per anno, mese e stato (basati sulla DATA DI PAGAMENTO)
-  const recordsFiltrati = useMemo(() => {
+  // Records per dashboard (KPI) - filtrati per anno, mese e stato dalla dashboard top bar
+  const recordsForDashboard = useMemo(() => {
     let filtered = cashflowWithInvoices;
     if (filterAnno !== 'tutti') {
       filtered = filtered.filter(cf => getAnnoFromDate(cf.dataPagamento) === filterAnno);
@@ -158,9 +208,9 @@ export const Cashflow: React.FC = () => {
     return filtered;
   }, [cashflowWithInvoices, filterAnno, filterMese, vistaStato]);
 
-  // Fatture filtrate per tabella (include ricerca e tipo)
+  // Fatture filtrate per tabella (NON include filtri Anno/Mese/Stato della dashboard)
   const recordsPerTabella = useMemo(() => {
-    return recordsFiltrati.filter(cf => {
+    return cashflowWithInvoices.filter(cf => {
       const inv = cf.invoice;
       if (!inv) return false;
       const matchesSearch = searchTerm === '' ||
@@ -169,9 +219,11 @@ export const Cashflow: React.FC = () => {
         inv.note?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         cf.note?.toLowerCase().includes(searchTerm.toLowerCase());
       const matchesTipo = filterTipo === 'tutti' || inv.tipo === filterTipo;
-      return matchesSearch && matchesTipo;
+      const matchesMeseTabella = filterMeseTabella === 'tutti' || getMeseFromDate(cf.dataPagamento) === filterMeseTabella;
+      const matchesStatoTabella = filterStatoTabella === 'tutti' || inv.statoFatturazione === filterStatoTabella;
+      return matchesSearch && matchesTipo && matchesMeseTabella && matchesStatoTabella;
     });
-  }, [recordsFiltrati, searchTerm, filterTipo]);
+  }, [cashflowWithInvoices, searchTerm, filterTipo, filterMeseTabella, filterStatoTabella]);
 
   // Ordina records per tabella (ordinamento per mese usa data di pagamento)
   const sortedRecords = useMemo(() => {
@@ -211,8 +263,8 @@ export const Cashflow: React.FC = () => {
 
   // Calcola totali (usa importo personalizzato se presente, altrimenti flusso + iva)
   const totals = useMemo(() => {
-    const entrate = recordsFiltrati.filter(cf => cf.invoice?.tipo === 'Entrata');
-    const uscite = recordsFiltrati.filter(cf => cf.invoice?.tipo === 'Uscita');
+    const entrate = recordsForDashboard.filter(cf => cf.invoice?.tipo === 'Entrata');
+    const uscite = recordsForDashboard.filter(cf => cf.invoice?.tipo === 'Uscita');
 
     const totaleEntrate = entrate.reduce((acc, cf) => acc + getImportoEffettivo(cf), 0);
     const totaleUscite = uscite.reduce((acc, cf) => acc + getImportoEffettivo(cf), 0);
@@ -224,7 +276,7 @@ export const Cashflow: React.FC = () => {
       countEntrate: entrate.length,
       countUscite: uscite.length,
     };
-  }, [recordsFiltrati]);
+  }, [recordsForDashboard]);
 
   // Saldo iniziale e saldo in banca per l'anno selezionato
   const currentBankBalance = useMemo(() => {
@@ -260,7 +312,7 @@ export const Cashflow: React.FC = () => {
       monthlyData[m] = { entrate: 0, uscite: 0 };
     });
 
-    recordsFiltrati.forEach(cf => {
+    recordsForDashboard.forEach(cf => {
       const inv = cf.invoice;
       const meseIndex = getMeseIndexFromDate(cf.dataPagamento);
       if (inv && meseIndex !== -1) {
@@ -279,21 +331,57 @@ export const Cashflow: React.FC = () => {
       entrate: monthlyData[m].entrate,
       uscite: monthlyData[m].uscite,
     }));
-  }, [recordsFiltrati]);
+  }, [recordsForDashboard]);
 
-  // Fatture disponibili per selezione (non già nel cashflow)
+  // Anni disponibili dalle fatture
+  const anniDisponibiliFatture = useMemo(() => {
+    const anni = invoices.map(i => i.anno).filter((a): a is number => Boolean(a));
+    const uniqueAnni = [...new Set(anni)];
+    return uniqueAnni.sort((a, b) => b - a);
+  }, [invoices]);
+
+  // Fatture disponibili per selezione (tutte le fatture - permettiamo pagamenti multipli)
   const invoicesDisponibili = useMemo(() => {
-    const usedInvoiceIds = new Set(cashflowRecords.map(cf => cf.invoiceId));
-    return invoices.filter(inv => !usedInvoiceIds.has(inv.id));
-  }, [invoices, cashflowRecords]);
+    let filtered = invoices;
+
+    // Filtra per tipo
+    if (invoiceFilterTipo !== 'tutti') {
+      filtered = filtered.filter(inv => inv.tipo === invoiceFilterTipo);
+    }
+
+    // Filtra per anno
+    if (invoiceFilterAnno !== 'tutti') {
+      filtered = filtered.filter(inv => inv.anno === invoiceFilterAnno);
+    }
+
+    // Filtra per ricerca testuale
+    if (invoiceSearchTerm) {
+      const search = invoiceSearchTerm.toLowerCase();
+      filtered = filtered.filter(inv =>
+        inv.id.toLowerCase().includes(search) ||
+        (inv.nomeProgetto || '').toLowerCase().includes(search) ||
+        (inv.spesa || '').toLowerCase().includes(search) ||
+        (inv.note || '').toLowerCase().includes(search)
+      );
+    }
+
+    return filtered;
+  }, [invoices, invoiceFilterTipo, invoiceFilterAnno, invoiceSearchTerm]);
 
   // Modal handlers
   const openNewModal = () => {
     setEditingRecord(null);
     setFormInvoiceId('');
-    setFormDataPagamento('');
+    // Imposta data di oggi come default (formato YYYY-MM-DD)
+    const today = new Date().toISOString().split('T')[0];
+    setFormDataPagamento(today);
     setFormImporto('');
     setFormNote('');
+    setFormStatoFatturazione('Effettivo');
+    // Reset filtri fatture
+    setInvoiceSearchTerm('');
+    setInvoiceFilterTipo('tutti');
+    setInvoiceFilterAnno('tutti');
     setShowModal(true);
   };
 
@@ -309,15 +397,21 @@ export const Cashflow: React.FC = () => {
       setFormImporto(totale.toString());
     }
     setFormNote(record.note || '');
+    setFormStatoFatturazione(record.invoice?.statoFatturazione || 'Effettivo');
     setShowModal(true);
   };
 
   const closeModal = () => {
     setShowModal(false);
     setEditingRecord(null);
+    setFormStatoFatturazione('Effettivo');
+    // Reset filtri fatture
+    setInvoiceSearchTerm('');
+    setInvoiceFilterTipo('tutti');
+    setInvoiceFilterAnno('tutti');
   };
 
-  // Quando cambia la fattura selezionata, pre-popola l'importo
+  // Quando cambia la fattura selezionata, pre-popola l'importo e lo stato
   const handleInvoiceChange = (invoiceId: string) => {
     setFormInvoiceId(invoiceId);
     if (invoiceId) {
@@ -325,9 +419,11 @@ export const Cashflow: React.FC = () => {
       if (inv) {
         const totale = (inv.flusso || 0) + (inv.iva || 0);
         setFormImporto(totale.toString());
+        setFormStatoFatturazione(inv.statoFatturazione || 'Effettivo');
       }
     } else {
       setFormImporto('');
+      setFormStatoFatturazione('Effettivo');
     }
   };
 
@@ -347,6 +443,14 @@ export const Cashflow: React.FC = () => {
       importo: importoToSave,
       note: formNote || undefined,
     };
+
+    // Aggiorna lo stato della fattura se è cambiato
+    if (invoice && invoice.statoFatturazione !== formStatoFatturazione) {
+      await updateInvoice(invoice.id, {
+        ...invoice,
+        statoFatturazione: formStatoFatturazione
+      });
+    }
 
     if (editingRecord) {
       await updateCashflowRecord(editingRecord.id, recordData);
@@ -625,6 +729,28 @@ export const Cashflow: React.FC = () => {
               <option value="Entrata">Entrate</option>
               <option value="Uscita">Uscite</option>
             </select>
+            {/* Filtro Mese */}
+            <select
+              value={filterMeseTabella}
+              onChange={(e) => setFilterMeseTabella(e.target.value)}
+              className="px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+            >
+              <option value="tutti">Tutti i mesi</option>
+              {MESI_FULL.map(mese => (
+                <option key={mese} value={mese}>{mese}</option>
+              ))}
+            </select>
+            {/* Filtro Stato */}
+            <select
+              value={filterStatoTabella}
+              onChange={(e) => setFilterStatoTabella(e.target.value as 'tutti' | 'Stimato' | 'Effettivo' | 'Nessuno')}
+              className="px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+            >
+              <option value="tutti">Tutti gli stati</option>
+              <option value="Stimato">Stimato</option>
+              <option value="Effettivo">Effettivo</option>
+              <option value="Nessuno">Nessuno</option>
+            </select>
           </div>
         </div>
 
@@ -636,6 +762,7 @@ export const Cashflow: React.FC = () => {
                 <th className="px-4 py-3 cursor-pointer hover:bg-gray-100" onClick={() => handleSort('mese')}>
                   <div className="flex items-center gap-1">Data Pag. <SortIcon column="mese" /></div>
                 </th>
+                <th className="px-4 py-3">ID Fattura</th>
                 <th className="px-4 py-3 cursor-pointer hover:bg-gray-100" onClick={() => handleSort('progetto')}>
                   <div className="flex items-center gap-1">Progetto <SortIcon column="progetto" /></div>
                 </th>
@@ -666,6 +793,9 @@ export const Cashflow: React.FC = () => {
                 return (
                   <tr key={record.id} className="hover:bg-gray-50 transition-colors">
                     <td className="px-4 py-3 text-sm text-gray-600">{formatDate(record.dataPagamento)}</td>
+                    <td className="px-4 py-3 text-sm font-medium text-primary">
+                      {formatInvoiceNumber(inv.id, inv.anno)}
+                    </td>
                     <td className="px-4 py-3 text-sm text-gray-600">{inv.nomeProgetto || '-'}</td>
                     <td className="px-4 py-3 text-sm text-gray-600">{inv.spesa || '-'}</td>
                     <td className="px-4 py-3 text-sm text-gray-600">{inv.tipoSpesa || '-'}</td>
@@ -746,9 +876,55 @@ export const Cashflow: React.FC = () => {
             <form onSubmit={handleSubmit} className="p-6 space-y-4">
               {/* Selezione Fattura */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
                   Fattura di Riferimento *
                 </label>
+
+                {/* Filtri per ricerca fatture */}
+                {!editingRecord && (
+                  <div className="mb-3 p-3 bg-gray-50 rounded-xl space-y-2">
+                    {/* Campo ricerca */}
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
+                      <input
+                        type="text"
+                        placeholder="Cerca per ID, progetto, categoria..."
+                        value={invoiceSearchTerm}
+                        onChange={(e) => setInvoiceSearchTerm(e.target.value)}
+                        className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 text-sm"
+                      />
+                    </div>
+
+                    {/* Filtri rapidi */}
+                    <div className="flex gap-2">
+                      <select
+                        value={invoiceFilterTipo}
+                        onChange={(e) => setInvoiceFilterTipo(e.target.value as 'tutti' | 'Entrata' | 'Uscita')}
+                        className="flex-1 px-3 py-1.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+                      >
+                        <option value="tutti">Tutti i tipi</option>
+                        <option value="Entrata">Entrate</option>
+                        <option value="Uscita">Uscite</option>
+                      </select>
+                      <select
+                        value={invoiceFilterAnno}
+                        onChange={(e) => setInvoiceFilterAnno(e.target.value === 'tutti' ? 'tutti' : parseInt(e.target.value))}
+                        className="flex-1 px-3 py-1.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+                      >
+                        <option value="tutti">Tutti gli anni</option>
+                        {anniDisponibiliFatture.map(anno => (
+                          <option key={anno} value={anno}>{anno}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* Contatore risultati */}
+                    <div className="text-xs text-gray-500 text-center">
+                      {invoicesDisponibili.length} {invoicesDisponibili.length === 1 ? 'fattura trovata' : 'fatture trovate'}
+                    </div>
+                  </div>
+                )}
+
                 <select
                   value={formInvoiceId}
                   onChange={(e) => handleInvoiceChange(e.target.value)}
@@ -835,6 +1011,25 @@ export const Cashflow: React.FC = () => {
                   className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/50 resize-none"
                   placeholder="Note aggiuntive sul movimento..."
                 />
+              </div>
+
+              {/* Stato Fatturazione */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Stato Fatturazione *
+                </label>
+                <select
+                  value={formStatoFatturazione}
+                  onChange={(e) => setFormStatoFatturazione(e.target.value as 'Stimato' | 'Effettivo' | 'Nessuno')}
+                  className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/50"
+                >
+                  <option value="Stimato">Stimato</option>
+                  <option value="Effettivo">Effettivo</option>
+                  <option value="Nessuno">Nessuno</option>
+                </select>
+                <p className="text-xs text-gray-500 mt-1">
+                  Modifica lo stato della fattura collegata
+                </p>
               </div>
 
               {/* Actions */}
