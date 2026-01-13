@@ -752,7 +752,9 @@ export const Cashflow: React.FC = () => {
                 tick={{ fill: '#6B7280', fontSize: 12 }}
                 tickFormatter={(value) => {
                   const thousands = Math.round(value / 1000);
-                  return `${thousands.toLocaleString('it-IT')}k €`;
+                  // Aggiungi punto per migliaia anche nei k
+                  const formatted = thousands.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+                  return `${formatted}k €`;
                 }}
               />
               <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
