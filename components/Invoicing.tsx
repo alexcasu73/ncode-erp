@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { useData } from '../context/DataContext';
 import { Invoice, Deal, DealStage } from '../types';
 import { Plus, Download, Filter, ArrowUpCircle, ArrowDownCircle, Search, Calendar, Eye, Edit2, Trash2, X, Check, ChevronUp, ChevronDown, ChevronsUpDown, RotateCcw } from 'lucide-react';
+import { formatCurrency } from '../lib/currency';
 
 // Mesi italiani
 const MESI = ['Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno', 'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre'];
@@ -11,15 +12,6 @@ const CATEGORIE_SPESA = ['Tools', 'Utenze', 'Affitto casa', 'Banca', 'Commercial
 
 // Tipi spesa
 const TIPI_SPESA = ['Costi per servizi', 'Altri costi', 'Team'];
-
-// Helper per formattare valuta
-const formatCurrency = (value: number): string => {
-  return new Intl.NumberFormat('it-IT', {
-    style: 'currency',
-    currency: 'EUR',
-    useGrouping: true
-  }).format(value);
-};
 
 // Helper per formattare data
 const formatDate = (date: Date | string): string => {

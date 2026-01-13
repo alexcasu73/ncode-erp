@@ -3,15 +3,7 @@ import { XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, BarChart, Ba
 import { useData } from '../context/DataContext';
 import { CashflowRecord, Invoice } from '../types';
 import { Plus, ArrowUpCircle, ArrowDownCircle, Calendar, Search, ChevronUp, ChevronDown, ChevronsUpDown, X, Edit2, Trash2, Wallet, Settings, RotateCcw } from 'lucide-react';
-
-// Helper per formattare valuta
-const formatCurrency = (value: number): string => {
-  return new Intl.NumberFormat('it-IT', {
-    style: 'currency',
-    currency: 'EUR',
-    useGrouping: true
-  }).format(value);
-};
+import { formatCurrency } from '../lib/currency';
 
 // Mesi italiani abbreviati
 const MESI_ABR = ['Gen', 'Feb', 'Mar', 'Apr', 'Mag', 'Giu', 'Lug', 'Ago', 'Set', 'Ott', 'Nov', 'Dic'];
@@ -296,9 +288,68 @@ export const Cashflow: React.FC = () => {
   }, [filterAnno, getBankBalance]);
 
   const saldoInBanca = useMemo(() => {
+    if (filterAnno === 'tutti') return 0;
+
     const saldoIniziale = currentBankBalance?.saldoIniziale || 0;
-    return saldoIniziale + totals.saldo;
-  }, [currentBankBalance, totals.saldo]);
+
+    // Calcola il saldo cumulativo dall'inizio dell'anno fino al mese selezionato
+    // IMPORTANTE: Usa cashflowRecords (non cashflowWithInvoices) per includere anche movimenti standalone
+    let recordsUpToSelectedMonth = cashflowRecords.filter(cf => {
+      const anno = getAnnoFromDate(cf.dataPagamento);
+      if (anno !== filterAnno) return false;
+
+      // Se un mese specifico è selezionato, includi tutti i movimenti fino a quel mese
+      if (filterMese !== 'tutti') {
+        const meseRecord = getMeseFromDate(cf.dataPagamento);
+        if (!meseRecord) return false;
+        const meseRecordIndex = MESI_FULL.indexOf(meseRecord);
+        const meseSelezionatoIndex = MESI_FULL.indexOf(filterMese);
+        return meseRecordIndex <= meseSelezionatoIndex;
+      }
+
+      // Se "tutti" è selezionato, includi tutti i movimenti dell'anno
+      return true;
+    });
+
+    // Applica il filtro per vistaStato (effettivo/stimato)
+    if (vistaStato === 'effettivo') {
+      recordsUpToSelectedMonth = recordsUpToSelectedMonth.filter(cf => {
+        // Movimenti standalone sono sempre considerati "effettivi"
+        if (!cf.invoiceId) return true;
+        // Movimenti con fattura: filtra per stato fatturazione
+        const invoice = invoices.find(inv => inv.id === cf.invoiceId);
+        return invoice?.statoFatturazione === 'Effettivo';
+      });
+    } else if (vistaStato === 'stimato') {
+      recordsUpToSelectedMonth = recordsUpToSelectedMonth.filter(cf => {
+        // Movimenti standalone NON sono stimati
+        if (!cf.invoiceId) return false;
+        // Movimenti con fattura: filtra per stato fatturazione
+        const invoice = invoices.find(inv => inv.id === cf.invoiceId);
+        return invoice?.statoFatturazione === 'Stimato';
+      });
+    }
+
+    // Calcola il saldo dei movimenti
+    const saldoMovimenti = recordsUpToSelectedMonth.reduce((acc, cf) => {
+      // Per movimenti standalone usa il tipo e importo direttamente dal record
+      if (!cf.invoiceId) {
+        const importo = cf.importo || 0;
+        const movimento = cf.tipo === 'Entrata' ? importo : -importo;
+        return acc + movimento;
+      }
+
+      // Per movimenti con fattura, trova la fattura e usa il tipo da lì
+      const invoice = invoices.find(inv => inv.id === cf.invoiceId);
+      if (!invoice) return acc;
+
+      const importo = getImportoEffettivo({ ...cf, invoice });
+      const movimento = invoice.tipo === 'Entrata' ? importo : -importo;
+      return acc + movimento;
+    }, 0);
+
+    return saldoIniziale + saldoMovimenti;
+  }, [currentBankBalance, filterAnno, filterMese, vistaStato, cashflowRecords, invoices]);
 
   // Conteggio per stato (basato sulla DATA DI PAGAMENTO)
   const countByStato = useMemo(() => {
@@ -699,7 +750,10 @@ export const Cashflow: React.FC = () => {
                 axisLine={false}
                 tickLine={false}
                 tick={{ fill: '#6B7280', fontSize: 12 }}
-                tickFormatter={(value) => `€${(value / 1000).toFixed(0)}k`}
+                tickFormatter={(value) => {
+                  const thousands = Math.round(value / 1000);
+                  return `${thousands.toLocaleString('it-IT')}k €`;
+                }}
               />
               <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
               <Tooltip

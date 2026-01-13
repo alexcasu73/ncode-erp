@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { useData } from '../context/DataContext';
 import { Download, Printer, Filter, Building2, TrendingUp, TrendingDown, Scale, Edit2, Plus, X, Check } from 'lucide-react';
 import { FinancialItem } from '../types';
+import { formatCurrency, formatCurrencyNoDecimals } from '../lib/currency';
 
 const MESI = ['Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno', 'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre'];
 
@@ -139,21 +140,21 @@ export const FinancialStatement: React.FC = () => {
                     <Building2 size={18} />
                     <h3 className="text-sm font-medium">Totale Attivo</h3>
                 </div>
-                <p className="text-3xl font-bold text-dark">€ {totalAssets.toLocaleString()}</p>
+                <p className="text-3xl font-bold text-dark">{formatCurrencyNoDecimals(totalAssets)}</p>
             </div>
             <div className="bg-white p-6 rounded-[2rem] shadow-sm border-t-4 border-red-400">
                 <div className="flex items-center gap-2 mb-2 text-gray-500">
                     <Scale size={18} />
                     <h3 className="text-sm font-medium">Totale Passivo</h3>
                 </div>
-                <p className="text-3xl font-bold text-dark">€ {totalLiabilities.toLocaleString()}</p>
+                <p className="text-3xl font-bold text-dark">{formatCurrencyNoDecimals(totalLiabilities)}</p>
             </div>
             <div className="bg-white p-6 rounded-[2rem] shadow-sm border-t-4 border-primary">
                 <div className="flex items-center gap-2 mb-2 text-gray-500">
                     <TrendingUp size={18} />
                     <h3 className="text-sm font-medium">Utile d'Esercizio (Calc)</h3>
                 </div>
-                <p className="text-3xl font-bold text-dark">€ {equityGap.toLocaleString()}</p>
+                <p className="text-3xl font-bold text-dark">{formatCurrencyNoDecimals(equityGap)}</p>
             </div>
           </div>
 
@@ -191,7 +192,7 @@ export const FinancialStatement: React.FC = () => {
                       assets.map((item) => (
                         <tr key={item.id} className="hover:bg-gray-50 group">
                           <td className="py-3 text-sm font-medium text-gray-600">{item.name}</td>
-                          <td className="py-3 text-right text-sm font-bold text-dark">€ {item.amount.toLocaleString('it-IT')}</td>
+                          <td className="py-3 text-right text-sm font-bold text-dark">{formatCurrencyNoDecimals(item.amount)}</td>
                           <td className="py-3 text-right opacity-0 group-hover:opacity-100 transition-opacity">
                             <button
                               onClick={() => setEditingItem(item)}
@@ -216,7 +217,7 @@ export const FinancialStatement: React.FC = () => {
                     <tr className="bg-gray-50">
                       <td className="py-4 pl-2 text-base font-bold text-dark">Totale Attivo</td>
                       <td colSpan={2} className="py-4 pr-2 text-right text-base font-bold text-green-600">
-                        € {totalAssets.toLocaleString('it-IT')}
+                        {formatCurrencyNoDecimals(totalAssets)}
                       </td>
                     </tr>
                   </tbody>
@@ -257,7 +258,7 @@ export const FinancialStatement: React.FC = () => {
                       liabilities.map((item) => (
                         <tr key={item.id} className="hover:bg-gray-50 group">
                           <td className="py-3 text-sm font-medium text-gray-600">{item.name}</td>
-                          <td className="py-3 text-right text-sm font-bold text-dark">€ {item.amount.toLocaleString('it-IT')}</td>
+                          <td className="py-3 text-right text-sm font-bold text-dark">{formatCurrencyNoDecimals(item.amount)}</td>
                           <td className="py-3 text-right opacity-0 group-hover:opacity-100 transition-opacity">
                             <button
                               onClick={() => setEditingItem(item)}
@@ -282,13 +283,13 @@ export const FinancialStatement: React.FC = () => {
                      <tr className="bg-primary/20">
                       <td className="py-3 pl-2 text-sm font-bold text-dark">Utile d'Esercizio (Corrente)</td>
                       <td colSpan={2} className="py-3 pr-2 text-right text-sm font-bold text-dark">
-                        € {equityGap.toLocaleString('it-IT')}
+                        {formatCurrencyNoDecimals(equityGap)}
                       </td>
                     </tr>
                     <tr className="bg-gray-50">
                       <td className="py-4 pl-2 text-base font-bold text-dark">Totale a Pareggio</td>
                       <td colSpan={2} className="py-4 pr-2 text-right text-base font-bold text-red-500">
-                        € {(totalLiabilities + equityGap).toLocaleString('it-IT')}
+                        {formatCurrencyNoDecimals(totalLiabilities + equityGap)}
                       </td>
                     </tr>
                   </tbody>
@@ -304,19 +305,19 @@ export const FinancialStatement: React.FC = () => {
             <div className="bg-white p-6 rounded-[2rem] shadow-sm border-l-4 border-green-500">
                 <h3 className="text-gray-500 text-sm font-medium">Valore della Produzione (Entrate)</h3>
                 <p className="text-3xl font-bold text-dark mt-2">
-                  € {incomeStatementData.entrate.toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  {formatCurrency(incomeStatementData.entrate)}
                 </p>
             </div>
             <div className="bg-white p-6 rounded-[2rem] shadow-sm border-l-4 border-red-400">
                 <h3 className="text-gray-500 text-sm font-medium">Costi della Produzione (Uscite)</h3>
                 <p className="text-3xl font-bold text-dark mt-2">
-                  € {incomeStatementData.uscite.toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  {formatCurrency(incomeStatementData.uscite)}
                 </p>
             </div>
             <div className="bg-white p-6 rounded-[2rem] shadow-sm border-l-4 border-primary">
                 <h3 className="text-gray-500 text-sm font-medium">Risultato Operativo</h3>
                 <p className={`text-3xl font-bold mt-2 ${incomeStatementData.risultatoOperativo >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                  € {incomeStatementData.risultatoOperativo.toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  {formatCurrency(incomeStatementData.risultatoOperativo)}
                 </p>
                 <p className="text-xs text-gray-400 mt-1">Margine: {incomeStatementData.margine.toFixed(1)}%</p>
             </div>
@@ -345,13 +346,13 @@ export const FinancialStatement: React.FC = () => {
                      <tr className="hover:bg-gray-50">
                         <td className="py-3 pl-6 text-sm text-gray-600">Ricavi da vendite e prestazioni</td>
                         <td className="py-3 pr-2 text-right text-sm font-semibold text-green-700">
-                          € {incomeStatementData.entrate.toLocaleString('it-IT', { minimumFractionDigits: 2 })}
+                          {formatCurrency(incomeStatementData.entrate)}
                         </td>
                      </tr>
                      <tr className="bg-green-50/30 border-t border-green-100">
                         <td className="py-3 pl-6 text-sm font-bold text-dark">Totale Valore Produzione</td>
                         <td className="py-3 pr-2 text-right text-sm font-bold text-green-700">
-                          € {incomeStatementData.entrate.toLocaleString('it-IT', { minimumFractionDigits: 2 })}
+                          {formatCurrency(incomeStatementData.entrate)}
                         </td>
                      </tr>
 
@@ -363,13 +364,13 @@ export const FinancialStatement: React.FC = () => {
                      <tr className="hover:bg-gray-50">
                         <td className="py-3 pl-6 text-sm text-gray-600">Costi per servizi e beni</td>
                         <td className="py-3 pr-2 text-right text-sm font-semibold text-red-600">
-                          ( € {incomeStatementData.uscite.toLocaleString('it-IT', { minimumFractionDigits: 2 })} )
+                          ( {formatCurrency(incomeStatementData.uscite)} )
                         </td>
                      </tr>
                      <tr className="bg-red-50/30 border-t border-red-100">
                         <td className="py-3 pl-6 text-sm font-bold text-dark">Totale Costi Produzione</td>
                         <td className="py-3 pr-2 text-right text-sm font-bold text-red-600">
-                          ( € {incomeStatementData.uscite.toLocaleString('it-IT', { minimumFractionDigits: 2 })} )
+                          ( {formatCurrency(incomeStatementData.uscite)} )
                         </td>
                      </tr>
 
@@ -378,7 +379,7 @@ export const FinancialStatement: React.FC = () => {
                      <tr className="bg-primary/20">
                         <td className="py-4 pl-2 text-base font-bold text-dark">Differenza tra Valore e Costi (A - B)</td>
                         <td className={`py-4 pr-2 text-right text-base font-bold ${incomeStatementData.risultatoOperativo >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                          € {incomeStatementData.risultatoOperativo.toLocaleString('it-IT', { minimumFractionDigits: 2 })}
+                          {formatCurrency(incomeStatementData.risultatoOperativo)}
                         </td>
                      </tr>
                   </tbody>

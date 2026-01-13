@@ -2,15 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { useData } from '../context/DataContext';
 import { Deal, DealStage } from '../types';
 import { Plus, Calendar, DollarSign, Edit2, Trash2, X, Check, GripVertical, TrendingUp } from 'lucide-react';
-
-// Helper per formattare valuta
-const formatCurrency = (value: number): string => {
-  return new Intl.NumberFormat('it-IT', {
-    style: 'currency',
-    currency: 'EUR',
-    useGrouping: true
-  }).format(value);
-};
+import { formatCurrency } from '../lib/currency';
 
 export const Deals: React.FC = () => {
   const { deals, customers, loading, addDeal, updateDeal, deleteDeal } = useData();

@@ -4,16 +4,7 @@ import { useData } from '../context/DataContext';
 import { parseBankStatementExcel, formatPeriodo, type ParsedBankStatement, type ParsedTransaction } from '../lib/excel-parser';
 import { suggestMatch, quickMatch, type MatchSuggestion } from '../lib/reconciliation-ai';
 import type { BankTransaction, ReconciliationSession, Invoice, CashflowRecord, CashflowWithInvoice, SideBySideRow, DifferenceReport } from '../types';
-
-// Format currency with Italian locale
-const formatCurrency = (value: number): string => {
-  return value.toLocaleString('it-IT', {
-    style: 'currency',
-    currency: 'EUR',
-    minimumFractionDigits: 2,
-    useGrouping: true
-  });
-};
+import { formatCurrency } from '../lib/currency';
 
 // Format date for display
 const formatDate = (dateStr: string): string => {

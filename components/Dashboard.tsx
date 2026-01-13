@@ -6,6 +6,7 @@ import {
 import { SALES_DATA, REVENUE_DATA } from '../constants';
 import { useData } from '../context/DataContext';
 import { ArrowUpRight, TrendingUp, MoreVertical, Search, Bell } from 'lucide-react';
+import { formatCurrency, formatCurrencyNoDecimals } from '../lib/currency';
 
 const COLORS = ['#D1F366', '#E5E7EB']; // Primary Green, Gray
 
@@ -149,14 +150,14 @@ export const Dashboard: React.FC = () => {
             <h3 className="text-card-title">Fatturato Totale</h3>
             <div className="flex items-center gap-3 mt-2">
               <span className="text-kpi-value text-dark">
-                € {dashboardData.currentRevenue.toLocaleString('it-IT', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                {formatCurrencyNoDecimals(dashboardData.currentRevenue)}
               </span>
               <span className={`text-white text-xs px-2 py-1 rounded-full ${dashboardData.revenueChange >= 0 ? 'bg-dark' : 'bg-red-600'}`}>
                 {dashboardData.revenueChange >= 0 ? '+' : ''}{dashboardData.revenueChange.toFixed(1)}%
               </span>
             </div>
             <p className="text-small mt-1">
-              € {dashboardData.lastRevenue.toLocaleString('it-IT', { minimumFractionDigits: 0, maximumFractionDigits: 0 })} anno scorso
+              {formatCurrencyNoDecimals(dashboardData.lastRevenue)} anno scorso
             </p>
           </div>
           <div className="h-16 w-full mt-4">
@@ -232,7 +233,7 @@ export const Dashboard: React.FC = () => {
                   padding: '12px'
                 }}
                 itemStyle={{ color: '#fff' }}
-                formatter={(value) => '€ ' + Number(value).toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                formatter={(value) => formatCurrency(Number(value))}
                 labelStyle={{ color: '#D1F366', fontWeight: 'bold' }}
               />
               <Bar dataKey="value" fill="#D1F366" radius={[8, 8, 0, 0]} barSize={40} />
