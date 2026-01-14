@@ -417,13 +417,13 @@ const CreateInvoiceModal: React.FC<{
     data: transaction.data,
     mese: MESI[txDate.getMonth()],
     anno: txDate.getFullYear(),
-    nomeProgetto: '',
+    nomeProgetto: transaction.descrizione || transaction.causale || '',
     tipo: transaction.tipo as 'Entrata' | 'Uscita',
     statoFatturazione: 'Effettivo' as 'Stimato' | 'Effettivo' | 'Nessuno',
     spesa: '',
     tipoSpesa: '',
     note: transaction.descrizione || transaction.causale || '',
-    flusso: transaction.importo,
+    flusso: Math.abs(transaction.importo), // Use absolute value for amount
     iva: 0,
     percentualeIva: 0,
     percentualeFatturazione: 100,
@@ -451,22 +451,22 @@ const CreateInvoiceModal: React.FC<{
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-500 mb-1">Tipo *</label>
+              <label className="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Tipo *</label>
               <select
                 value={formData.tipo}
                 onChange={(e) => setFormData({ ...formData, tipo: e.target.value as 'Entrata' | 'Uscita' })}
-                className="w-full pl-4 pr-12 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50"
+                className="w-full pl-4 pr-12 py-2 border border-gray-200 dark:border-dark-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 bg-white dark:bg-gray-800/30 text-dark dark:text-white"
               >
                 <option value="Entrata">Entrata</option>
                 <option value="Uscita">Uscita</option>
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-500 mb-1">Stato *</label>
+              <label className="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Stato *</label>
               <select
                 value={formData.statoFatturazione}
                 onChange={(e) => setFormData({ ...formData, statoFatturazione: e.target.value as 'Stimato' | 'Effettivo' | 'Nessuno' })}
-                className="w-full pl-4 pr-12 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50"
+                className="w-full pl-4 pr-12 py-2 border border-gray-200 dark:border-dark-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 bg-white dark:bg-gray-800/30 text-dark dark:text-white"
               >
                 <option value="Effettivo">Effettivo</option>
                 <option value="Stimato">Stimato</option>
@@ -476,34 +476,34 @@ const CreateInvoiceModal: React.FC<{
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-500 mb-1">Progetto</label>
+            <label className="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Progetto</label>
             <input
               type="text"
               value={formData.nomeProgetto}
               onChange={(e) => setFormData({ ...formData, nomeProgetto: e.target.value })}
-              className="w-full pl-4 pr-12 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50"
+              className="w-full pl-4 pr-4 py-2 border border-gray-200 dark:border-dark-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 bg-white dark:bg-gray-800/30 text-dark dark:text-white placeholder-gray-400 dark:placeholder-gray-500"
               placeholder="Nome progetto..."
             />
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-500 mb-1">Categoria Spesa</label>
+              <label className="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Categoria Spesa</label>
               <input
                 type="text"
                 value={formData.spesa}
                 onChange={(e) => setFormData({ ...formData, spesa: e.target.value })}
-                className="w-full pl-4 pr-12 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50"
+                className="w-full pl-4 pr-4 py-2 border border-gray-200 dark:border-dark-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 bg-white dark:bg-gray-800/30 text-dark dark:text-white placeholder-gray-400 dark:placeholder-gray-500"
                 placeholder="Es: Utenze, Tools..."
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-500 mb-1">Tipo Spesa</label>
+              <label className="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Tipo Spesa</label>
               <input
                 type="text"
                 value={formData.tipoSpesa}
                 onChange={(e) => setFormData({ ...formData, tipoSpesa: e.target.value })}
-                className="w-full pl-4 pr-12 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50"
+                className="w-full pl-4 pr-4 py-2 border border-gray-200 dark:border-dark-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 bg-white dark:bg-gray-800/30 text-dark dark:text-white placeholder-gray-400 dark:placeholder-gray-500"
                 placeholder="Es: Costi per servizi..."
               />
             </div>
@@ -511,35 +511,36 @@ const CreateInvoiceModal: React.FC<{
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-500 mb-1">Importo Netto *</label>
+              <label className="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Importo Netto *</label>
               <input
                 type="number"
                 step="0.01"
                 value={formData.flusso}
                 onChange={(e) => setFormData({ ...formData, flusso: parseFloat(e.target.value) || 0 })}
                 required
-                className="w-full pl-4 pr-12 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50"
+                className="w-full pl-4 pr-4 py-2 border border-gray-200 dark:border-dark-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 bg-white dark:bg-gray-800/30 text-dark dark:text-white"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-500 mb-1">IVA</label>
+              <label className="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">IVA</label>
               <input
                 type="number"
                 step="0.01"
                 value={formData.iva}
                 onChange={(e) => setFormData({ ...formData, iva: parseFloat(e.target.value) || 0 })}
-                className="w-full pl-4 pr-12 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50"
+                className="w-full pl-4 pr-4 py-2 border border-gray-200 dark:border-dark-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 bg-white dark:bg-gray-800/30 text-dark dark:text-white"
               />
             </div>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-500 mb-1">Note</label>
+            <label className="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Note</label>
             <textarea
               value={formData.note}
               onChange={(e) => setFormData({ ...formData, note: e.target.value })}
               rows={3}
-              className="w-full pl-4 pr-12 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 resize-none"
+              className="w-full pl-4 pr-4 py-2 border border-gray-200 dark:border-dark-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 resize-none bg-white dark:bg-gray-800/30 text-dark dark:text-white placeholder-gray-400 dark:placeholder-gray-500"
+              placeholder="Note aggiuntive..."
             />
           </div>
 
@@ -547,13 +548,13 @@ const CreateInvoiceModal: React.FC<{
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 pl-4 pr-12 py-2 border border-gray-200 rounded-lg text-gray-500 hover:bg-gray-50 transition-colors"
+              className="flex-1 px-6 py-3 bg-gray-50 dark:bg-dark-bg border border-gray-200 dark:border-dark-border rounded-lg font-medium text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
             >
               Annulla
             </button>
             <button
               type="submit"
-              className="flex-1 pl-4 pr-12 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors"
+              className="flex-1 px-6 py-3 bg-primary text-white rounded-lg font-medium hover:opacity-90 transition-all"
             >
               Crea Fattura e Riconcilia
             </button>
@@ -572,11 +573,11 @@ const CreateCashflowModal: React.FC<{
 }> = ({ transaction, onSave, onClose }) => {
   const [formData, setFormData] = useState({
     dataPagamento: transaction.data,
-    importo: transaction.importo,
+    importo: Math.abs(transaction.importo), // Use absolute value for amount
     tipo: transaction.tipo as 'Entrata' | 'Uscita',
     descrizione: transaction.descrizione || transaction.causale || '',
     categoria: '',
-    note: ''
+    note: transaction.descrizione || transaction.causale || ''
   });
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -600,21 +601,21 @@ const CreateCashflowModal: React.FC<{
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-500 mb-1">Data *</label>
+              <label className="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Data *</label>
               <input
                 type="date"
                 value={formData.dataPagamento}
                 onChange={(e) => setFormData({ ...formData, dataPagamento: e.target.value })}
                 required
-                className="w-full pl-4 pr-12 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50"
+                className="w-full pl-4 pr-4 py-2 border border-gray-200 dark:border-dark-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 bg-white dark:bg-gray-800/30 text-dark dark:text-white"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-500 mb-1">Tipo *</label>
+              <label className="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Tipo *</label>
               <select
                 value={formData.tipo}
                 onChange={(e) => setFormData({ ...formData, tipo: e.target.value as 'Entrata' | 'Uscita' })}
-                className="w-full pl-4 pr-12 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50"
+                className="w-full pl-4 pr-12 py-2 border border-gray-200 dark:border-dark-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 bg-white dark:bg-gray-800/30 text-dark dark:text-white"
               >
                 <option value="Entrata">Entrata</option>
                 <option value="Uscita">Uscita</option>
@@ -623,48 +624,48 @@ const CreateCashflowModal: React.FC<{
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-500 mb-1">Descrizione *</label>
+            <label className="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Descrizione *</label>
             <input
               type="text"
               value={formData.descrizione}
               onChange={(e) => setFormData({ ...formData, descrizione: e.target.value })}
               required
-              className="w-full pl-4 pr-12 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50"
+              className="w-full pl-4 pr-4 py-2 border border-gray-200 dark:border-dark-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 bg-white dark:bg-gray-800/30 text-dark dark:text-white placeholder-gray-400 dark:placeholder-gray-500"
               placeholder="Descrizione movimento..."
             />
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-500 mb-1">Importo *</label>
+              <label className="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Importo *</label>
               <input
                 type="number"
                 step="0.01"
                 value={formData.importo}
                 onChange={(e) => setFormData({ ...formData, importo: parseFloat(e.target.value) || 0 })}
                 required
-                className="w-full pl-4 pr-12 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50"
+                className="w-full pl-4 pr-4 py-2 border border-gray-200 dark:border-dark-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 bg-white dark:bg-gray-800/30 text-dark dark:text-white"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-500 mb-1">Categoria</label>
+              <label className="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Categoria</label>
               <input
                 type="text"
                 value={formData.categoria}
                 onChange={(e) => setFormData({ ...formData, categoria: e.target.value })}
-                className="w-full pl-4 pr-12 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50"
+                className="w-full pl-4 pr-4 py-2 border border-gray-200 dark:border-dark-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 bg-white dark:bg-gray-800/30 text-dark dark:text-white placeholder-gray-400 dark:placeholder-gray-500"
                 placeholder="Es: Banca, Altro..."
               />
             </div>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-500 mb-1">Note</label>
+            <label className="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Note</label>
             <textarea
               value={formData.note}
               onChange={(e) => setFormData({ ...formData, note: e.target.value })}
               rows={2}
-              className="w-full pl-4 pr-12 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 resize-none"
+              className="w-full pl-4 pr-4 py-2 border border-gray-200 dark:border-dark-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 resize-none bg-white dark:bg-gray-800/30 text-dark dark:text-white placeholder-gray-400 dark:placeholder-gray-500"
               placeholder="Note aggiuntive..."
             />
           </div>
@@ -673,13 +674,13 @@ const CreateCashflowModal: React.FC<{
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 pl-4 pr-12 py-2 border border-gray-200 rounded-lg text-gray-500 hover:bg-gray-50 transition-colors"
+              className="flex-1 px-6 py-3 bg-gray-50 dark:bg-dark-bg border border-gray-200 dark:border-dark-border rounded-lg font-medium text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
             >
               Annulla
             </button>
             <button
               type="submit"
-              className="flex-1 pl-4 pr-12 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+              className="flex-1 px-6 py-3 bg-primary text-white rounded-lg font-medium hover:opacity-90 transition-all"
             >
               Crea Movimento e Riconcilia
             </button>
@@ -2122,7 +2123,7 @@ export const Reconciliation: React.FC = () => {
               <select
                 value={selectedAiModel}
                 onChange={(e) => setSelectedAiModel(e.target.value as 'haiku' | 'sonnet' | 'sonnet4' | 'opus' | 'opus4')}
-                className="text-sm font-medium text-dark dark:text-white bg-transparent border-none focus:outline-none focus:ring-2 focus:ring-purple-500 rounded px-2 cursor-pointer"
+                className="text-sm font-medium text-dark dark:text-white bg-transparent border-none focus:outline-none focus:ring-2 focus:ring-purple-500 rounded pl-2 pr-6 cursor-pointer"
               >
                 <option value="haiku">Haiku 3.5 - ~15¢/100 tx (Veloce)</option>
                 <option value="sonnet">Sonnet 3.5 - ~$1.50/100 tx (Alta qualità)</option>
