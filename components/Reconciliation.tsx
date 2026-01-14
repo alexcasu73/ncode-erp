@@ -2064,7 +2064,8 @@ export const Reconciliation: React.FC = () => {
           status: 'closed',
           closedDate: new Date().toISOString()
         });
-        // Clear selections
+        // Deselect session and clear selections
+        setSelectedSession(null);
         setSelectedIds(new Set());
       } catch (err) {
         console.error('Error closing session:', err);
