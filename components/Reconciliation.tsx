@@ -85,17 +85,19 @@ const TransactionRow: React.FC<{
       >
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4 flex-1">
-            <button
-              onClick={(e) => { e.stopPropagation(); onToggleSelect(); }}
-              disabled={disabled}
-              className="text-gray-500 dark:text-gray-400 hover:text-dark dark:hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isSelected ? (
-                <CheckSquare size={18} className="text-primary" />
-              ) : (
-                <Square size={18} />
-              )}
-            </button>
+            <div className="flex items-center justify-center w-8">
+              <button
+                onClick={(e) => { e.stopPropagation(); onToggleSelect(); }}
+                disabled={disabled}
+                className="text-gray-500 dark:text-gray-400 hover:text-dark dark:hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isSelected ? (
+                  <CheckSquare size={16} className="text-primary" />
+                ) : (
+                  <Square size={16} />
+                )}
+              </button>
+            </div>
             <div className="w-24 text-sm text-gray-500 dark:text-gray-400">{formatDate(transaction.data)}</div>
             <div className="flex-1">
               <div className="font-medium text-dark dark:text-white text-sm truncate max-w-md">
@@ -1869,10 +1871,17 @@ export const Reconciliation: React.FC = () => {
     const tx = bankTransactions.find(t => t.id === transactionId);
     if (!tx) return;
 
-    setIsProcessingAI(true);
     try {
       const modelInfo = getAiModelInfo(selectedAiModel);
+      console.log(`[Single AI Match] Analyzing transaction:`, {
+        id: tx.id,
+        descrizione: tx.descrizione,
+        importo: tx.importo,
+        tipo: tx.tipo,
+        data: tx.data
+      });
       const suggestion = await suggestMatch(tx, invoices, cashflowRecords, modelInfo.id);
+      console.log(`[Single AI Match Result]`, suggestion);
       await updateBankTransaction(transactionId, {
         matchedInvoiceId: suggestion.invoiceId || undefined,
         matchedCashflowId: suggestion.cashflowId || undefined,
@@ -1881,8 +1890,6 @@ export const Reconciliation: React.FC = () => {
       });
     } catch (err) {
       console.error('AI matching error:', err);
-    } finally {
-      setIsProcessingAI(false);
     }
   };
 
@@ -1936,32 +1943,70 @@ export const Reconciliation: React.FC = () => {
     const pending = sessionTransactions.filter(tx => tx.matchStatus === 'pending');
     if (pending.length === 0) return;
 
-    setIsProcessingAI(true);
-    setAiProgress({ current: 0, total: pending.length });
+    setAiProcessing({
+      isProcessing: true,
+      sessionId: currentSession?.id || null,
+      current: 0,
+      total: pending.length,
+      shouldStop: false
+    });
 
     try {
       const modelInfo = getAiModelInfo(selectedAiModel);
       for (let i = 0; i < pending.length; i++) {
+        // Check if user wants to stop
+        if (aiProcessing.shouldStop) {
+          console.log(`⏹️ AI processing stopped by user at ${i}/${pending.length}`);
+          break;
+        }
+
         const tx = pending[i];
+
+        // Update progress
+        setAiProcessing({
+          isProcessing: true,
+          sessionId: currentSession?.id || null,
+          current: i + 1,
+          total: pending.length,
+          shouldStop: aiProcessing.shouldStop
+        });
+
         const suggestion = await suggestMatch(tx, invoices, cashflowRecords, modelInfo.id);
+
+        // Check again after AI call
+        if (aiProcessing.shouldStop) {
+          console.log(`⏹️ AI processing stopped by user after AI call`);
+          break;
+        }
+
         await updateBankTransaction(tx.id, {
           matchedInvoiceId: suggestion.invoiceId || undefined,
           matchedCashflowId: suggestion.cashflowId || undefined,
           matchConfidence: suggestion.confidence,
           matchReason: suggestion.reason
         });
-        setAiProgress({ current: i + 1, total: pending.length });
 
         // Small delay to avoid rate limiting
         if (i < pending.length - 1) {
           await new Promise(resolve => setTimeout(resolve, 300));
         }
+
+        // Check one more time after delay
+        if (aiProcessing.shouldStop) {
+          console.log(`⏹️ AI processing stopped by user after delay`);
+          break;
+        }
       }
     } catch (err) {
       console.error('AI batch matching error:', err);
     } finally {
-      setIsProcessingAI(false);
-      setAiProgress({ current: 0, total: 0 });
+      setAiProcessing({
+        isProcessing: false,
+        sessionId: null,
+        current: 0,
+        total: 0,
+        shouldStop: false
+      });
     }
   };
 

@@ -63,8 +63,12 @@ export async function suggestMatch(
     }
   });
 
-  console.log(`[AI] Transaction tipo: ${transaction.tipo}, descrizione: "${transaction.descrizione}"`);
+  console.log(`[AI] Transaction tipo: ${transaction.tipo}, importo: €${transaction.importo}, descrizione: "${transaction.descrizione}"`);
   console.log(`[AI] Total cashflow records: ${cashflowRecords.length}, Filtered invoices: ${filteredInvoices.length}, cashflow with invoices: ${cashflowWithInvoices.length}`);
+
+  // Log keywords from transaction description for debugging
+  const transactionKeywords = (transaction.descrizione || '').toLowerCase().split(/\s+/).filter(w => w.length > 3);
+  console.log(`[AI] Transaction keywords:`, transactionKeywords);
 
   // Check if we have old-style IDs (long timestamp format) - this indicates cache issue
   const hasOldStyleIds = cashflowRecords.some(cf => cf.id.includes('-') && cf.id.split('-').length === 3 && cf.id.split('-')[1].length > 5);
@@ -79,6 +83,21 @@ export async function suggestMatch(
       invoiceId: cf.invoiceId,
       importo: cf.importo,
       tipo: cf.tipo || invoice?.tipo,
+      note: cf.note || invoice?.note
+    })));
+  }
+
+  // Search for Verisure specifically for debugging
+  const verisureMatches = cashflowWithInvoices.filter(({ cf, invoice }) => {
+    const cfNote = (cf.note || '').toLowerCase();
+    const invNote = (invoice?.note || '').toLowerCase();
+    return cfNote.includes('verisure') || invNote.includes('verisure');
+  });
+  if (verisureMatches.length > 0) {
+    console.log(`[AI] 🔍 Found ${verisureMatches.length} Verisure cashflow records:`, verisureMatches.map(({ cf, invoice }) => ({
+      id: cf.id,
+      importo: cf.importo || ((invoice?.flusso || 0) + (invoice?.iva || 0)),
+      dataPagamento: cf.dataPagamento,
       note: cf.note || invoice?.note
     })));
   }
@@ -121,11 +140,20 @@ Prima di tutto, calcola la differenza assoluta tra l'importo della transazione b
 
 🟡 STEP 2 - VERIFICA DESCRIZIONE (se importo ok):
 Solo se l'importo corrisponde (differenza ≤2€), controlla la descrizione:
-- Confronta le parole chiave nella descrizione della transazione con le note del movimento
-- Se ci sono parole comuni significative (>3 caratteri), aumenta la confidence
+- Fai un matching MOLTO FLESSIBILE: ignora maiuscole/minuscole, ignora caratteri speciali (*/-_.), ignora spazi
+- Cerca nomi di aziende/servizi dentro la descrizione completa
+- Esempi di match validi:
+  * "GOOGLE*WORKSPACE" → "Google Workspace" ✅
+  * "VERISURE ITALY SRL" → "Verisure" ✅
+  * "DIGITAL OCEAN LLC" → "DigitalOcean" ✅
+  * "ANTHROPIC PBC" → "Anthropic" ✅
+- Basta che UNA PAROLA CHIAVE (>4 caratteri) sia presente in entrambe le stringhe
+- NON serve match completo, basta match PARZIALE del nome azienda/servizio
+- Se trovi anche solo il nome base dell'azienda (es: "Google", "Verisure"), è un match valido
 
 🟢 STEP 3 - VERIFICA DATA (opzionale):
-Se importo E descrizione matchano, controlla la vicinanza della data (±30 giorni) per aumentare ulteriormente la confidence
+Se importo E descrizione matchano, controlla la vicinanza della data (±60 giorni) per aumentare ulteriormente la confidence.
+IMPORTANTE: Se importo e descrizione matchano perfettamente, NON scartare il match solo perché la data è lontana!
 
 PRIORITÀ:
 1. IMPORTO (se non matcha → confidence = 0, STOP)
@@ -136,6 +164,13 @@ ESEMPI:
 ❌ BAD: Transazione "Anthropic -20€" + Movimento "Anthropic 50€" → confidence = 0 (importi diversi di 30€!)
 ✅ GOOD: Transazione "Anthropic -50€" + Movimento "Anthropic 50€" → confidence = 95 (importo identico + descrizione match)
 ✅ GOOD: Transazione "Digital Ocean -34.99€" + Movimento "Digital Ocean 34.99€" → confidence = 95
+✅ GOOD: Transazione "SDD A : VERISURE ITALY SRL 2601C265808" + Movimento note "Verisure" → confidence = 90 (nome azienda presente)
+✅ GOOD: Transazione "BONIF A : NCODE STUDIO SRL" + Movimento note "Ncode Studio" → confidence = 90 (match parziale nome)
+✅ GOOD: Transazione "POS CARTA...GOOGLE*WORKSPACE...GOOGLE.COM" + Movimento note "Google Workspace" → confidence = 95 (match flessibile)
+✅ GOOD: Transazione "ADDEBITO DIRETTO AMAZON PRIME" + Movimento note "Amazon Prime Video" → confidence = 85 (parola comune "AMAZON")
+
+⚠️ REGOLA D'ORO: SE IMPORTO MATCHA + NOME AZIENDA/SERVIZIO PRESENTE = FAI IL MATCH!
+Non essere troppo restrittivo! Se l'importo è corretto e vedi il nome dell'azienda (anche parziale, anche con caratteri speciali), è molto probabile che sia un match valido. Confidence alta (80-95%)!
 
 Rispondi ESCLUSIVAMENTE con un oggetto JSON valido (senza markdown, senza backticks) nel seguente formato:
 {"invoiceId": "id_fattura_o_null", "cashflowId": "id_cashflow_o_null", "confidence": numero_da_0_a_100, "reason": "breve spiegazione in italiano"}
@@ -171,6 +206,32 @@ IMPORTANTE:
 
     const result = JSON.parse(cleanedText);
     console.log(`[AI] Parsed result:`, result);
+
+    // CRITICAL: Verify amount match before accepting AI suggestion
+    if (result.cashflowId) {
+      const matchedCashflow = cashflowRecords.find(cf => cf.id === result.cashflowId);
+      if (matchedCashflow) {
+        const invoice = matchedCashflow.invoiceId ? invoices.find(inv => inv.id === matchedCashflow.invoiceId) : null;
+        const cashflowAmount = matchedCashflow.importo || (invoice ? (invoice.flusso || 0) + (invoice.iva || 0) : 0);
+        const transactionAmount = transaction.importo;
+        const amountDiff = Math.abs(cashflowAmount - transactionAmount);
+
+        console.log(`[AI] 🔍 Verifying amount match: Transaction €${transactionAmount} vs Cashflow ${result.cashflowId} €${cashflowAmount} (diff: €${amountDiff.toFixed(2)})`);
+
+        // If difference > 2€, REJECT the match regardless of AI confidence
+        if (amountDiff > 2) {
+          console.warn(`[AI] ⚠️ REJECTED: Amount difference €${amountDiff.toFixed(2)} exceeds threshold (2€). AI suggestion overridden.`);
+          return {
+            invoiceId: null,
+            cashflowId: null,
+            confidence: 0,
+            reason: `❌ Match respinto: importi non corrispondenti (transazione €${transactionAmount.toFixed(2)} vs movimento €${cashflowAmount.toFixed(2)}, diff €${amountDiff.toFixed(2)})`
+          };
+        } else {
+          console.log(`[AI] ✅ Amount verification passed (diff: €${amountDiff.toFixed(2)} ≤ 2€)`);
+        }
+      }
+    }
 
     return {
       invoiceId: result.invoiceId || null,

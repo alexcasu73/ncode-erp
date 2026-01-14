@@ -52,6 +52,7 @@ export const Invoicing: React.FC = () => {
   });
   const [showModal, setShowModal] = useState(false);
   const [editingInvoice, setEditingInvoice] = useState<Invoice | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   // Persist filters to localStorage
   React.useEffect(() => {
@@ -257,6 +258,34 @@ export const Invoicing: React.FC = () => {
   const handleDelete = async (id: string) => {
     if (confirm('Sei sicuro di voler eliminare questa voce?')) {
       await deleteInvoice(id);
+    }
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedIds.size === sortedInvoices.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(sortedInvoices.map(i => i.id)));
+    }
+  };
+
+  const toggleSelect = (id: string) => {
+    const newSelected = new Set(selectedIds);
+    if (newSelected.has(id)) {
+      newSelected.delete(id);
+    } else {
+      newSelected.add(id);
+    }
+    setSelectedIds(newSelected);
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedIds.size === 0) return;
+    if (confirm(`Sei sicuro di voler eliminare ${selectedIds.size} fatture selezionate?`)) {
+      for (const id of selectedIds) {
+        await deleteInvoice(id);
+      }
+      setSelectedIds(new Set());
     }
   };
 
@@ -535,12 +564,66 @@ export const Invoicing: React.FC = () => {
         </div>
       </div>
 
+      {/* Bulk Actions Bar */}
+      {selectedIds.size > 0 && (
+        <div className="bg-gradient-to-r from-primary/10 to-primary/5 dark:from-primary/20 dark:to-primary/10 border-2 border-primary/30 dark:border-primary/40 rounded-xl p-5 flex items-center justify-between shadow-lg animate-fade-in backdrop-blur-sm">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-primary/20 dark:bg-primary/30 rounded-full flex items-center justify-center">
+              <Check size={20} className="text-primary dark:text-primary" strokeWidth={2.5} />
+            </div>
+            <div>
+              <p className="text-sm font-bold text-dark dark:text-white">
+                {selectedIds.size} {selectedIds.size === 1 ? 'fattura selezionata' : 'fatture selezionate'}
+              </p>
+              <p className="text-xs text-gray-600 dark:text-gray-400">
+                Pronto per l'eliminazione
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setSelectedIds(new Set())}
+              className="px-4 py-2 bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 rounded-lg font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition-all flex items-center gap-2"
+            >
+              <X size={16} />
+              Annulla
+            </button>
+            <button
+              onClick={handleBulkDelete}
+              className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-all shadow-md hover:shadow-lg flex items-center gap-2"
+            >
+              <Trash2 size={16} />
+              Elimina {selectedIds.size > 1 ? 'tutti' : ''}
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Table */}
       <div className="bg-white dark:bg-dark-card rounded-lg overflow-hidden shadow-sm border border-gray-200 dark:border-dark-border">
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead className="bg-gray-50 dark:bg-dark-bg">
               <tr className="text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                <th className="px-4 py-4 w-12">
+                  <div className="flex items-center justify-center">
+                    <label className="inline-flex items-center cursor-pointer group">
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.size === sortedInvoices.length && sortedInvoices.length > 0}
+                        onChange={toggleSelectAll}
+                        className="sr-only peer"
+                      />
+                      <div className="relative w-4 h-4 bg-white dark:bg-gray-700 border-2 border-gray-300 dark:border-gray-600 rounded-md peer-checked:bg-primary peer-checked:border-primary transition-all duration-200 group-hover:border-primary/50 peer-focus:ring-2 peer-focus:ring-primary/20">
+                        <Check
+                          size={12}
+                          className="absolute inset-0 m-auto text-white opacity-0 peer-checked:opacity-100 transition-opacity duration-200"
+                          strokeWidth={3}
+                        />
+                      </div>
+                    </label>
+                  </div>
+                </th>
                 <th
                   className="px-6 py-4 whitespace-nowrap cursor-pointer hover:bg-gray-50 transition-colors"
                   onClick={() => handleSort('id')}
@@ -626,6 +709,25 @@ export const Invoicing: React.FC = () => {
             <tbody className="divide-y divide-gray-200 dark:divide-dark-border">
               {sortedInvoices.map((inv) => (
                 <tr key={inv.id} className={`hover:bg-gray-50 dark:hover:bg-dark-bg transition-colors ${inv.tipo === 'Uscita' ? 'bg-orange-50/30 dark:bg-orange-900/10' : ''}`}>
+                  <td className="px-4 py-4 whitespace-nowrap">
+                    <div className="flex items-center justify-center">
+                      <label className="inline-flex items-center cursor-pointer group">
+                        <input
+                          type="checkbox"
+                          checked={selectedIds.has(inv.id)}
+                          onChange={() => toggleSelect(inv.id)}
+                          className="sr-only peer"
+                        />
+                        <div className="relative w-4 h-4 bg-white dark:bg-gray-700 border-2 border-gray-300 dark:border-gray-600 rounded-md peer-checked:bg-primary peer-checked:border-primary transition-all duration-200 group-hover:border-primary/50 peer-focus:ring-2 peer-focus:ring-primary/20">
+                          <Check
+                            size={12}
+                            className="absolute inset-0 m-auto text-white opacity-0 peer-checked:opacity-100 transition-opacity duration-200"
+                            strokeWidth={3}
+                          />
+                        </div>
+                      </label>
+                    </div>
+                  </td>
                   <td className="px-6 py-4 text-sm text-dark dark:text-white font-semibold">
                     {formatInvoiceId(inv.id, inv.anno)}
                   </td>

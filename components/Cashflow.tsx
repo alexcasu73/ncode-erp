@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, BarChart, Bar } from 'recharts';
 import { useData } from '../context/DataContext';
 import { CashflowRecord, Invoice } from '../types';
-import { Plus, ArrowUpCircle, ArrowDownCircle, Calendar, Search, ChevronUp, ChevronDown, ChevronsUpDown, X, Edit2, Trash2, Wallet, Settings, RotateCcw } from 'lucide-react';
+import { Plus, ArrowUpCircle, ArrowDownCircle, Calendar, Search, ChevronUp, ChevronDown, ChevronsUpDown, X, Edit2, Trash2, Wallet, Settings, RotateCcw, Check } from 'lucide-react';
 import { formatCurrency } from '../lib/currency';
 
 // Mesi italiani abbreviati
@@ -112,6 +112,7 @@ export const Cashflow: React.FC = () => {
   const [editingRecord, setEditingRecord] = useState<CashflowRecord | null>(null);
   const [showBankBalanceModal, setShowBankBalanceModal] = useState(false);
   const [bankBalanceInput, setBankBalanceInput] = useState<string>('');
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   // Persist filters to localStorage
   React.useEffect(() => {
@@ -635,6 +636,34 @@ export const Cashflow: React.FC = () => {
     }
   };
 
+  const toggleSelectAll = () => {
+    if (selectedIds.size === sortedRecords.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(sortedRecords.map(r => r.id)));
+    }
+  };
+
+  const toggleSelect = (id: string) => {
+    const newSelected = new Set(selectedIds);
+    if (newSelected.has(id)) {
+      newSelected.delete(id);
+    } else {
+      newSelected.add(id);
+    }
+    setSelectedIds(newSelected);
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedIds.size === 0) return;
+    if (confirm(`Sei sicuro di voler eliminare ${selectedIds.size} movimenti selezionati?`)) {
+      for (const id of selectedIds) {
+        await deleteCashflowRecord(id);
+      }
+      setSelectedIds(new Set());
+    }
+  };
+
   // Bank balance modal handlers
   const openBankBalanceModal = () => {
     if (filterAnno !== 'tutti') {
@@ -940,10 +969,66 @@ export const Cashflow: React.FC = () => {
           </div>
           </div>
 
+          {/* Bulk Actions Bar */}
+          {selectedIds.size > 0 && (
+            <div className="p-4">
+              <div className="bg-gradient-to-r from-primary/10 to-primary/5 dark:from-primary/20 dark:to-primary/10 border-2 border-primary/30 dark:border-primary/40 rounded-xl p-5 flex items-center justify-between shadow-lg animate-fade-in backdrop-blur-sm">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-primary/20 dark:bg-primary/30 rounded-full flex items-center justify-center">
+                    <Check size={20} className="text-primary dark:text-primary" strokeWidth={2.5} />
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold text-dark dark:text-white">
+                      {selectedIds.size} {selectedIds.size === 1 ? 'movimento selezionato' : 'movimenti selezionati'}
+                    </p>
+                    <p className="text-xs text-gray-600 dark:text-gray-400">
+                      Pronto per l'eliminazione
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => setSelectedIds(new Set())}
+                    className="px-4 py-2 bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 rounded-lg font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition-all flex items-center gap-2"
+                  >
+                    <X size={16} />
+                    Annulla
+                  </button>
+                  <button
+                    onClick={handleBulkDelete}
+                    className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-all shadow-md hover:shadow-lg flex items-center gap-2"
+                  >
+                    <Trash2 size={16} />
+                    Elimina {selectedIds.size > 1 ? 'tutti' : ''}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Tabella */}
           <table className="w-full">
             <thead className="bg-gray-50 dark:bg-dark-bg">
               <tr className="text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                <th className="px-4 py-4 w-12">
+                  <div className="flex items-center justify-center">
+                    <label className="inline-flex items-center cursor-pointer group">
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.size === sortedRecords.length && sortedRecords.length > 0}
+                        onChange={toggleSelectAll}
+                        className="sr-only peer"
+                      />
+                      <div className="relative w-4 h-4 bg-white dark:bg-gray-700 border-2 border-gray-300 dark:border-gray-600 rounded-md peer-checked:bg-primary peer-checked:border-primary transition-all duration-200 group-hover:border-primary/50 peer-focus:ring-2 peer-focus:ring-primary/20">
+                        <Check
+                          size={12}
+                          className="absolute inset-0 m-auto text-white opacity-0 peer-checked:opacity-100 transition-opacity duration-200"
+                          strokeWidth={3}
+                        />
+                      </div>
+                    </label>
+                  </div>
+                </th>
                 <th className="px-6 py-4 whitespace-nowrap cursor-pointer hover:bg-gray-50 dark:bg-dark-bg min-w-[120px]" onClick={() => handleSort('mese')}>
                   <div className="flex items-center gap-1">Data Pag. <SortIcon column="mese" /></div>
                 </th>
@@ -978,6 +1063,25 @@ export const Cashflow: React.FC = () => {
                   const tipo = record.tipo || 'Entrata';
                   return (
                     <tr key={record.id} className="hover:bg-gray-50 dark:hover:bg-dark-bg transition-colors">
+                      <td className="px-4 py-4 whitespace-nowrap w-12">
+                        <div className="flex items-center justify-center">
+                          <label className="inline-flex items-center cursor-pointer group">
+                            <input
+                              type="checkbox"
+                              checked={selectedIds.has(record.id)}
+                              onChange={() => toggleSelect(record.id)}
+                              className="sr-only peer"
+                            />
+                            <div className="relative w-4 h-4 bg-white dark:bg-gray-700 border-2 border-gray-300 dark:border-gray-600 rounded-md peer-checked:bg-primary peer-checked:border-primary transition-all duration-200 group-hover:border-primary/50 peer-focus:ring-2 peer-focus:ring-primary/20">
+                              <Check
+                                size={12}
+                                className="absolute inset-0 m-auto text-white opacity-0 peer-checked:opacity-100 transition-opacity duration-200"
+                                strokeWidth={3}
+                              />
+                            </div>
+                          </label>
+                        </div>
+                      </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{formatDate(record.dataPagamento)}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-400 italic">
                         Movimento Standalone
@@ -1032,6 +1136,25 @@ export const Cashflow: React.FC = () => {
                 const isParziale = record.importo !== undefined && record.importo !== null && Math.abs(record.importo - totaleFattura) > 0.01;
                 return (
                   <tr key={record.id} className="hover:bg-gray-50 dark:hover:bg-dark-bg transition-colors">
+                    <td className="px-4 py-4 whitespace-nowrap w-12">
+                      <div className="flex items-center justify-center">
+                        <label className="inline-flex items-center cursor-pointer group">
+                          <input
+                            type="checkbox"
+                            checked={selectedIds.has(record.id)}
+                            onChange={() => toggleSelect(record.id)}
+                            className="sr-only peer"
+                          />
+                          <div className="relative w-4 h-4 bg-white dark:bg-gray-700 border-2 border-gray-300 dark:border-gray-600 rounded-md peer-checked:bg-primary peer-checked:border-primary transition-all duration-200 group-hover:border-primary/50 peer-focus:ring-2 peer-focus:ring-primary/20">
+                            <Check
+                              size={12}
+                              className="absolute inset-0 m-auto text-white opacity-0 peer-checked:opacity-100 transition-opacity duration-200"
+                              strokeWidth={3}
+                            />
+                          </div>
+                        </label>
+                      </div>
+                    </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{formatDate(record.dataPagamento)}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-primary">
                       {formatInvoiceNumber(inv.id, inv.anno)}

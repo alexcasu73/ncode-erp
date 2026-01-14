@@ -241,22 +241,24 @@ export const CRM: React.FC = () => {
           <table className="w-full">
             <thead className="bg-gray-50 dark:bg-dark-bg">
               <tr className="text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                <th className="px-6 py-4 w-16">
-                  <label className="inline-flex items-center cursor-pointer group">
-                    <input
-                      type="checkbox"
-                      checked={selectedIds.size === sortedCustomers.length && sortedCustomers.length > 0}
-                      onChange={toggleSelectAll}
-                      className="sr-only peer"
-                    />
-                    <div className="relative w-5 h-5 bg-white dark:bg-gray-700 border-2 border-gray-300 dark:border-gray-600 rounded-md peer-checked:bg-primary peer-checked:border-primary transition-all duration-200 group-hover:border-primary/50 peer-focus:ring-2 peer-focus:ring-primary/20">
-                      <Check
-                        size={14}
-                        className="absolute inset-0 m-auto text-white opacity-0 peer-checked:opacity-100 transition-opacity duration-200"
-                        strokeWidth={3}
+                <th className="px-4 py-4 w-12">
+                  <div className="flex items-center justify-center">
+                    <label className="inline-flex items-center cursor-pointer group">
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.size === sortedCustomers.length && sortedCustomers.length > 0}
+                        onChange={toggleSelectAll}
+                        className="sr-only peer"
                       />
-                    </div>
-                  </label>
+                      <div className="relative w-4 h-4 bg-white dark:bg-gray-700 border-2 border-gray-300 dark:border-gray-600 rounded-md peer-checked:bg-primary peer-checked:border-primary transition-all duration-200 group-hover:border-primary/50 peer-focus:ring-2 peer-focus:ring-primary/20">
+                        <Check
+                          size={12}
+                          className="absolute inset-0 m-auto text-white opacity-0 peer-checked:opacity-100 transition-opacity duration-200"
+                          strokeWidth={3}
+                        />
+                      </div>
+                    </label>
+                  </div>
                 </th>
                 <th
                   className="px-6 py-4 cursor-pointer hover:bg-gray-100 dark:hover:bg-dark-border transition-colors"
@@ -309,22 +311,24 @@ export const CRM: React.FC = () => {
             <tbody className="divide-y divide-gray-200 dark:divide-dark-border">
               {sortedCustomers.map((customer) => (
                 <tr key={customer.id} className="hover:bg-gray-50 dark:hover:bg-dark-bg transition-colors">
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <label className="inline-flex items-center cursor-pointer group">
-                      <input
-                        type="checkbox"
-                        checked={selectedIds.has(customer.id)}
-                        onChange={() => toggleSelect(customer.id)}
-                        className="sr-only peer"
-                      />
-                      <div className="relative w-5 h-5 bg-white dark:bg-gray-700 border-2 border-gray-300 dark:border-gray-600 rounded-md peer-checked:bg-primary peer-checked:border-primary transition-all duration-200 group-hover:border-primary/50 peer-focus:ring-2 peer-focus:ring-primary/20">
-                        <Check
-                          size={14}
-                          className="absolute inset-0 m-auto text-white opacity-0 peer-checked:opacity-100 transition-opacity duration-200"
-                          strokeWidth={3}
+                  <td className="px-4 py-4 whitespace-nowrap">
+                    <div className="flex items-center justify-center">
+                      <label className="inline-flex items-center cursor-pointer group">
+                        <input
+                          type="checkbox"
+                          checked={selectedIds.has(customer.id)}
+                          onChange={() => toggleSelect(customer.id)}
+                          className="sr-only peer"
                         />
-                      </div>
-                    </label>
+                        <div className="relative w-4 h-4 bg-white dark:bg-gray-700 border-2 border-gray-300 dark:border-gray-600 rounded-md peer-checked:bg-primary peer-checked:border-primary transition-all duration-200 group-hover:border-primary/50 peer-focus:ring-2 peer-focus:ring-primary/20">
+                          <Check
+                            size={12}
+                            className="absolute inset-0 m-auto text-white opacity-0 peer-checked:opacity-100 transition-opacity duration-200"
+                            strokeWidth={3}
+                          />
+                        </div>
+                      </label>
+                    </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">

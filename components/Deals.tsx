@@ -10,6 +10,7 @@ export const Deals: React.FC = () => {
   const [showModal, setShowModal] = useState(false);
   const [editingDeal, setEditingDeal] = useState<Deal | null>(null);
   const [preselectedStage, setPreselectedStage] = useState<DealStage | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   // Drag state
   const [draggedDeal, setDraggedDeal] = useState<Deal | null>(null);
@@ -116,6 +117,34 @@ export const Deals: React.FC = () => {
     }
   };
 
+  const toggleSelectAll = () => {
+    if (selectedIds.size === deals.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(deals.map(d => d.id)));
+    }
+  };
+
+  const toggleSelect = (id: string) => {
+    const newSelected = new Set(selectedIds);
+    if (newSelected.has(id)) {
+      newSelected.delete(id);
+    } else {
+      newSelected.add(id);
+    }
+    setSelectedIds(newSelected);
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedIds.size === 0) return;
+    if (confirm(`Sei sicuro di voler eliminare ${selectedIds.size} deal selezionati?`)) {
+      for (const id of selectedIds) {
+        await deleteDeal(id);
+      }
+      setSelectedIds(new Set());
+    }
+  };
+
   const openNewDealModal = (stage?: DealStage) => {
     setEditingDeal(null);
     setPreselectedStage(stage || null);
@@ -147,6 +176,41 @@ export const Deals: React.FC = () => {
           </button>
         </div>
       </div>
+
+      {/* Bulk Actions Bar */}
+      {selectedIds.size > 0 && (
+        <div className="bg-gradient-to-r from-primary/10 to-primary/5 dark:from-primary/20 dark:to-primary/10 border-2 border-primary/30 dark:border-primary/40 rounded-xl p-5 flex items-center justify-between shadow-lg animate-fade-in backdrop-blur-sm mb-6">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-primary/20 dark:bg-primary/30 rounded-full flex items-center justify-center">
+              <Check size={20} className="text-primary dark:text-primary" strokeWidth={2.5} />
+            </div>
+            <div>
+              <p className="text-sm font-bold text-dark dark:text-white">
+                {selectedIds.size} {selectedIds.size === 1 ? 'deal selezionato' : 'deal selezionati'}
+              </p>
+              <p className="text-xs text-gray-600 dark:text-gray-400">
+                Pronto per l'eliminazione
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setSelectedIds(new Set())}
+              className="px-4 py-2 bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 rounded-lg font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition-all flex items-center gap-2"
+            >
+              <X size={16} />
+              Annulla
+            </button>
+            <button
+              onClick={handleBulkDelete}
+              className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-all shadow-md hover:shadow-lg flex items-center gap-2"
+            >
+              <Trash2 size={16} />
+              Elimina {selectedIds.size > 1 ? 'tutti' : ''}
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Kanban Board */}
       <div className="flex-1 overflow-x-auto">
@@ -191,38 +255,63 @@ export const Deals: React.FC = () => {
                       onDragEnd={handleDragEnd}
                       className={`bg-white dark:bg-dark-card p-4 rounded-lg hover:shadow-md transition-all cursor-grab active:cursor-grabbing ${getStageColor(stage)} ${
                         draggedDeal?.id === deal.id ? 'opacity-50' : ''
-                      }`}
+                      } relative`}
                     >
-                      {/* Drag Handle & Actions */}
-                      <div className="flex justify-between items-start mb-2">
+                      {/* Checkbox - Top Right */}
+                      <div className="absolute top-3 right-3 z-10">
+                        <label className="inline-flex items-center cursor-pointer group">
+                          <input
+                            type="checkbox"
+                            checked={selectedIds.has(deal.id)}
+                            onChange={(e) => {
+                              e.stopPropagation();
+                              toggleSelect(deal.id);
+                            }}
+                            onClick={(e) => e.stopPropagation()}
+                            className="sr-only peer"
+                          />
+                          <div className="relative w-4 h-4 bg-white dark:bg-gray-700 border-2 border-gray-300 dark:border-gray-600 rounded-md peer-checked:bg-primary peer-checked:border-primary transition-all duration-200 group-hover:border-primary/50 peer-focus:ring-2 peer-focus:ring-primary/20">
+                            <Check
+                              size={12}
+                              className="absolute inset-0 m-auto text-white opacity-0 peer-checked:opacity-100 transition-opacity duration-200"
+                              strokeWidth={3}
+                            />
+                          </div>
+                        </label>
+                      </div>
+
+                      {/* Drag Handle & Customer Name */}
+                      <div className="flex items-start mb-2 pr-6">
                         <div className="flex items-center gap-1">
                           <GripVertical size={14} className="text-gray-300 dark:text-gray-600 dark:text-gray-400" />
                           <span className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
                             {deal.customerName}
                           </span>
                         </div>
-                        <div className="flex gap-1">
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setEditingDeal(deal);
-                              setPreselectedStage(null);
-                              setShowModal(true);
-                            }}
-                            className="text-gray-300 dark:text-gray-600 hover:text-primary dark:hover:text-primary p-1"
-                          >
-                            <Edit2 size={14} />
-                          </button>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleDelete(deal.id);
-                            }}
-                            className="text-gray-300 dark:text-gray-600 hover:text-red-500 p-1"
-                          >
-                            <Trash2 size={14} />
-                          </button>
-                        </div>
+                      </div>
+
+                      {/* Action Buttons */}
+                      <div className="flex gap-1 justify-end mb-2">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setEditingDeal(deal);
+                            setPreselectedStage(null);
+                            setShowModal(true);
+                          }}
+                          className="text-gray-300 dark:text-gray-600 hover:text-primary dark:hover:text-primary p-1"
+                        >
+                          <Edit2 size={14} />
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDelete(deal.id);
+                          }}
+                          className="text-gray-300 dark:text-gray-600 hover:text-red-500 p-1"
+                        >
+                          <Trash2 size={14} />
+                        </button>
                       </div>
 
                       {/* Deal Title */}
