@@ -30,6 +30,7 @@ const TransactionRow: React.FC<{
   onConfirm: (invoiceId: string) => void;
   onIgnore: () => void;
   onManualMatch: () => void;
+  onUnmatch: () => void;
   onRunAI: () => void;
   isProcessing: boolean;
   isSelected: boolean;
@@ -37,7 +38,7 @@ const TransactionRow: React.FC<{
   onCreateInvoice: () => void;
   onCreateCashflow: () => void;
   disabled?: boolean;
-}> = ({ transaction, invoices, cashflowRecords, onConfirm, onIgnore, onManualMatch, onRunAI, isProcessing, isSelected, onToggleSelect, onCreateInvoice, onCreateCashflow, disabled = false }) => {
+}> = ({ transaction, invoices, cashflowRecords, onConfirm, onIgnore, onManualMatch, onUnmatch, onRunAI, isProcessing, isSelected, onToggleSelect, onCreateInvoice, onCreateCashflow, disabled = false }) => {
   const [expanded, setExpanded] = useState(false);
 
   // Find matched cashflow first (priority)
@@ -280,14 +281,24 @@ const TransactionRow: React.FC<{
             )}
 
             {transaction.matchStatus !== 'pending' && (
-              <button
-                onClick={(e) => { e.stopPropagation(); onManualMatch(); }}
-                disabled={disabled}
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-50 text-gray-500 rounded-lg text-sm font-medium hover:bg-gray-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <RefreshCw size={14} />
-                Modifica Abbinamento
-              </button>
+              <div className="flex gap-2">
+                <button
+                  onClick={(e) => { e.stopPropagation(); onManualMatch(); }}
+                  disabled={disabled}
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-50 dark:bg-gray-700 text-gray-500 dark:text-gray-300 rounded-lg text-sm font-medium hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <RefreshCw size={14} />
+                  Modifica Abbinamento
+                </button>
+                <button
+                  onClick={(e) => { e.stopPropagation(); onUnmatch(); }}
+                  disabled={disabled}
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded-lg text-sm font-medium hover:bg-red-100 dark:hover:bg-red-900/50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <X size={14} />
+                  Rimuovi Abbinamento
+                </button>
+              </div>
             )}
           </div>
         </div>
@@ -1888,6 +1899,30 @@ export const Reconciliation: React.FC = () => {
     setManualMatchTransaction(null);
   };
 
+  // Unmatch transaction - remove matching and set back to pending
+  const handleUnmatch = async (transactionId: string) => {
+    const tx = bankTransactions.find(t => t.id === transactionId);
+    if (!tx) return;
+
+    if (!confirm('Sei sicuro di voler rimuovere l\'abbinamento? La transazione tornerà in "Da verificare".')) return;
+
+    await updateBankTransaction(transactionId, {
+      matchStatus: 'pending',
+      matchedInvoiceId: undefined,
+      matchedCashflowId: undefined,
+      matchConfidence: undefined,
+      matchReason: undefined
+    });
+
+    // Update session counts
+    if (currentSession && (tx.matchStatus === 'matched' || tx.matchStatus === 'manual')) {
+      await updateReconciliationSession(currentSession.id, {
+        matchedCount: Math.max(0, currentSession.matchedCount - 1),
+        pendingCount: currentSession.pendingCount + 1
+      });
+    }
+  };
+
   // Run AI on all pending
   const handleRunAIAll = async () => {
     const pending = sessionTransactions.filter(tx => tx.matchStatus === 'pending');
@@ -2449,6 +2484,7 @@ export const Reconciliation: React.FC = () => {
                     onConfirm={(invoiceId) => handleConfirmMatch(tx.id, invoiceId)}
                     onIgnore={() => handleIgnore(tx.id)}
                     onManualMatch={() => setManualMatchTransaction(tx)}
+                    onUnmatch={() => handleUnmatch(tx.id)}
                     onRunAI={() => handleRunAI(tx.id)}
                     isProcessing={aiProcessing.isProcessing}
                     isSelected={selectedIds.has(tx.id)}

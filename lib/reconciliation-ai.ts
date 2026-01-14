@@ -113,11 +113,12 @@ ISTRUZIONI:
 1. Cerca SEMPRE tra i movimenti di cassa già registrati - se trovi una corrispondenza esatta o molto probabile, usa il cashflowId
 2. Se non c'è un movimento di cassa corrispondente, cerca tra le fatture non ancora pagate
 3. Per la corrispondenza considera IN ORDINE DI IMPORTANZA:
-   - **Descrizione/Note**: Confronta la descrizione della transazione bancaria con le note dei movimenti di cassa. Cerca parole chiave comuni, nomi di progetti, riferimenti. Questo è il criterio PIÙ IMPORTANTE.
-   - **Importo**: Deve essere uguale o molto simile (tolleranza massima 1€). Se descrizione e importo matchano, confidence alta.
+   - **Importo**: CRITERIO FONDAMENTALE - Gli importi devono corrispondere con tolleranza massima di 2€. Se l'importo non corrisponde, NON creare l'abbinamento (confidence = 0).
+   - **Descrizione/Note**: Confronta la descrizione della transazione bancaria con le note dei movimenti di cassa. Cerca parole chiave comuni, nomi di progetti, riferimenti.
    - **Data**: La transazione bancaria dovrebbe essere vicina alla data pagamento del movimento (tolleranza ±30 giorni).
-4. PRIORITÀ AL MATCHING SEMANTICO: Se la descrizione della transazione bancaria contiene parole chiave che matchano con le note del movimento di cassa (es. nome progetto, cliente, servizio), questo è un match molto probabile anche se le date non sono perfettamente allineate.
-5. Se non trovi corrispondenze affidabili (né per descrizione né per importo), rispondi con confidence 0
+4. REGOLA FONDAMENTALE: Se l'importo della transazione è significativamente diverso (differenza >2€), NON abbinare anche se la descrizione sembra corrispondere. In quel caso rispondi con confidence 0.
+5. Solo se IMPORTO + DESCRIZIONE matchano, allora considera anche la data per aumentare la confidence.
+6. Se non trovi corrispondenze affidabili (importo + descrizione), rispondi con confidence 0
 
 Rispondi ESCLUSIVAMENTE con un oggetto JSON valido (senza markdown, senza backticks) nel seguente formato:
 {"invoiceId": "id_fattura_o_null", "cashflowId": "id_cashflow_o_null", "confidence": numero_da_0_a_100, "reason": "breve spiegazione in italiano"}
