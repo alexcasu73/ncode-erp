@@ -1584,17 +1584,17 @@ export const Reconciliation: React.FC = () => {
       const parsed = await parseBankStatementExcel(file);
       console.log('Parsed result:', parsed);
 
-      // Show parsing statistics if any rows were skipped
+      // Show parsing statistics if any rows had problems
       if (parsed.parsingStats) {
         const { totalRows, skippedNoDate, skippedInvalidDate, skippedZeroAmount } = parsed.parsingStats;
-        const totalSkipped = skippedNoDate + skippedInvalidDate + skippedZeroAmount;
-        if (totalSkipped > 0) {
+        const totalProblematic = skippedNoDate + skippedInvalidDate + skippedZeroAmount;
+        if (totalProblematic > 0) {
           const details: string[] = [];
           if (skippedNoDate > 0) details.push(`${skippedNoDate} senza data`);
           if (skippedInvalidDate > 0) details.push(`${skippedInvalidDate} con data invalida`);
           if (skippedZeroAmount > 0) details.push(`${skippedZeroAmount} con importo zero`);
 
-          alert(`Importate ${parsed.transactions.length} transazioni valide.\n\nRighe scartate (${totalSkipped}): ${details.join(', ')}`);
+          alert(`Importate ${parsed.transactions.length} transazioni.\n\n⚠️ Righe con problemi (${totalProblematic}) importate in "Da verificare":\n${details.join(', ')}\n\nControlla la descrizione per i dettagli.`);
         }
       }
 

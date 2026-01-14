@@ -261,32 +261,49 @@ function parseTransactions(rows: any[][], startRow: number, columnMap: Record<st
 
     consecutiveEmptyRows = 0;
 
-    // Skip rows without date (but don't count them as empty)
+    // Build warning messages for problematic rows
+    const warnings: string[] = [];
+
+    // Handle missing or invalid date
     const dataOp = row[columnMap.dataOp];
+    let parsedDate: string;
+
     if (!dataOp) {
       skippedNoDate++;
-      continue;
+      parsedDate = new Date().toISOString().split('T')[0]; // Use today as placeholder
+      warnings.push('⚠️ DATA MANCANTE');
+      console.log(`⚠️ Row ${i}: No date, using placeholder`);
+    } else {
+      const dateAttempt = parseDate(dataOp);
+      if (!dateAttempt) {
+        skippedInvalidDate++;
+        parsedDate = new Date().toISOString().split('T')[0]; // Use today as placeholder
+        warnings.push(`⚠️ DATA INVALIDA: ${String(dataOp)}`);
+        console.log(`⚠️ Row ${i}: Invalid date format:`, dataOp);
+      } else {
+        parsedDate = dateAttempt;
+      }
     }
 
-    const parsedDate = parseDate(dataOp);
-    if (!parsedDate) {
-      skippedInvalidDate++;
-      console.log(`⚠️ Row ${i}: Invalid date format:`, dataOp);
-      continue;
-    }
-
+    // Handle zero or missing amount
     const importo = parseAmount(row[columnMap.importo]);
     if (importo === 0) {
       skippedZeroAmount++;
+      warnings.push('⚠️ IMPORTO ZERO O MANCANTE');
       console.log(`⚠️ Row ${i}: Zero amount, raw value:`, row[columnMap.importo]);
-      continue;
+    }
+
+    // Build description with warnings
+    let descrizione = row[columnMap.descrizione] ? String(row[columnMap.descrizione]).trim() : '';
+    if (warnings.length > 0) {
+      descrizione = warnings.join(' ') + (descrizione ? ' | ' + descrizione : '');
     }
 
     const transaction: ParsedTransaction = {
       data: parsedDate,
       dataValuta: parseDate(row[columnMap.dataVal]),
       causale: row[columnMap.causale] ? String(row[columnMap.causale]).trim() : undefined,
-      descrizione: row[columnMap.descrizione] ? String(row[columnMap.descrizione]).trim() : '',
+      descrizione,
       importo: Math.abs(importo),
       tipo: importo >= 0 ? 'Entrata' : 'Uscita',
       saldo: row[columnMap.saldo] !== undefined ? parseAmount(row[columnMap.saldo]) : undefined
@@ -296,7 +313,7 @@ function parseTransactions(rows: any[][], startRow: number, columnMap: Record<st
   }
 
   console.log(`✅ Parsed ${transactions.length} transactions`);
-  console.log(`⏭️  Skipped: ${skippedNoDate} (no date), ${skippedInvalidDate} (invalid date), ${skippedZeroAmount} (zero amount)`);
+  console.log(`⚠️  Problematic rows: ${skippedNoDate} (no date), ${skippedInvalidDate} (invalid date), ${skippedZeroAmount} (zero amount)`);
 
   return {
     transactions,
