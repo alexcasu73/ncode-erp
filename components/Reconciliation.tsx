@@ -1444,16 +1444,6 @@ export const Reconciliation: React.FC = () => {
     }
   }, [selectedSession]);
 
-  // Deseleziona sessioni chiuse al caricamento
-  React.useEffect(() => {
-    if (selectedSession) {
-      const session = reconciliationSessions.find(s => s.id === selectedSession);
-      if (session?.status === 'closed') {
-        setSelectedSession(null);
-      }
-    }
-  }, [reconciliationSessions, selectedSession]);
-
   React.useEffect(() => {
     localStorage.setItem('reconciliation_filter', filter);
   }, [filter]);
@@ -2060,8 +2050,7 @@ export const Reconciliation: React.FC = () => {
           status: 'closed',
           closedDate: new Date().toISOString()
         });
-        // Deseleziona la sessione per svuotare le tabelle
-        setSelectedSession(null);
+        // Clear selections
         setSelectedIds(new Set());
       } catch (err) {
         console.error('Error closing session:', err);
