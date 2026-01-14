@@ -186,7 +186,11 @@ export const Invoicing: React.FC = () => {
         inv.id.toLowerCase().includes(searchTerm.toLowerCase());
 
       const matchesTipo = filterTipo === 'tutti' || inv.tipo === filterTipo;
-      const matchesStato = filterStato === 'tutti' || inv.statoFatturazione === filterStato;
+
+      // Normalize invoice status: treat empty string, null, undefined as "Nessuno"
+      const invoiceStatus = inv.statoFatturazione || 'Nessuno';
+      const matchesStato = filterStato === 'tutti' || invoiceStatus === filterStato;
+
       const matchesMeseTabella = filterMeseTabella === 'tutti' || inv.mese === filterMeseTabella;
 
       return matchesSearch && matchesTipo && matchesStato && matchesMeseTabella;

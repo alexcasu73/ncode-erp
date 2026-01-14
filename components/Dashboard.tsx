@@ -3,9 +3,8 @@ import {
   BarChart, Bar, XAxis, Tooltip, ResponsiveContainer,
   LineChart, Line, PieChart, Pie, Cell
 } from 'recharts';
-import { SALES_DATA, REVENUE_DATA } from '../constants';
 import { useData } from '../context/DataContext';
-import { ArrowUpRight, TrendingUp, MoreVertical, Search, Bell } from 'lucide-react';
+import { ArrowUpRight, TrendingUp, Users, Wallet, TrendingDown } from 'lucide-react';
 import { formatCurrency, formatCurrencyNoDecimals } from '../lib/currency';
 
 const COLORS = ['#D1F366', '#E5E7EB']; // Primary Green, Gray
@@ -70,6 +69,54 @@ export const Dashboard: React.FC = () => {
       ? ((currentTransactions - lastTransactions) / lastTransactions) * 100
       : 0;
 
+    // CASHFLOW REALE - Movimenti di cassa anno corrente
+    const currentYearCashflows = cashflowRecords.filter(cf => {
+      if (!cf.dataPagamento) return false;
+      const cfDate = new Date(cf.dataPagamento);
+      return cfDate.getFullYear() === currentYear;
+    });
+
+    // Cashflow anno scorso
+    const lastYearCashflows = cashflowRecords.filter(cf => {
+      if (!cf.dataPagamento) return false;
+      const cfDate = new Date(cf.dataPagamento);
+      return cfDate.getFullYear() === lastYear;
+    });
+
+    // Calcola entrate e uscite reali
+    const currentCashflowIn = currentYearCashflows
+      .filter(cf => cf.tipo === 'Entrata')
+      .reduce((sum, cf) => sum + (cf.importo || 0), 0);
+
+    const currentCashflowOut = currentYearCashflows
+      .filter(cf => cf.tipo === 'Uscita')
+      .reduce((sum, cf) => sum + (cf.importo || 0), 0);
+
+    const currentCashBalance = currentCashflowIn - currentCashflowOut;
+
+    const lastCashflowIn = lastYearCashflows
+      .filter(cf => cf.tipo === 'Entrata')
+      .reduce((sum, cf) => sum + (cf.importo || 0), 0);
+
+    const lastCashflowOut = lastYearCashflows
+      .filter(cf => cf.tipo === 'Uscita')
+      .reduce((sum, cf) => sum + (cf.importo || 0), 0);
+
+    const lastCashBalance = lastCashflowIn - lastCashflowOut;
+
+    const cashBalanceChange = lastCashBalance !== 0
+      ? ((currentCashBalance - lastCashBalance) / Math.abs(lastCashBalance)) * 100
+      : 0;
+
+    // CLIENTI REALI
+    const totalCustomers = customers.length;
+    const activeCustomers = customers.filter(c => c.status === 'active').length;
+
+    // Clienti con fatture nell'anno corrente
+    const customersWithInvoices = new Set(
+      currentYearInvoices.map(inv => inv.customer).filter(Boolean)
+    ).size;
+
     // Dati per grafico fatturato - 12 mesi dell'anno corrente (solo effettive)
     const revenueChartData = [];
     for (let i = 0; i < 12; i++) {
@@ -114,10 +161,18 @@ export const Dashboard: React.FC = () => {
       currentTransactions,
       lastTransactions,
       transactionsChange,
+      currentCashflowIn,
+      currentCashflowOut,
+      currentCashBalance,
+      lastCashBalance,
+      cashBalanceChange,
+      totalCustomers,
+      activeCustomers,
+      customersWithInvoices,
       revenueChartData,
       transactionsChartData
     };
-  }, [invoices]);
+  }, [invoices, cashflowRecords, customers]);
 
   if (loading) {
     return <div className="flex items-center justify-center h-64">Caricamento...</div>;
@@ -132,7 +187,7 @@ export const Dashboard: React.FC = () => {
           <p className="text-page-subtitle mt-1">Informazioni dettagliate sulla tua attività</p>
         </div>
         <div className="flex items-center gap-3">
-            <div className="bg-white rounded-full px-4 py-2 flex items-center gap-2 border border-gray-200" shadow-sm>
+            <div className="bg-white rounded-full px-4 py-2 flex items-center gap-2 border border-gray-200 shadow-sm">
                 <span className="text-sm font-medium text-dark">Anno {new Date().getFullYear()}</span>
             </div>
             <button className="bg-primary text-white px-6 py-2 rounded-full font-medium hover:bg-orange-600 transition-colors flex items-center gap-2 shadow-sm">
@@ -143,9 +198,9 @@ export const Dashboard: React.FC = () => {
       </div>
 
       {/* KPI Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
         {/* Revenue Card */}
-        <div className="bg-white p-6 rounded-[2rem] flex flex-col justify-between min-h-[180px]" shadow-sm>
+        <div className="bg-white p-6 rounded-[2rem] flex flex-col justify-between min-h-[180px] shadow-sm">
           <div>
             <h3 className="text-card-title">Fatturato Totale</h3>
             <div className="flex items-center gap-3 mt-2">
@@ -169,8 +224,51 @@ export const Dashboard: React.FC = () => {
           </div>
         </div>
 
+        {/* Cash Balance Card */}
+        <div className="bg-white p-6 rounded-[2rem] flex flex-col justify-between min-h-[180px] shadow-sm">
+          <div>
+            <div className="flex items-center gap-2 mb-2">
+              <Wallet size={18} className="text-primary" />
+              <h3 className="text-card-title">Saldo Cassa</h3>
+            </div>
+            <div className="flex items-center gap-3 mt-2">
+              <span className={`text-kpi-value ${dashboardData.currentCashBalance >= 0 ? 'text-secondary' : 'text-red-600'}`}>
+                {formatCurrencyNoDecimals(dashboardData.currentCashBalance)}
+              </span>
+              <span className={`text-white text-xs px-2 py-1 rounded-full ${dashboardData.cashBalanceChange >= 0 ? 'bg-secondary' : 'bg-red-600'}`}>
+                {dashboardData.cashBalanceChange >= 0 ? '+' : ''}{dashboardData.cashBalanceChange.toFixed(1)}%
+              </span>
+            </div>
+            <div className="flex items-center gap-3 mt-2">
+              <div className="flex items-center gap-1">
+                <TrendingUp size={14} className="text-secondary" />
+                <span className="text-xs text-gray-500">{formatCurrencyNoDecimals(dashboardData.currentCashflowIn)}</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <TrendingDown size={14} className="text-red-500" />
+                <span className="text-xs text-gray-500">{formatCurrencyNoDecimals(dashboardData.currentCashflowOut)}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
         {/* Customers Card */}
-        <div className="bg-white p-6 rounded-[2rem] flex flex-col justify-between min-h-[180px]" shadow-sm>
+        <div className="bg-white p-6 rounded-[2rem] flex flex-col justify-between min-h-[180px] shadow-sm">
+          <div>
+            <div className="flex items-center gap-2 mb-2">
+              <Users size={18} className="text-primary" />
+              <h3 className="text-card-title">Clienti</h3>
+            </div>
+            <div className="flex items-center gap-3 mt-2">
+              <span className="text-kpi-value text-dark">{dashboardData.totalCustomers}</span>
+            </div>
+            <p className="text-small mt-1">{dashboardData.activeCustomers} attivi</p>
+            <p className="text-small">{dashboardData.customersWithInvoices} con fatture quest'anno</p>
+          </div>
+        </div>
+
+        {/* Projects Card */}
+        <div className="bg-white p-6 rounded-[2rem] flex flex-col justify-between min-h-[180px] shadow-sm">
           <div>
              <h3 className="text-card-title">Progetti Attivi</h3>
              <div className="flex items-center gap-3 mt-2">
@@ -183,8 +281,8 @@ export const Dashboard: React.FC = () => {
           </div>
         </div>
 
-        {/* Orders Card */}
-        <div className="bg-white p-6 rounded-[2rem] flex flex-col justify-between min-h-[180px]" shadow-sm>
+        {/* Invoices Card */}
+        <div className="bg-white p-6 rounded-[2rem] flex flex-col justify-between min-h-[180px] shadow-sm">
             <div>
                 <h3 className="text-card-title">Fatture Totali</h3>
                 <div className="flex items-center gap-3 mt-2">
@@ -206,7 +304,7 @@ export const Dashboard: React.FC = () => {
       </div>
 
       {/* Andamento Mensile Fatturato */}
-      <div className="bg-white p-8 rounded-[2rem]" shadow-sm>
+      <div className="bg-white p-8 rounded-[2rem] shadow-sm">
         <div className="flex justify-between items-center mb-8">
           <h3 className="text-section-title text-dark">Andamento Mensile Fatturato</h3>
           <div className="text-sm text-gray-500">

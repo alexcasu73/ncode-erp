@@ -12,16 +12,16 @@ const formatDate = (dateStr: string): string => {
   return date.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' });
 };
 
-// Format invoice ID: "Fattura_xyz" -> "xyz/anno"
+// Format invoice ID: ID is already in format "xyz/anno", just return it
 const formatInvoiceId = (id: string, anno: number): string => {
-  const numero = id.replace('Fattura_', '');
-  return `${numero}/${anno}`;
+  return id; // ID is already in format "xyz/2026"
 };
 
 // Transaction row component
 const TransactionRow: React.FC<{
   transaction: BankTransaction;
   invoices: Invoice[];
+  cashflowRecords: CashflowRecord[];
   onConfirm: (invoiceId: string) => void;
   onIgnore: () => void;
   onManualMatch: () => void;
@@ -32,12 +32,20 @@ const TransactionRow: React.FC<{
   onCreateInvoice: () => void;
   onCreateCashflow: () => void;
   disabled?: boolean;
-}> = ({ transaction, invoices, onConfirm, onIgnore, onManualMatch, onRunAI, isProcessing, isSelected, onToggleSelect, onCreateInvoice, onCreateCashflow, disabled = false }) => {
+}> = ({ transaction, invoices, cashflowRecords, onConfirm, onIgnore, onManualMatch, onRunAI, isProcessing, isSelected, onToggleSelect, onCreateInvoice, onCreateCashflow, disabled = false }) => {
   const [expanded, setExpanded] = useState(false);
 
-  const matchedInvoice = transaction.matchedInvoiceId
-    ? invoices.find(inv => inv.id === transaction.matchedInvoiceId)
+  // Find matched cashflow first (priority)
+  const matchedCashflow = transaction.matchedCashflowId
+    ? cashflowRecords.find(cf => cf.id === transaction.matchedCashflowId)
     : null;
+
+  // Find matched invoice (could be from cashflow or direct)
+  const matchedInvoice = matchedCashflow?.invoiceId
+    ? invoices.find(inv => inv.id === matchedCashflow.invoiceId)
+    : transaction.matchedInvoiceId
+      ? invoices.find(inv => inv.id === transaction.matchedInvoiceId)
+      : null;
 
   const getStatusColor = () => {
     switch (transaction.matchStatus) {
@@ -153,8 +161,41 @@ const TransactionRow: React.FC<{
               </div>
             )}
 
-            {/* Matched invoice */}
-            {matchedInvoice && (
+            {/* Matched cashflow (priority) */}
+            {matchedCashflow && (
+              <div className="mb-4 p-4 border-2 border-green-500 bg-green-50 rounded-lg" shadow-sm>
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="w-8 h-8 bg-green-600 rounded-full flex items-center justify-center">
+                    <Link2 size={16} className="text-white" />
+                  </div>
+                  <span className="text-sm font-semibold text-green-900">MOVIMENTO DI CASSA ABBINATO</span>
+                </div>
+                <div className="bg-white rounded-lg p-3 space-y-2">
+                  <div className="flex items-baseline gap-2 text-sm">
+                    <span className="font-bold text-green-700">{matchedCashflow.id}</span>
+                    <span className="text-gray-400">|</span>
+                    <span className="text-gray-700">{matchedCashflow.dataPagamento ? formatDate(matchedCashflow.dataPagamento) : 'N/D'}</span>
+                    <span className="text-gray-400">|</span>
+                    <span className="font-bold text-lg text-green-600">
+                      {(matchedCashflow.importo || ((matchedInvoice?.flusso || 0) + (matchedInvoice?.iva || 0))).toFixed(2).replace('.', ',')} €
+                    </span>
+                  </div>
+                  {(matchedCashflow.note || matchedCashflow.descrizione) && (
+                    <div className="text-sm text-gray-700 pt-1 border-t border-gray-100">
+                      <span className="font-medium text-gray-500">Note:</span> {matchedCashflow.note || matchedCashflow.descrizione}
+                    </div>
+                  )}
+                  {matchedInvoice && (
+                    <div className="text-xs text-gray-600 pt-1 border-t border-gray-100">
+                      <span className="font-medium">Rif. Fattura:</span> {formatInvoiceId(matchedInvoice.id, matchedInvoice.anno)} - {matchedInvoice.nomeProgetto || matchedInvoice.spesa || 'N/A'}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Matched invoice only (when no cashflow) */}
+            {!matchedCashflow && matchedInvoice && (
               <div className="mb-4 p-3 border-2 border-green-500 bg-white rounded-lg" shadow-sm>
                 <div className="flex items-center gap-2 mb-2">
                   <Link2 size={16} className="text-green-600" />
@@ -259,46 +300,11 @@ const ManualMatchModal: React.FC<{
   onClose: () => void;
 }> = ({ transaction, invoices, cashflowRecords, onMatch, onClose }) => {
   const [search, setSearch] = useState('');
-  const [showPaid, setShowPaid] = useState(false);
-
-  // Calcola stato pagamento per ogni fattura
-  const paymentStatus = useMemo(() => {
-    const statusMap = new Map<string, { totalePagato: number; percentuale: number; status: 'non_pagato' | 'parziale' | 'pagato' }>();
-
-    invoices.forEach(invoice => {
-      const totaleFattura = (invoice.flusso || 0) + (invoice.iva || 0);
-      const pagamenti = cashflowRecords.filter(cf => cf.invoiceId === invoice.id);
-      const totalePagato = pagamenti.reduce((sum, cf) => {
-        return sum + (cf.importo !== undefined ? cf.importo : totaleFattura);
-      }, 0);
-
-      const percentuale = totaleFattura > 0 ? (totalePagato / totaleFattura) * 100 : 0;
-      let status: 'non_pagato' | 'parziale' | 'pagato';
-
-      if (totalePagato === 0) {
-        status = 'non_pagato';
-      } else if (totalePagato >= totaleFattura - 0.01) { // Tolleranza di 1 centesimo
-        status = 'pagato';
-      } else {
-        status = 'parziale';
-      }
-
-      statusMap.set(invoice.id, { totalePagato, percentuale, status });
-    });
-
-    return statusMap;
-  }, [invoices, cashflowRecords]);
 
   const filteredInvoices = useMemo(() => {
     return invoices
       .filter(inv => inv.tipo === transaction.tipo)
       .filter(inv => {
-        // Filtra per stato pagamento se non vogliamo vedere le pagate
-        if (!showPaid) {
-          const status = paymentStatus.get(inv.id);
-          if (status?.status === 'pagato') return false;
-        }
-
         if (!search) return true;
         const searchLower = search.toLowerCase();
         const totale = (inv.flusso || 0) + (inv.iva || 0);
@@ -309,7 +315,7 @@ const ManualMatchModal: React.FC<{
           totale.toString().includes(search)
         );
       });
-  }, [invoices, transaction.tipo, search, showPaid, paymentStatus]);
+  }, [invoices, transaction.tipo, search]);
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={onClose}>
@@ -325,7 +331,7 @@ const ManualMatchModal: React.FC<{
           <p className="text-sm text-gray-500 mt-1">{transaction.descrizione}</p>
         </div>
 
-        <div className="p-4 border-b border-gray-200 space-y-3">
+        <div className="p-4 border-b border-gray-200">
           <div className="relative">
             <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
             <input
@@ -336,15 +342,6 @@ const ManualMatchModal: React.FC<{
               className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
             />
           </div>
-          <label className="flex items-center gap-2 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={showPaid}
-              onChange={e => setShowPaid(e.target.checked)}
-              className="w-4 h-4 text-primary border-gray-200 rounded focus:ring-2 focus:ring-primary/50"
-            />
-            <span className="text-sm text-gray-500">Mostra anche fatture già pagate</span>
-          </label>
         </div>
 
         <div className="overflow-y-auto max-h-96">
@@ -355,43 +352,24 @@ const ManualMatchModal: React.FC<{
           ) : (
             filteredInvoices.map(inv => {
               const totale = (inv.flusso || 0) + (inv.iva || 0);
-              const paymentInfo = paymentStatus.get(inv.id) || { totalePagato: 0, percentuale: 0, status: 'non_pagato' as const };
-              const residuo = totale - paymentInfo.totalePagato;
               const isExactMatch = Math.abs(totale - transaction.importo) < 0.01;
-              const isResidualMatch = Math.abs(residuo - transaction.importo) < 0.01;
 
               return (
                 <div
                   key={inv.id}
                   onClick={() => onMatch(inv.id)}
                   className={`p-4 border-b border-gray-200 last:border-b-0 cursor-pointer hover:bg-gray-50 transition-colors ${
-                    isExactMatch ? 'bg-green-50' :
-                    isResidualMatch ? 'bg-yellow-50' :
-                    paymentInfo.status === 'parziale' ? 'bg-yellow-50/30' : ''
+                    isExactMatch ? 'bg-green-50' : ''
                   }`}
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex-1">
                       <div className="flex items-center gap-2">
                         <div className="font-medium text-dark">{formatInvoiceId(inv.id, inv.anno)}</div>
-                        <span className={`px-2 py-0.5 text-xs font-semibold rounded-full ${
-                          paymentInfo.status === 'pagato'
-                            ? 'bg-green-100 text-green-700'
-                            : paymentInfo.status === 'parziale'
-                            ? 'bg-yellow-100 text-yellow-700'
-                            : 'bg-red-100 text-red-700'
-                        }`}>
-                          {paymentInfo.status === 'pagato' ? 'Pagato' : paymentInfo.status === 'parziale' ? `Parziale ${paymentInfo.percentuale.toFixed(0)}%` : 'Non Pagato'}
-                        </span>
                       </div>
                       <div className="text-sm text-gray-500 mt-1">
                         {inv.nomeProgetto || inv.spesa || 'N/A'} | {inv.data instanceof Date ? formatDate(inv.data.toISOString()) : formatDate(inv.data)}
                       </div>
-                      {paymentInfo.status === 'parziale' && (
-                        <div className="text-xs text-gray-500 mt-1">
-                          Pagato: {formatCurrency(paymentInfo.totalePagato)} | Residuo: <span className="font-semibold text-orange-600">{formatCurrency(residuo)}</span>
-                        </div>
-                      )}
                     </div>
                     <div className="text-right ml-4">
                       <div className={`font-semibold ${inv.tipo === 'Entrata' ? 'text-green-600' : 'text-red-600'}`}>
@@ -399,9 +377,6 @@ const ManualMatchModal: React.FC<{
                       </div>
                       {isExactMatch && (
                         <span className="text-xs text-green-600 font-medium">Importo esatto</span>
-                      )}
-                      {isResidualMatch && paymentInfo.status === 'parziale' && (
-                        <span className="text-xs text-yellow-600 font-medium">Residuo esatto</span>
                       )}
                     </div>
                   </div>
@@ -1423,6 +1398,8 @@ export const Reconciliation: React.FC = () => {
   });
   const [isProcessingAI, setIsProcessingAI] = useState(false);
   const [aiProgress, setAiProgress] = useState({ current: 0, total: 0 });
+  const [isStoppingAI, setIsStoppingAI] = useState(false);
+  const stopAIProcessingRef = useRef(false);
   const [manualMatchTransaction, setManualMatchTransaction] = useState<BankTransaction | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [isDeleting, setIsDeleting] = useState(false);
@@ -1431,6 +1408,14 @@ export const Reconciliation: React.FC = () => {
   const [comparisonView, setComparisonView] = useState<'transactions' | 'unmatched' | 'sidebyside' | 'report'>(() => {
     const saved = localStorage.getItem('reconciliation_comparisonView');
     return (saved as 'transactions' | 'unmatched' | 'sidebyside' | 'report') || 'transactions';
+  });
+  const [aiMatchingEnabled, setAiMatchingEnabled] = useState<boolean>(() => {
+    const saved = localStorage.getItem('reconciliation_aiMatchingEnabled');
+    return saved === null ? false : saved === 'true'; // Default: DISABILITATA per sicurezza costi
+  });
+  const [selectedAiModel, setSelectedAiModel] = useState<'haiku' | 'sonnet' | 'sonnet4' | 'opus' | 'opus4'>(() => {
+    const saved = localStorage.getItem('reconciliation_selectedAiModel');
+    return (saved as 'haiku' | 'sonnet' | 'sonnet4' | 'opus' | 'opus4') || 'haiku';
   });
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -1461,6 +1446,55 @@ export const Reconciliation: React.FC = () => {
   React.useEffect(() => {
     localStorage.setItem('reconciliation_comparisonView', comparisonView);
   }, [comparisonView]);
+
+  React.useEffect(() => {
+    localStorage.setItem('reconciliation_aiMatchingEnabled', String(aiMatchingEnabled));
+  }, [aiMatchingEnabled]);
+
+  React.useEffect(() => {
+    localStorage.setItem('reconciliation_selectedAiModel', selectedAiModel);
+  }, [selectedAiModel]);
+
+  // Get AI model details
+  const getAiModelInfo = (model: 'haiku' | 'sonnet' | 'sonnet4' | 'opus' | 'opus4') => {
+    switch (model) {
+      case 'haiku':
+        return {
+          id: 'claude-3-5-haiku-20241022',
+          name: 'Haiku 3.5',
+          cost: '~15¢/100 tx',
+          description: 'Veloce ed economico'
+        };
+      case 'sonnet':
+        return {
+          id: 'claude-3-5-sonnet-20241022',
+          name: 'Sonnet 3.5',
+          cost: '~$1.50/100 tx',
+          description: 'Bilanciato, alta qualità'
+        };
+      case 'sonnet4':
+        return {
+          id: 'claude-sonnet-4-20250514',
+          name: 'Sonnet 4',
+          cost: '~$3/100 tx',
+          description: 'Più recente e performante'
+        };
+      case 'opus':
+        return {
+          id: 'claude-3-opus-20240229',
+          name: 'Opus 3',
+          cost: '~$7.50/100 tx',
+          description: 'Altissima qualità'
+        };
+      case 'opus4':
+        return {
+          id: 'claude-opus-4-5-20251101',
+          name: 'Opus 4.5',
+          cost: '~$15/100 tx',
+          description: 'Massima qualità assoluta'
+        };
+    }
+  };
 
   // Current session transactions
   const sessionTransactions = useMemo(() => {
@@ -1563,8 +1597,35 @@ export const Reconciliation: React.FC = () => {
       const addedSession = await addReconciliationSession(session);
       console.log('Session added:', addedSession);
 
-      // Create bank transactions with quick matching
-      for (const tx of parsed.transactions) {
+      // Select session immediately so transactions appear as they're added
+      setSelectedSession(sessionId);
+
+      // Create bank transactions with AI matching (if enabled)
+      if (aiMatchingEnabled) {
+        setIsProcessingAI(true);
+        setIsStoppingAI(false);
+        stopAIProcessingRef.current = false;
+      }
+      let matchedCount = 0;
+
+      // Track matched cashflows to prevent duplicates
+      const matchedCashflowIds = new Set<string>();
+
+      let shouldStop = false;
+
+      for (let i = 0; i < parsed.transactions.length && !shouldStop; i++) {
+        // Check if user wants to stop - use local variable for clarity
+        shouldStop = stopAIProcessingRef.current;
+        if (shouldStop) {
+          console.log(`⏹️⏹️⏹️ AI processing STOPPED by user at ${i}/${parsed.transactions.length}`);
+          console.log(`Breaking out of loop NOW`);
+          break;
+        }
+
+        const tx = parsed.transactions[i];
+        console.log(`📊 Processing transaction ${i + 1}/${parsed.transactions.length} ${aiMatchingEnabled ? 'with AI' : 'without AI'}`);
+        setAiProgress({ current: i + 1, total: parsed.transactions.length });
+
         const bankTx: BankTransaction = {
           id: crypto.randomUUID(),
           sessionId,
@@ -1578,24 +1639,148 @@ export const Reconciliation: React.FC = () => {
           matchStatus: 'pending'
         };
 
-        // Try quick match first
-        const quickMatchResult = quickMatch(bankTx, invoices, cashflowRecords);
-        if (quickMatchResult) {
-          bankTx.matchedInvoiceId = quickMatchResult.invoiceId || undefined;
-          bankTx.matchedCashflowId = quickMatchResult.cashflowId || undefined;
-          bankTx.matchConfidence = quickMatchResult.confidence;
-          bankTx.matchReason = quickMatchResult.reason;
+        // Try automatic matching with AI (only if enabled)
+        if (aiMatchingEnabled) {
+        try {
+          console.log(`[AI Match ${i+1}/${parsed.transactions.length}] Analyzing transaction:`, {
+            descrizione: tx.descrizione,
+            importo: tx.importo,
+            tipo: tx.tipo,
+            data: tx.data
+          });
+          console.log(`Available invoices: ${invoices.length}, cashflow records: ${cashflowRecords.length}`);
+          console.log(`Sample cashflow IDs:`, cashflowRecords.slice(0, 5).map(cf => cf.id));
+
+          const modelInfo = getAiModelInfo(selectedAiModel);
+          console.log(`🤖 Using AI model: ${modelInfo.name} (${modelInfo.id})`);
+          const aiMatchResult = await suggestMatch(bankTx, invoices, cashflowRecords, modelInfo.id);
+
+          // Check if user stopped processing after AI call
+          shouldStop = stopAIProcessingRef.current;
+          if (shouldStop) {
+            console.log(`⏹️ AI processing stopped by user after AI analysis`);
+            // Save the current transaction without matching before stopping
+            await addBankTransaction(bankTx);
+            break;
+          }
+
+          console.log(`[AI Match Result]`, {
+            confidence: aiMatchResult.confidence,
+            cashflowId: aiMatchResult.cashflowId,
+            invoiceId: aiMatchResult.invoiceId,
+            reason: aiMatchResult.reason
+          });
+
+          // Show why it's not auto-matching
+          if (aiMatchResult.confidence < 80) {
+            console.log(`⚠️ Not auto-matching: confidence ${aiMatchResult.confidence}% is below threshold (80%)`);
+            console.log(`Reason: "${aiMatchResult.reason}"`);
+          } else if (!aiMatchResult.cashflowId && !aiMatchResult.invoiceId) {
+            console.log(`⚠️ Not auto-matching: AI didn't find any match (both cashflowId and invoiceId are null)`);
+            console.log(`Reason: "${aiMatchResult.reason}"`);
+          }
+
+          // Auto-match if confidence is high enough
+          if (aiMatchResult.confidence >= 80) {
+            if (aiMatchResult.cashflowId) {
+              // Check if this cashflow is already matched to prevent duplicates
+              if (matchedCashflowIds.has(aiMatchResult.cashflowId)) {
+                console.log(`⚠️ Cashflow ${aiMatchResult.cashflowId} already matched to another transaction, leaving as pending`);
+              } else {
+                // Verify cashflow exists
+                const cashflowExists = cashflowRecords.some(cf => cf.id === aiMatchResult.cashflowId);
+                console.log(`Cashflow ${aiMatchResult.cashflowId} exists: ${cashflowExists}`);
+                if (!cashflowExists) {
+                  console.error(`❌ AI returned cashflow ID ${aiMatchResult.cashflowId} but it doesn't exist in database!`);
+                  console.log(`Available cashflow IDs for tipo ${tx.tipo}:`, cashflowRecords.filter(cf => {
+                    const invoice = invoices.find(inv => inv.id === cf.invoiceId);
+                    return (cf.tipo || invoice?.tipo) === tx.tipo;
+                  }).slice(0, 5).map(cf => cf.id));
+                }
+                if (cashflowExists) {
+                  bankTx.matchedCashflowId = aiMatchResult.cashflowId;
+                  bankTx.matchedInvoiceId = aiMatchResult.invoiceId || undefined;
+                  bankTx.matchConfidence = aiMatchResult.confidence;
+                  bankTx.matchReason = aiMatchResult.reason;
+                  bankTx.matchStatus = 'matched';
+                  matchedCount++;
+                  matchedCashflowIds.add(aiMatchResult.cashflowId);
+                  console.log(`✅ Transaction matched to cashflow ${aiMatchResult.cashflowId}`);
+                }
+              }
+            } else if (aiMatchResult.invoiceId) {
+              // Fallback to invoice-only match
+              const invoiceExists = invoices.some(inv => inv.id === aiMatchResult.invoiceId);
+              console.log(`Invoice ${aiMatchResult.invoiceId} exists: ${invoiceExists}`);
+              if (invoiceExists) {
+                bankTx.matchedInvoiceId = aiMatchResult.invoiceId;
+                bankTx.matchConfidence = aiMatchResult.confidence;
+                bankTx.matchReason = aiMatchResult.reason;
+                bankTx.matchStatus = 'matched';
+                matchedCount++;
+                console.log(`✅ Transaction matched to invoice ${aiMatchResult.invoiceId}`);
+              }
+            }
+          } else {
+            console.log(`⚠️ Confidence too low (${aiMatchResult.confidence}%), not auto-matching`);
+          }
+        } catch (aiError) {
+          console.error('❌ AI matching error for transaction:', tx.id, aiError);
+          // Continue without matching if AI fails
+        }
+        } else {
+          console.log(`⏭️ AI matching disabled, skipping AI analysis for transaction ${i + 1}`);
+        }
+
+        // Check again before saving
+        shouldStop = stopAIProcessingRef.current;
+        if (shouldStop) {
+          console.log(`⏹️ AI processing stopped by user, skipping remaining transactions`);
+          break;
         }
 
         await addBankTransaction(bankTx);
+
+        // Check again after saving
+        shouldStop = stopAIProcessingRef.current;
+        if (shouldStop) {
+          console.log(`⏹️ AI processing stopped by user after saving transaction`);
+          break;
+        }
+
+        // Small delay to avoid rate limiting
+        if (i < parsed.transactions.length - 1) {
+          await new Promise(resolve => setTimeout(resolve, 200));
+          // Check one more time after delay
+          shouldStop = stopAIProcessingRef.current;
+        }
       }
 
-      setSelectedSession(sessionId);
+      // Final check to ensure we stopped
+      if (shouldStop) {
+        console.log(`🛑 Loop exited due to user stop request`);
+      }
+
+      console.log(`✅ Loop completed. Matched: ${matchedCount}, Total: ${parsed.transactions.length}`);
+      console.log(`Was stopped by user? ${stopAIProcessingRef.current}`);
+
+      // Update session with final counts
+      await updateReconciliationSession(sessionId, {
+        matchedCount,
+        pendingCount: parsed.transactions.length - matchedCount
+      });
+
+      setIsProcessingAI(false);
+      setIsStoppingAI(false);
+      setAiProgress({ current: 0, total: 0 });
     } catch (err) {
       console.error('Upload error:', err);
       setError(err instanceof Error ? err.message : 'Errore nel caricamento del file');
     } finally {
       setIsUploading(false);
+      setIsProcessingAI(false);
+      setIsStoppingAI(false);
+      setAiProgress({ current: 0, total: 0 });
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }
@@ -1643,7 +1828,8 @@ export const Reconciliation: React.FC = () => {
 
     setIsProcessingAI(true);
     try {
-      const suggestion = await suggestMatch(tx, invoices, cashflowRecords);
+      const modelInfo = getAiModelInfo(selectedAiModel);
+      const suggestion = await suggestMatch(tx, invoices, cashflowRecords, modelInfo.id);
       await updateBankTransaction(transactionId, {
         matchedInvoiceId: suggestion.invoiceId || undefined,
         matchedCashflowId: suggestion.cashflowId || undefined,
@@ -1687,9 +1873,10 @@ export const Reconciliation: React.FC = () => {
     setAiProgress({ current: 0, total: pending.length });
 
     try {
+      const modelInfo = getAiModelInfo(selectedAiModel);
       for (let i = 0; i < pending.length; i++) {
         const tx = pending[i];
-        const suggestion = await suggestMatch(tx, invoices, cashflowRecords);
+        const suggestion = await suggestMatch(tx, invoices, cashflowRecords, modelInfo.id);
         await updateBankTransaction(tx.id, {
           matchedInvoiceId: suggestion.invoiceId || undefined,
           matchedCashflowId: suggestion.cashflowId || undefined,
@@ -1877,6 +2064,39 @@ export const Reconciliation: React.FC = () => {
           <p className="text-gray-500 mt-1">Carica l'estratto conto e riconcilia le transazioni con Claude AI</p>
         </div>
         <div className="flex items-center gap-3">
+          {/* AI Toggle */}
+          <div className="flex items-center gap-3 px-4 py-2.5 bg-white border-2 border-gray-200 rounded-xl">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={aiMatchingEnabled}
+                onChange={(e) => setAiMatchingEnabled(e.target.checked)}
+                className="w-4 h-4 text-purple-600 border-gray-300 rounded focus:ring-2 focus:ring-purple-500"
+              />
+              <span className="text-sm font-medium text-dark">
+                Matching AI
+              </span>
+            </label>
+          </div>
+
+          {/* AI Model Selector */}
+          {aiMatchingEnabled && (
+            <div className="flex items-center gap-2 px-4 py-2.5 bg-white border-2 border-gray-200 rounded-xl">
+              <span className="text-xs text-gray-500 font-medium">Modello:</span>
+              <select
+                value={selectedAiModel}
+                onChange={(e) => setSelectedAiModel(e.target.value as 'haiku' | 'sonnet' | 'sonnet4' | 'opus' | 'opus4')}
+                className="text-sm font-medium text-dark bg-transparent border-none focus:outline-none focus:ring-2 focus:ring-purple-500 rounded px-2 py-1 cursor-pointer"
+              >
+                <option value="haiku">Haiku 3.5 - ~15¢/100 tx (Veloce)</option>
+                <option value="sonnet">Sonnet 3.5 - ~$1.50/100 tx (Alta qualità)</option>
+                <option value="sonnet4">Sonnet 4 - ~$3/100 tx (Più performante)</option>
+                <option value="opus">Opus 3 - ~$7.50/100 tx (Altissima qualità)</option>
+                <option value="opus4">Opus 4.5 - ~$15/100 tx (Massima qualità)</option>
+              </select>
+            </div>
+          )}
+
           <input
             ref={fileInputRef}
             type="file"
@@ -1894,10 +2114,68 @@ export const Reconciliation: React.FC = () => {
             ) : (
               <Upload size={18} />
             )}
-            {isUploading ? 'Caricamento...' : 'Carica Estratto Conto'}
+            {isUploading
+              ? (isProcessingAI && aiProgress.total > 0
+                  ? `Analisi AI ${aiProgress.current}/${aiProgress.total}...`
+                  : `Importazione ${aiProgress.current > 0 ? `${aiProgress.current}/${aiProgress.total}` : ''}...`)
+              : 'Carica Estratto Conto'}
           </button>
         </div>
       </div>
+
+      {/* AI Processing Progress Banner */}
+      {isProcessingAI && aiProgress.total > 0 && (
+        <div className="mb-6 p-4 bg-purple-50 border border-purple-200 rounded-xl">
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-3">
+              <RefreshCw size={20} className="text-purple-600 animate-spin" />
+              <div>
+                <div className="font-medium text-purple-900 flex items-center gap-2">
+                  Analisi AI in corso: {aiProgress.current} / {aiProgress.total}
+                  <span className="px-2 py-0.5 text-xs font-semibold rounded-full bg-purple-100 text-purple-700">
+                    {getAiModelInfo(selectedAiModel).name}
+                  </span>
+                </div>
+                <div className="text-sm text-purple-600">
+                  Le transazioni appaiono in tempo reale • Costo stimato: {getAiModelInfo(selectedAiModel).cost}
+                </div>
+              </div>
+            </div>
+            <div className="flex items-center gap-4">
+              <div className="text-2xl font-bold text-purple-600">
+                {Math.round((aiProgress.current / aiProgress.total) * 100)}%
+              </div>
+              <button
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  console.log(`🛑🛑🛑 STOP BUTTON CLICKED! Setting stopAIProcessingRef.current = true`);
+                  console.log(`BEFORE: stopAIProcessingRef.current =`, stopAIProcessingRef.current);
+                  stopAIProcessingRef.current = true;
+                  console.log(`AFTER: stopAIProcessingRef.current =`, stopAIProcessingRef.current);
+                  setIsStoppingAI(true);
+                  console.log(`✅ Stop flag set, waiting for next loop iteration to exit...`);
+                }}
+                disabled={isStoppingAI}
+                className={`px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2 ${
+                  isStoppingAI
+                    ? 'bg-gray-400 text-gray-200 cursor-not-allowed'
+                    : 'bg-red-500 text-white hover:bg-red-600'
+                }`}
+              >
+                <X size={16} />
+                {isStoppingAI ? 'Interruzione...' : 'Ferma Analisi'}
+              </button>
+            </div>
+          </div>
+          <div className="w-full bg-purple-200 rounded-full h-2">
+            <div
+              className="bg-purple-600 h-2 rounded-full transition-all duration-300"
+              style={{ width: `${(aiProgress.current / aiProgress.total) * 100}%` }}
+            />
+          </div>
+        </div>
+      )}
 
       {/* Error */}
       {error && (
@@ -1918,11 +2196,12 @@ export const Reconciliation: React.FC = () => {
               <button
                 key={session.id}
                 onClick={() => setSelectedSession(session.id)}
+                disabled={isProcessingAI || isUploading}
                 className={`flex-shrink-0 px-4 py-2.5 rounded-xl border transition-colors relative ${
                   selectedSession === session.id
                     ? 'bg-primary text-white border-primary'
                     : 'bg-white text-gray-500 border-gray-200 hover:border-primary'
-                }`}
+                } disabled:opacity-50 disabled:cursor-not-allowed`}
               >
                 <div className="flex items-center gap-2">
                   <div className="font-medium text-sm">{session.periodo || session.fileName}</div>
@@ -1996,10 +2275,11 @@ export const Reconciliation: React.FC = () => {
             <div className="mb-6 flex justify-end">
               <button
                 onClick={handleCloseSession}
-                className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors"
+                disabled={isProcessingAI || isUploading}
+                className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-green-600"
               >
                 <FileCheck size={16} />
-                Chiudi Sessione
+                {isProcessingAI || isUploading ? 'Processamento in corso...' : 'Chiudi Sessione'}
               </button>
             </div>
           )}
@@ -2079,7 +2359,7 @@ export const Reconciliation: React.FC = () => {
               {/* Select all button */}
               <button
                 onClick={handleSelectAll}
-                disabled={currentSession.status === 'closed'}
+                disabled={currentSession.status === 'closed' || isProcessingAI || isUploading}
                 className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium bg-gray-50 text-gray-500 hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {selectionState === 'all' ? (
@@ -2116,22 +2396,22 @@ export const Reconciliation: React.FC = () => {
               {selectedIds.size > 0 && (
                 <button
                   onClick={handleBulkDelete}
-                  disabled={isDeleting || currentSession.status === 'closed'}
+                  disabled={isDeleting || isProcessingAI || isUploading || currentSession.status === 'closed'}
                   className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg font-medium hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <Trash2 size={16} />
-                  {isDeleting ? 'Eliminazione...' : `Elimina (${selectedIds.size})`}
+                  {isProcessingAI || isUploading ? 'Processamento in corso...' : isDeleting ? 'Eliminazione...' : `Elimina (${selectedIds.size})`}
                 </button>
               )}
 
               {/* Delete session button */}
               <button
                 onClick={handleDeleteSession}
-                disabled={isDeleting || currentSession.status === 'closed'}
+                disabled={isDeleting || isProcessingAI || isUploading || currentSession.status === 'closed'}
                 className="flex items-center gap-2 px-4 py-2 bg-gray-50 text-gray-500 rounded-lg font-medium hover:bg-gray-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <Trash2 size={16} />
-                Elimina Sessione
+                {isProcessingAI || isUploading ? 'Processamento in corso...' : 'Elimina Sessione'}
               </button>
 
               {stats.pending > 0 && (
@@ -2167,6 +2447,7 @@ export const Reconciliation: React.FC = () => {
                     key={tx.id}
                     transaction={tx}
                     invoices={invoices}
+                    cashflowRecords={cashflowRecords}
                     onConfirm={(invoiceId) => handleConfirmMatch(tx.id, invoiceId)}
                     onIgnore={() => handleIgnore(tx.id)}
                     onManualMatch={() => setManualMatchTransaction(tx)}
@@ -2176,7 +2457,7 @@ export const Reconciliation: React.FC = () => {
                     onToggleSelect={() => handleToggleSelect(tx.id)}
                     onCreateInvoice={() => setCreateInvoiceTransaction(tx)}
                     onCreateCashflow={() => setCreateCashflowTransaction(tx)}
-                    disabled={currentSession.status === 'closed'}
+                    disabled={currentSession.status === 'closed' || isProcessingAI || isUploading}
                   />
                 ))
               )}

@@ -7,7 +7,7 @@ import { Invoicing } from './components/Invoicing';
 import { Cashflow } from './components/Cashflow';
 import { FinancialStatement } from './components/FinancialStatement';
 import { Reconciliation } from './components/Reconciliation';
-import { Search, Bell, User, Menu, X } from 'lucide-react';
+import { Bell, User, Menu, X } from 'lucide-react';
 
 const App: React.FC = () => {
   const [currentView, setCurrentView] = useState('dashboard');
@@ -62,18 +62,11 @@ const App: React.FC = () => {
             <Menu size={20} className="text-dark" />
           </button>
 
-          {/* Search Bar */}
-          <div className="hidden sm:flex items-center bg-white rounded-full px-4 py-2.5 w-full max-w-md shadow-sm">
-            <Search size={20} className="text-gray-400 mr-3" />
-            <input
-              type="text"
-              placeholder="Cerca qualsiasi cosa..."
-              className="bg-transparent border-none outline-none w-full text-sm text-dark placeholder-gray-400"
-            />
-          </div>
+          {/* Spacer */}
+          <div className="flex-1"></div>
 
           {/* Right side buttons */}
-          <div className="flex items-center gap-4 ml-4">
+          <div className="flex items-center gap-4">
             <button className="relative w-10 h-10 bg-white rounded-full flex items-center justify-center shadow-sm hover:bg-gray-50 transition-colors">
               <Bell size={20} className="text-dark" />
               <span className="absolute top-2 right-2.5 w-2 h-2 bg-red-500 rounded-full border border-white"></span>

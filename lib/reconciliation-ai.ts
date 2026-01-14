@@ -43,19 +43,49 @@ function formatBankTransaction(tx: BankTransaction): string {
 export async function suggestMatch(
   transaction: BankTransaction,
   invoices: Invoice[],
-  cashflowRecords: CashflowRecord[]
+  cashflowRecords: CashflowRecord[],
+  model?: string
 ): Promise<MatchSuggestion> {
   // Filter invoices by type (match Entrata with Entrata, Uscita with Uscita)
   const filteredInvoices = invoices.filter(inv => inv.tipo === transaction.tipo);
 
   // Get cashflow records with their invoices for context
+  // Include both cashflow with invoices AND standalone cashflow that match tipo
   const cashflowWithInvoices = cashflowRecords.map(cf => {
     const invoice = invoices.find(inv => inv.id === cf.invoiceId);
     return { cf, invoice };
-  }).filter(({ invoice }) => invoice?.tipo === transaction.tipo);
+  }).filter(({ cf, invoice }) => {
+    // Include if invoice matches tipo OR if it's standalone with matching tipo
+    if (invoice) {
+      return invoice.tipo === transaction.tipo;
+    } else {
+      return cf.tipo === transaction.tipo;
+    }
+  });
+
+  console.log(`[AI] Transaction tipo: ${transaction.tipo}, descrizione: "${transaction.descrizione}"`);
+  console.log(`[AI] Total cashflow records: ${cashflowRecords.length}, Filtered invoices: ${filteredInvoices.length}, cashflow with invoices: ${cashflowWithInvoices.length}`);
+
+  // Check if we have old-style IDs (long timestamp format) - this indicates cache issue
+  const hasOldStyleIds = cashflowRecords.some(cf => cf.id.includes('-') && cf.id.split('-').length === 3 && cf.id.split('-')[1].length > 5);
+  if (hasOldStyleIds) {
+    console.warn(`[AI] ⚠️ WARNING: Detected old-style cashflow IDs! Please RELOAD the page (F5) to get new progressive IDs from database.`);
+  }
+
+  // Log some cashflow samples to debug
+  if (cashflowWithInvoices.length > 0) {
+    console.log(`[AI] Sample cashflow:`, cashflowWithInvoices.slice(0, 2).map(({ cf, invoice }) => ({
+      id: cf.id,
+      invoiceId: cf.invoiceId,
+      importo: cf.importo,
+      tipo: cf.tipo || invoice?.tipo,
+      note: cf.note || invoice?.note
+    })));
+  }
 
   // If no invoices match the type, return no match
   if (filteredInvoices.length === 0 && cashflowWithInvoices.length === 0) {
+    console.log(`[AI] No matching records found for tipo ${transaction.tipo}`);
     return {
       invoiceId: null,
       cashflowId: null,
@@ -80,13 +110,13 @@ ${cashflowWithInvoices.length > 0
   : 'Nessun movimento registrato'}
 
 ISTRUZIONI:
-1. Cerca prima tra i movimenti di cassa già registrati - se trovi una corrispondenza esatta o molto probabile, usa il cashflowId
+1. Cerca SEMPRE tra i movimenti di cassa già registrati - se trovi una corrispondenza esatta o molto probabile, usa il cashflowId
 2. Se non c'è un movimento di cassa corrispondente, cerca tra le fatture non ancora pagate
 3. Per la corrispondenza considera IN ORDINE DI IMPORTANZA:
-   - **Descrizione/Note**: Confronta la descrizione della transazione bancaria con le note delle fatture e dei movimenti. Cerca parole chiave comuni, nomi di progetti, riferimenti, numeri di fattura. Questo è il criterio PIÙ IMPORTANTE.
+   - **Descrizione/Note**: Confronta la descrizione della transazione bancaria con le note dei movimenti di cassa. Cerca parole chiave comuni, nomi di progetti, riferimenti. Questo è il criterio PIÙ IMPORTANTE.
    - **Importo**: Deve essere uguale o molto simile (tolleranza massima 1€). Se descrizione e importo matchano, confidence alta.
-   - **Data**: La transazione bancaria dovrebbe essere vicina alla data fattura o data pagamento prevista (tolleranza ±30 giorni).
-4. PRIORITÀ AL MATCHING SEMANTICO: Se la descrizione della transazione bancaria contiene parole chiave che matchano con le note della fattura/movimento (es. nome progetto, cliente, servizio), questo è un match molto probabile anche se le date non sono perfettamente allineate.
+   - **Data**: La transazione bancaria dovrebbe essere vicina alla data pagamento del movimento (tolleranza ±30 giorni).
+4. PRIORITÀ AL MATCHING SEMANTICO: Se la descrizione della transazione bancaria contiene parole chiave che matchano con le note del movimento di cassa (es. nome progetto, cliente, servizio), questo è un match molto probabile anche se le date non sono perfettamente allineate.
 5. Se non trovi corrispondenze affidabili (né per descrizione né per importo), rispondi con confidence 0
 
 Rispondi ESCLUSIVAMENTE con un oggetto JSON valido (senza markdown, senza backticks) nel seguente formato:
@@ -95,16 +125,24 @@ Rispondi ESCLUSIVAMENTE con un oggetto JSON valido (senza markdown, senza backti
 IMPORTANTE:
 - Usa "null" (senza virgolette) per i campi vuoti, non la stringa "null"
 - Non includere testo prima o dopo il JSON
-- Il campo reason deve spiegare brevemente perché hai scelto (o non scelto) questo match`;
+- Nel campo "reason" fai SEMPRE riferimento al MOVIMENTO DI CASSA (con il suo ID: es. "CF-xxx"), NON alla fattura
+- Esempio reason corretto: "Match perfetto: movimento CF-123456 del 06/01/26 per €50.00 con note 'Anthropic'"
+- Esempio reason ERRATO: "Match perfetto con Fattura_295"
+- Il campo reason deve spiegare brevemente perché hai scelto quel MOVIMENTO DI CASSA`;
 
   try {
+    const selectedModel = model || 'claude-3-5-haiku-20241022';
+    console.log(`[AI] 🤖 Using model: ${selectedModel}`);
+    console.log(`[AI] Sending prompt (first 1000 chars):`, prompt.substring(0, 1000) + '...');
+
     const response = await anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514',
+      model: selectedModel,
       max_tokens: 500,
       messages: [{ role: 'user', content: prompt }]
     });
 
     const text = response.content[0].type === 'text' ? response.content[0].text : '';
+    console.log(`[AI] Raw response:`, text);
 
     // Clean potential markdown formatting
     const cleanedText = text
@@ -113,6 +151,7 @@ IMPORTANTE:
       .trim();
 
     const result = JSON.parse(cleanedText);
+    console.log(`[AI] Parsed result:`, result);
 
     return {
       invoiceId: result.invoiceId || null,
@@ -188,50 +227,102 @@ export function quickMatch(
   const amount = transaction.importo;
   const tipo = transaction.tipo;
   const description = transaction.descrizione || '';
+  const txDate = new Date(transaction.data);
 
-  // First check cashflow records
-  for (const cf of cashflowRecords) {
+  // Match cashflow records by amount
+  const matchingCashflows = cashflowRecords.filter(cf => {
+    // Get the invoice to check tipo
     const invoice = invoices.find(inv => inv.id === cf.invoiceId);
-    if (!invoice || invoice.tipo !== tipo) continue;
+    if (!invoice || invoice.tipo !== tipo) return false;
 
+    // Check amount match
     const cfAmount = cf.importo || ((invoice.flusso || 0) + (invoice.iva || 0));
+    return Math.abs(cfAmount - amount) < 0.01;
+  });
 
-    // Exact match on amount
-    if (Math.abs(cfAmount - amount) < 0.01) {
-      const hasDescMatch = hasDescriptionMatch(description, invoice.note) || hasDescriptionMatch(description, cf.note);
+  // If no cashflow matches, return null
+  if (matchingCashflows.length === 0) {
+    return null;
+  }
+
+  // If multiple matches with same amount, try to disambiguate by description
+  if (matchingCashflows.length > 1) {
+    const descMatches = matchingCashflows.filter(cf => {
+      // Check if description matches cashflow note or invoice note
+      const invoice = invoices.find(inv => inv.id === cf.invoiceId);
+      return hasDescriptionMatch(description, cf.note) ||
+             (invoice && hasDescriptionMatch(description, invoice.note));
+    });
+
+    // If only one has description match, use it
+    if (descMatches.length === 1) {
+      const cf = descMatches[0];
+      const invoice = invoices.find(inv => inv.id === cf.invoiceId);
       return {
-        invoiceId: invoice.id,
+        invoiceId: invoice?.id || null,
         cashflowId: cf.id,
-        confidence: hasDescMatch ? 98 : 95,
-        reason: hasDescMatch
-          ? 'Corrispondenza esatta dell\'importo e della descrizione con movimento esistente'
-          : 'Corrispondenza esatta dell\'importo con movimento di cassa esistente'
+        confidence: 95,
+        reason: 'Corrispondenza esatta di importo e descrizione'
       };
     }
-  }
 
-  // Then check invoices without cashflow records
-  const invoicesWithCashflow = new Set(cashflowRecords.map(cf => cf.invoiceId));
+    // Try to match by date proximity (within 7 days of payment date)
+    const dateMatches = matchingCashflows.filter(cf => {
+      if (!cf.dataPagamento) return false;
+      const cfDate = new Date(cf.dataPagamento);
+      const diffDays = Math.abs((txDate.getTime() - cfDate.getTime()) / (1000 * 60 * 60 * 24));
+      return diffDays <= 7;
+    });
 
-  for (const inv of invoices) {
-    if (inv.tipo !== tipo) continue;
-    if (invoicesWithCashflow.has(inv.id)) continue;
-
-    const invAmount = (inv.flusso || 0) + (inv.iva || 0);
-
-    // Exact match on amount
-    if (Math.abs(invAmount - amount) < 0.01) {
-      const hasDescMatch = hasDescriptionMatch(description, inv.note);
+    if (dateMatches.length === 1) {
+      const cf = dateMatches[0];
+      const invoice = invoices.find(inv => inv.id === cf.invoiceId);
       return {
-        invoiceId: inv.id,
-        cashflowId: null,
-        confidence: hasDescMatch ? 90 : 85,
-        reason: hasDescMatch
-          ? 'Corrispondenza esatta dell\'importo e della descrizione con fattura non ancora pagata'
-          : 'Corrispondenza esatta dell\'importo con fattura non ancora pagata'
+        invoiceId: invoice?.id || null,
+        cashflowId: cf.id,
+        confidence: 85,
+        reason: 'Corrispondenza di importo e data pagamento vicina'
       };
     }
+
+    // Multiple ambiguous matches - don't auto-match
+    return null;
   }
 
-  return null;
+  // Single cashflow match found
+  const matchedCashflow = matchingCashflows[0];
+  const matchedInvoice = invoices.find(inv => inv.id === matchedCashflow.invoiceId);
+
+  // Check description match
+  const hasDescMatch = hasDescriptionMatch(description, matchedCashflow.note) ||
+                       (matchedInvoice && hasDescriptionMatch(description, matchedInvoice.note));
+
+  // Check date proximity with payment date
+  let isDateClose = false;
+  if (matchedCashflow.dataPagamento) {
+    const cfDate = new Date(matchedCashflow.dataPagamento);
+    const diffDays = Math.abs((txDate.getTime() - cfDate.getTime()) / (1000 * 60 * 60 * 24));
+    isDateClose = diffDays <= 30;
+  }
+
+  let confidence = 80;
+  let reason = 'Corrispondenza esatta dell\'importo';
+
+  if (hasDescMatch && isDateClose) {
+    confidence = 95;
+    reason = 'Corrispondenza esatta di importo, descrizione e data';
+  } else if (hasDescMatch) {
+    confidence = 90;
+    reason = 'Corrispondenza esatta di importo e descrizione';
+  } else if (isDateClose) {
+    confidence = 85;
+    reason = 'Corrispondenza esatta di importo e data vicina';
+  }
+
+  return {
+    invoiceId: matchedInvoice?.id || null,
+    cashflowId: matchedCashflow.id,
+    confidence,
+    reason
+  };
 }
