@@ -27,6 +27,15 @@ export const FinancialStatement: React.FC = () => {
     return <div className="flex items-center justify-center h-64">Caricamento...</div>;
   }
 
+  // Calcola gli anni disponibili dalle fatture
+  const availableYears = useMemo(() => {
+    const years = new Set(invoices.map(inv => inv.anno));
+    if (years.size === 0) {
+      return [new Date().getFullYear()];
+    }
+    return Array.from(years).sort((a, b) => b - a);
+  }, [invoices]);
+
   // Calcola dati reali dal Conto Economico basato su fatture
   const incomeStatementData = useMemo(() => {
     // Filtra fatture per anno e stato
@@ -77,9 +86,9 @@ export const FinancialStatement: React.FC = () => {
             <select
               value={filterAnno}
               onChange={(e) => setFilterAnno(Number(e.target.value))}
-              className="border-none outline-none bg-transparent text-sm font-medium text-gray-500 dark:text-gray-400 cursor-pointer"
+              className="border-none outline-none bg-transparent text-sm font-medium text-gray-500 dark:text-gray-400 cursor-pointer pl-3 pr-8"
             >
-              {[2024, 2025, 2026].map(anno => (
+              {availableYears.map(anno => (
                 <option key={anno} value={anno}>{anno}</option>
               ))}
             </select>
@@ -91,7 +100,7 @@ export const FinancialStatement: React.FC = () => {
               <select
                 value={filterStato}
                 onChange={(e) => setFilterStato(e.target.value as 'Stimato' | 'Effettivo')}
-                className="border-none outline-none bg-transparent text-sm font-medium text-gray-500 dark:text-gray-400 cursor-pointer"
+                className="border-none outline-none bg-transparent text-sm font-medium text-gray-500 dark:text-gray-400 cursor-pointer pl-2 pr-6"
               >
                 <option value="Effettivo">Effettivo</option>
                 <option value="Stimato">Stimato</option>

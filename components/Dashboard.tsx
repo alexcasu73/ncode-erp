@@ -19,105 +19,95 @@ export const Dashboard: React.FC = () => {
     const currentDate = new Date();
     const currentYear = currentDate.getFullYear();
     const lastYear = currentYear - 1;
+    const startOfCurrentYear = new Date(currentYear, 0, 1); // 1 gennaio anno corrente
+    const startYear = 2026; // Anno di inizio attività
 
-    // Fatture effettive dell'anno corrente
-    const currentYearInvoices = invoices.filter(inv =>
-      inv.anno === currentYear && inv.statoFatturazione === 'Effettivo'
+    // Fatture effettive CUMULATIVE dall'inizio attività fino all'anno corrente
+    const invoicesUpToCurrentYear = invoices.filter(inv =>
+      inv.anno >= startYear && inv.anno <= currentYear && inv.statoFatturazione === 'Effettivo'
     );
 
-    // Fatture effettive dell'anno scorso
-    const lastYearInvoices = invoices.filter(inv =>
-      inv.anno === lastYear && inv.statoFatturazione === 'Effettivo'
+    // Fatture effettive CUMULATIVE dall'inizio attività fino all'anno scorso
+    const invoicesUpToLastYear = invoices.filter(inv =>
+      inv.anno >= startYear && inv.anno <= lastYear && inv.statoFatturazione === 'Effettivo'
     );
 
-    // Fatturato totale anno corrente
-    const currentRevenue = currentYearInvoices.reduce((sum, inv) =>
-      sum + (inv.flusso || 0) + (inv.iva || 0), 0
-    );
+    // Fatturato totale CUMULATIVO (entrate - uscite) - SOLO FLUSSO (senza IVA)
+    const currentRevenue = invoicesUpToCurrentYear.reduce((sum, inv) => {
+      const amount = inv.flusso || 0;
+      return sum + (inv.tipo === 'Entrata' ? amount : -amount);
+    }, 0);
 
-    // Fatturato anno scorso
-    const lastRevenue = lastYearInvoices.reduce((sum, inv) =>
-      sum + (inv.flusso || 0) + (inv.iva || 0), 0
-    );
+    // Fatturato CUMULATIVO fino all'anno scorso - SOLO FLUSSO (senza IVA)
+    const lastRevenue = invoicesUpToLastYear.reduce((sum, inv) => {
+      const amount = inv.flusso || 0;
+      return sum + (inv.tipo === 'Entrata' ? amount : -amount);
+    }, 0);
 
     // Variazione percentuale fatturato
-    const revenueChange = lastRevenue > 0
-      ? ((currentRevenue - lastRevenue) / lastRevenue) * 100
-      : 0;
+    const revenueChange = lastRevenue !== 0
+      ? ((currentRevenue - lastRevenue) / Math.abs(lastRevenue)) * 100
+      : currentRevenue !== 0 ? 100 : 0;
 
-    // Numero di progetti unici - anno corrente
+    // Numero di progetti unici - CUMULATIVO dall'inizio fino all'anno corrente
     const currentProjects = new Set(
-      currentYearInvoices.map(inv => inv.nomeProgetto || inv.spesa).filter(Boolean)
+      invoicesUpToCurrentYear.map(inv => inv.nomeProgetto || inv.spesa).filter(Boolean)
     ).size;
 
-    // Progetti anno scorso
+    // Progetti CUMULATIVI fino all'anno scorso
     const lastProjects = new Set(
-      lastYearInvoices.map(inv => inv.nomeProgetto || inv.spesa).filter(Boolean)
+      invoicesUpToLastYear.map(inv => inv.nomeProgetto || inv.spesa).filter(Boolean)
     ).size;
 
-    // Variazione percentuale progetti
+    // Variazione percentuale progetti (nuovi progetti aggiunti quest'anno)
     const projectsChange = lastProjects > 0
       ? ((currentProjects - lastProjects) / lastProjects) * 100
-      : 0;
+      : currentProjects > 0 ? 100 : 0;
 
-    // Numero di fatture anno corrente
-    const currentTransactions = currentYearInvoices.length;
-    const lastTransactions = lastYearInvoices.length;
+    // Numero di fatture CUMULATIVO dall'inizio
+    const currentTransactions = invoicesUpToCurrentYear.length;
+    const lastTransactions = invoicesUpToLastYear.length;
 
     // Variazione percentuale fatture
     const transactionsChange = lastTransactions > 0
       ? ((currentTransactions - lastTransactions) / lastTransactions) * 100
-      : 0;
+      : currentTransactions > 0 ? 100 : 0;
 
-    // CASHFLOW REALE - Movimenti di cassa anno corrente
-    const currentYearCashflows = cashflowRecords.filter(cf => {
-      if (!cf.dataPagamento) return false;
-      const cfDate = new Date(cf.dataPagamento);
-      return cfDate.getFullYear() === currentYear;
-    });
+    // SALDO CASSA CUMULATIVO basato sulle fatture effettive (con IVA)
+    const currentCashflowIn = invoicesUpToCurrentYear
+      .filter(inv => inv.tipo === 'Entrata')
+      .reduce((sum, inv) => sum + (inv.flusso || 0) + (inv.iva || 0), 0);
 
-    // Cashflow anno scorso
-    const lastYearCashflows = cashflowRecords.filter(cf => {
-      if (!cf.dataPagamento) return false;
-      const cfDate = new Date(cf.dataPagamento);
-      return cfDate.getFullYear() === lastYear;
-    });
-
-    // Calcola entrate e uscite reali
-    const currentCashflowIn = currentYearCashflows
-      .filter(cf => cf.tipo === 'Entrata')
-      .reduce((sum, cf) => sum + (cf.importo || 0), 0);
-
-    const currentCashflowOut = currentYearCashflows
-      .filter(cf => cf.tipo === 'Uscita')
-      .reduce((sum, cf) => sum + (cf.importo || 0), 0);
+    const currentCashflowOut = invoicesUpToCurrentYear
+      .filter(inv => inv.tipo === 'Uscita')
+      .reduce((sum, inv) => sum + (inv.flusso || 0) + (inv.iva || 0), 0);
 
     const currentCashBalance = currentCashflowIn - currentCashflowOut;
 
-    const lastCashflowIn = lastYearCashflows
-      .filter(cf => cf.tipo === 'Entrata')
-      .reduce((sum, cf) => sum + (cf.importo || 0), 0);
+    const lastCashflowIn = invoicesUpToLastYear
+      .filter(inv => inv.tipo === 'Entrata')
+      .reduce((sum, inv) => sum + (inv.flusso || 0) + (inv.iva || 0), 0);
 
-    const lastCashflowOut = lastYearCashflows
-      .filter(cf => cf.tipo === 'Uscita')
-      .reduce((sum, cf) => sum + (cf.importo || 0), 0);
+    const lastCashflowOut = invoicesUpToLastYear
+      .filter(inv => inv.tipo === 'Uscita')
+      .reduce((sum, inv) => sum + (inv.flusso || 0) + (inv.iva || 0), 0);
 
     const lastCashBalance = lastCashflowIn - lastCashflowOut;
 
     const cashBalanceChange = lastCashBalance !== 0
       ? ((currentCashBalance - lastCashBalance) / Math.abs(lastCashBalance)) * 100
-      : 0;
+      : currentCashBalance !== 0 ? 100 : 0;
 
-    // CLIENTI REALI
+    // CLIENTI REALI (già cumulativi)
     const totalCustomers = customers.length;
     const activeCustomers = customers.filter(c => c.status === 'active').length;
 
-    // Clienti con fatture nell'anno corrente
+    // Clienti con fatture CUMULATIVI
     const customersWithInvoices = new Set(
-      currentYearInvoices.map(inv => inv.customer).filter(Boolean)
+      invoicesUpToCurrentYear.map(inv => inv.customer).filter(Boolean)
     ).size;
 
-    // Dati per grafico fatturato - 12 mesi dell'anno corrente (solo effettive)
+    // Dati per grafico fatturato - 12 mesi dell'anno corrente (solo effettive e dal 1 gennaio)
     const revenueChartData = [];
     for (let i = 0; i < 12; i++) {
       const monthName = MESI[i];
@@ -136,7 +126,7 @@ export const Dashboard: React.FC = () => {
       });
     }
 
-    // Dati per grafico fatture - 12 mesi dell'anno corrente (solo effettive)
+    // Dati per grafico fatture - 12 mesi dell'anno corrente (solo effettive e dal 1 gennaio)
     const transactionsChartData = [];
     for (let i = 0; i < 12; i++) {
       const monthName = MESI[i];
@@ -204,16 +194,20 @@ export const Dashboard: React.FC = () => {
           <div>
             <h3 className="text-card-title text-gray-500 dark:text-gray-400">Fatturato Totale</h3>
             <div className="flex items-center gap-3 mt-2">
-              <span className="text-kpi-value text-dark dark:text-white">
+              <span className={`text-kpi-value ${dashboardData.currentRevenue >= 0 ? 'text-secondary' : 'text-red-600'}`}>
                 {formatCurrencyNoDecimals(dashboardData.currentRevenue)}
               </span>
-              <span className={`text-white text-xs px-2 py-1 rounded-md font-medium ${dashboardData.revenueChange >= 0 ? 'bg-secondary' : 'bg-red-600'}`}>
-                {dashboardData.revenueChange >= 0 ? '+' : ''}{dashboardData.revenueChange.toFixed(1)}%
-              </span>
+              {dashboardData.lastRevenue !== 0 && (
+                <span className={`text-white text-xs px-2 py-1 rounded-md font-medium ${dashboardData.revenueChange >= 0 ? 'bg-secondary' : 'bg-red-600'}`}>
+                  {dashboardData.revenueChange >= 0 ? '+' : ''}{dashboardData.revenueChange.toFixed(1)}%
+                </span>
+              )}
             </div>
-            <p className="text-small text-gray-500 dark:text-gray-400 mt-1">
-              {formatCurrencyNoDecimals(dashboardData.lastRevenue)} anno scorso
-            </p>
+            {dashboardData.lastRevenue !== 0 && (
+              <p className="text-small text-gray-500 dark:text-gray-400 mt-1">
+                {formatCurrencyNoDecimals(dashboardData.lastRevenue)} anno scorso
+              </p>
+            )}
           </div>
           <div className="h-16 w-full mt-4">
             <ResponsiveContainer width="100%" height="100%">
@@ -235,9 +229,11 @@ export const Dashboard: React.FC = () => {
               <span className={`text-kpi-value ${dashboardData.currentCashBalance >= 0 ? 'text-secondary' : 'text-red-600'}`}>
                 {formatCurrencyNoDecimals(dashboardData.currentCashBalance)}
               </span>
-              <span className={`text-white text-xs px-2 py-1 rounded-md font-medium ${dashboardData.cashBalanceChange >= 0 ? 'bg-secondary' : 'bg-red-600'}`}>
-                {dashboardData.cashBalanceChange >= 0 ? '+' : ''}{dashboardData.cashBalanceChange.toFixed(1)}%
-              </span>
+              {dashboardData.lastCashBalance !== 0 && (
+                <span className={`text-white text-xs px-2 py-1 rounded-md font-medium ${dashboardData.cashBalanceChange >= 0 ? 'bg-secondary' : 'bg-red-600'}`}>
+                  {dashboardData.cashBalanceChange >= 0 ? '+' : ''}{dashboardData.cashBalanceChange.toFixed(1)}%
+                </span>
+              )}
             </div>
             <div className="flex items-center gap-3 mt-2">
               <div className="flex items-center gap-1">
@@ -273,11 +269,15 @@ export const Dashboard: React.FC = () => {
              <h3 className="text-card-title text-gray-500 dark:text-gray-400">Progetti Attivi</h3>
              <div className="flex items-center gap-3 mt-2">
                  <span className="text-kpi-value text-dark dark:text-white">{dashboardData.currentProjects}</span>
-                 <span className={`text-white text-xs px-2 py-1 rounded-md font-medium ${dashboardData.projectsChange >= 0 ? 'bg-secondary' : 'bg-red-600'}`}>
-                   {dashboardData.projectsChange >= 0 ? '+' : ''}{dashboardData.projectsChange.toFixed(1)}%
-                 </span>
+                 {dashboardData.lastProjects > 0 && (
+                   <span className={`text-white text-xs px-2 py-1 rounded-md font-medium ${dashboardData.projectsChange >= 0 ? 'bg-secondary' : 'bg-red-600'}`}>
+                     {dashboardData.projectsChange >= 0 ? '+' : ''}{dashboardData.projectsChange.toFixed(1)}%
+                   </span>
+                 )}
              </div>
-             <p className="text-small text-gray-500 dark:text-gray-400 mt-1">{dashboardData.lastProjects} progetti anno scorso</p>
+             {dashboardData.lastProjects > 0 && (
+               <p className="text-small text-gray-500 dark:text-gray-400 mt-1">{dashboardData.lastProjects} progetti anno scorso</p>
+             )}
           </div>
         </div>
 
@@ -287,11 +287,15 @@ export const Dashboard: React.FC = () => {
                 <h3 className="text-card-title text-gray-500 dark:text-gray-400">Fatture Totali</h3>
                 <div className="flex items-center gap-3 mt-2">
                     <span className="text-kpi-value text-dark dark:text-white">{dashboardData.currentTransactions}</span>
-                    <span className={`text-white text-xs px-2 py-1 rounded-md font-medium ${dashboardData.transactionsChange >= 0 ? 'bg-secondary' : 'bg-red-600'}`}>
-                      {dashboardData.transactionsChange >= 0 ? '+' : ''}{dashboardData.transactionsChange.toFixed(1)}%
-                    </span>
+                    {dashboardData.lastTransactions > 0 && (
+                      <span className={`text-white text-xs px-2 py-1 rounded-md font-medium ${dashboardData.transactionsChange >= 0 ? 'bg-secondary' : 'bg-red-600'}`}>
+                        {dashboardData.transactionsChange >= 0 ? '+' : ''}{dashboardData.transactionsChange.toFixed(1)}%
+                      </span>
+                    )}
                 </div>
-                <p className="text-small text-gray-500 dark:text-gray-400 mt-1">{dashboardData.lastTransactions} fatture anno scorso</p>
+                {dashboardData.lastTransactions > 0 && (
+                  <p className="text-small text-gray-500 dark:text-gray-400 mt-1">{dashboardData.lastTransactions} fatture anno scorso</p>
+                )}
             </div>
             <div className="h-16 w-full mt-2">
                 <ResponsiveContainer width="100%" height="100%">
