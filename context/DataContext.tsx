@@ -430,10 +430,25 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const deleteInvoice = async (id: string): Promise<boolean> => {
     if (!isSupabaseConfigured) {
+      // Delete associated cashflow records first
+      setCashflowRecords(prev => prev.filter(cf => cf.invoiceId !== id));
+      // Then delete the invoice
       setInvoices(prev => prev.filter(i => i.id !== id));
       return true;
     }
 
+    // Delete associated cashflow records first
+    const { error: cashflowError } = await supabase
+      .from('cashflow_records')
+      .delete()
+      .eq('invoice_id', id);
+
+    if (cashflowError) {
+      console.error('Error deleting associated cashflow records:', cashflowError);
+      return false;
+    }
+
+    // Then delete the invoice
     const { error } = await supabase
       .from('invoices')
       .delete()
@@ -444,6 +459,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return false;
     }
 
+    // Update local state
+    setCashflowRecords(prev => prev.filter(cf => cf.invoiceId !== id));
     setInvoices(prev => prev.filter(i => i.id !== id));
     return true;
   };
