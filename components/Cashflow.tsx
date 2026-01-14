@@ -210,7 +210,7 @@ export const Cashflow: React.FC = () => {
     return cashflowRecords.map(cf => {
       const invoice = invoices.find(inv => inv.id === cf.invoiceId);
       return { ...cf, invoice };
-    }).filter(cf => cf.invoice); // Solo record con fattura valida
+    }); // Include anche movimenti standalone senza fattura
   }, [cashflowRecords, invoices]);
 
   // Records per dashboard (KPI) - filtrati per anno, mese e stato dalla dashboard top bar
@@ -223,9 +223,17 @@ export const Cashflow: React.FC = () => {
       filtered = filtered.filter(cf => getMeseFromDate(cf.dataPagamento) === filterMese);
     }
     if (vistaStato === 'effettivo') {
-      filtered = filtered.filter(cf => cf.invoice?.statoFatturazione === 'Effettivo');
+      filtered = filtered.filter(cf => {
+        // Movimenti standalone sono sempre considerati "effettivi"
+        if (!cf.invoiceId) return true;
+        return cf.invoice?.statoFatturazione === 'Effettivo';
+      });
     } else if (vistaStato === 'stimato') {
-      filtered = filtered.filter(cf => cf.invoice?.statoFatturazione === 'Stimato');
+      filtered = filtered.filter(cf => {
+        // Movimenti standalone NON sono stimati
+        if (!cf.invoiceId) return false;
+        return cf.invoice?.statoFatturazione === 'Stimato';
+      });
     }
     return filtered;
   }, [cashflowWithInvoices, filterAnno, filterMese, vistaStato]);
@@ -285,8 +293,16 @@ export const Cashflow: React.FC = () => {
 
   // Calcola totali (usa importo personalizzato se presente, altrimenti flusso + iva)
   const totals = useMemo(() => {
-    const entrate = recordsForDashboard.filter(cf => cf.invoice?.tipo === 'Entrata');
-    const uscite = recordsForDashboard.filter(cf => cf.invoice?.tipo === 'Uscita');
+    const entrate = recordsForDashboard.filter(cf => {
+      // Per movimenti standalone usa cf.tipo, per fatture usa invoice.tipo
+      const tipo = cf.invoice?.tipo || cf.tipo;
+      return tipo === 'Entrata';
+    });
+    const uscite = recordsForDashboard.filter(cf => {
+      // Per movimenti standalone usa cf.tipo, per fatture usa invoice.tipo
+      const tipo = cf.invoice?.tipo || cf.tipo;
+      return tipo === 'Uscita';
+    });
 
     const totaleEntrate = entrate.reduce((acc, cf) => acc + getImportoEffettivo(cf), 0);
     const totaleUscite = uscite.reduce((acc, cf) => acc + getImportoEffettivo(cf), 0);
@@ -311,64 +327,56 @@ export const Cashflow: React.FC = () => {
 
     const saldoIniziale = currentBankBalance?.saldoIniziale || 0;
 
-    // Calcola il saldo cumulativo dall'inizio dell'anno fino al mese selezionato
-    // IMPORTANTE: Usa cashflowRecords (non cashflowWithInvoices) per includere anche movimenti standalone
-    let recordsUpToSelectedMonth = cashflowRecords.filter(cf => {
-      const anno = getAnnoFromDate(cf.dataPagamento);
-      if (anno !== filterAnno) return false;
+    // Create a filtered list similar to recordsForDashboard but with cumulative month logic
+    let filtered = cashflowWithInvoices;
 
-      // Se un mese specifico è selezionato, includi tutti i movimenti fino a quel mese
-      if (filterMese !== 'tutti') {
+    // Filter by year
+    if (filterAnno !== 'tutti') {
+      filtered = filtered.filter(cf => getAnnoFromDate(cf.dataPagamento) === filterAnno);
+    }
+
+    // Filter by month (cumulative - include all months up to selected month)
+    if (filterMese !== 'tutti') {
+      filtered = filtered.filter(cf => {
         const meseRecord = getMeseFromDate(cf.dataPagamento);
         if (!meseRecord) return false;
         const meseRecordIndex = MESI_FULL.indexOf(meseRecord);
         const meseSelezionatoIndex = MESI_FULL.indexOf(filterMese);
         return meseRecordIndex <= meseSelezionatoIndex;
-      }
-
-      // Se "tutti" è selezionato, includi tutti i movimenti dell'anno
-      return true;
-    });
-
-    // Applica il filtro per vistaStato (effettivo/stimato)
-    if (vistaStato === 'effettivo') {
-      recordsUpToSelectedMonth = recordsUpToSelectedMonth.filter(cf => {
-        // Movimenti standalone sono sempre considerati "effettivi"
-        if (!cf.invoiceId) return true;
-        // Movimenti con fattura: filtra per stato fatturazione
-        const invoice = invoices.find(inv => inv.id === cf.invoiceId);
-        return invoice?.statoFatturazione === 'Effettivo';
-      });
-    } else if (vistaStato === 'stimato') {
-      recordsUpToSelectedMonth = recordsUpToSelectedMonth.filter(cf => {
-        // Movimenti standalone NON sono stimati
-        if (!cf.invoiceId) return false;
-        // Movimenti con fattura: filtra per stato fatturazione
-        const invoice = invoices.find(inv => inv.id === cf.invoiceId);
-        return invoice?.statoFatturazione === 'Stimato';
       });
     }
 
-    // Calcola il saldo dei movimenti
-    const saldoMovimenti = recordsUpToSelectedMonth.reduce((acc, cf) => {
-      // Per movimenti standalone usa il tipo e importo direttamente dal record
-      if (!cf.invoiceId) {
-        const importo = cf.importo || 0;
-        const movimento = cf.tipo === 'Entrata' ? importo : -importo;
-        return acc + movimento;
-      }
+    // Filter by vistaStato
+    if (vistaStato === 'effettivo') {
+      filtered = filtered.filter(cf => {
+        // Movimenti standalone sono sempre considerati "effettivi"
+        if (!cf.invoiceId) return true;
+        return cf.invoice?.statoFatturazione === 'Effettivo';
+      });
+    } else if (vistaStato === 'stimato') {
+      filtered = filtered.filter(cf => {
+        // Movimenti standalone NON sono stimati
+        if (!cf.invoiceId) return false;
+        return cf.invoice?.statoFatturazione === 'Stimato';
+      });
+    }
 
-      // Per movimenti con fattura, trova la fattura e usa il tipo da lì
-      const invoice = invoices.find(inv => inv.id === cf.invoiceId);
-      if (!invoice) return acc;
+    // Calculate saldo using the same logic as totals
+    const entrate = filtered.filter(cf => {
+      const tipo = cf.invoice?.tipo || cf.tipo;
+      return tipo === 'Entrata';
+    });
+    const uscite = filtered.filter(cf => {
+      const tipo = cf.invoice?.tipo || cf.tipo;
+      return tipo === 'Uscita';
+    });
 
-      const importo = getImportoEffettivo({ ...cf, invoice });
-      const movimento = invoice.tipo === 'Entrata' ? importo : -importo;
-      return acc + movimento;
-    }, 0);
+    const totaleEntrate = entrate.reduce((acc, cf) => acc + getImportoEffettivo(cf), 0);
+    const totaleUscite = uscite.reduce((acc, cf) => acc + getImportoEffettivo(cf), 0);
+    const saldoMovimenti = totaleEntrate - totaleUscite;
 
     return saldoIniziale + saldoMovimenti;
-  }, [currentBankBalance, filterAnno, filterMese, vistaStato, cashflowRecords, invoices]);
+  }, [currentBankBalance, filterAnno, filterMese, vistaStato, cashflowWithInvoices]);
 
   // Conteggio per stato (basato sulla DATA DI PAGAMENTO)
   const countByStato = useMemo(() => {
@@ -380,8 +388,16 @@ export const Cashflow: React.FC = () => {
       baseFiltered = baseFiltered.filter(cf => getMeseFromDate(cf.dataPagamento) === filterMese);
     }
     return {
-      effettive: baseFiltered.filter(cf => cf.invoice?.statoFatturazione === 'Effettivo').length,
-      stimate: baseFiltered.filter(cf => cf.invoice?.statoFatturazione === 'Stimato').length,
+      effettive: baseFiltered.filter(cf => {
+        // Movimenti standalone sono considerati "effettivi"
+        if (!cf.invoiceId) return true;
+        return cf.invoice?.statoFatturazione === 'Effettivo';
+      }).length,
+      stimate: baseFiltered.filter(cf => {
+        // Movimenti standalone NON sono stimati
+        if (!cf.invoiceId) return false;
+        return cf.invoice?.statoFatturazione === 'Stimato';
+      }).length,
     };
   }, [cashflowWithInvoices, filterAnno, filterMese]);
 
@@ -599,12 +615,12 @@ export const Cashflow: React.FC = () => {
       {/* Filtri Anno e Stato */}
       <div className="flex flex-wrap gap-4 items-center">
         {/* Selettore Anno */}
-        <div className="bg-white dark:bg-dark-card rounded-lg p-2 flex items-center" shadow-sm>
+        <div className="bg-white dark:bg-dark-card rounded-lg p-2 flex items-center shadow-sm border border-gray-200 dark:border-dark-border">
           <Calendar size={16} className="text-gray-500 dark:text-gray-400 ml-2" />
           <select
             value={filterAnno === 'tutti' ? 'tutti' : filterAnno}
             onChange={(e) => setFilterAnno(e.target.value === 'tutti' ? 'tutti' : parseInt(e.target.value))}
-            className="px-3 py-2 bg-transparent border-none font-medium text-dark dark:text-white text-sm focus:ring-0 focus:outline-none cursor-pointer"
+            className="pl-3 pr-8 py-2 bg-transparent border-none font-medium text-dark dark:text-white text-sm focus:ring-0 focus:outline-none cursor-pointer"
           >
             <option value="tutti">Tutti gli anni</option>
             {anniDisponibili.map(anno => (
@@ -614,11 +630,12 @@ export const Cashflow: React.FC = () => {
         </div>
 
         {/* Selettore Mese */}
-        <div className="bg-white dark:bg-dark-card rounded-lg p-2 flex items-center" shadow-sm>
+        <div className="bg-white dark:bg-dark-card rounded-lg p-2 flex items-center shadow-sm border border-gray-200 dark:border-dark-border">
+          <Calendar size={16} className="text-gray-500 dark:text-gray-400 ml-2" />
           <select
             value={filterMese}
             onChange={(e) => setFilterMese(e.target.value)}
-            className="px-3 py-2 bg-transparent border-none font-medium text-dark dark:text-white text-sm focus:ring-0 focus:outline-none cursor-pointer"
+            className="pl-3 pr-8 py-2 bg-transparent border-none font-medium text-dark dark:text-white text-sm focus:ring-0 focus:outline-none cursor-pointer"
           >
             <option value="tutti">Tutti i mesi</option>
             {MESI_FULL.map(mese => (
@@ -628,13 +645,13 @@ export const Cashflow: React.FC = () => {
         </div>
 
         {/* Toggle Vista Stato */}
-        <div className="bg-white dark:bg-dark-card rounded-lg p-2 inline-flex gap-1" shadow-sm>
+        <div className="bg-white dark:bg-dark-card rounded-lg p-2 inline-flex gap-1 shadow-sm border border-gray-200 dark:border-dark-border">
           <button
             onClick={() => setVistaStato('tutti')}
             className={`px-4 py-2 rounded-lg font-medium text-sm transition-colors ${
               vistaStato === 'tutti'
-                ? 'bg-dark dark:bg-primary text-white'
-                : 'text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-dark-bg'
+                ? 'bg-dark dark:bg-white text-white dark:text-dark'
+                : 'text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-dark-border'
             }`}
           >
             Tutti ({countByStato.effettive + countByStato.stimate})
@@ -643,8 +660,8 @@ export const Cashflow: React.FC = () => {
             onClick={() => setVistaStato('effettivo')}
             className={`px-4 py-2 rounded-lg font-medium text-sm transition-colors ${
               vistaStato === 'effettivo'
-                ? 'bg-green-600 text-white'
-                : 'text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-dark-bg'
+                ? 'bg-green-600 dark:bg-green-500 text-white'
+                : 'text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-dark-border'
             }`}
           >
             Effettivo ({countByStato.effettive})
@@ -654,7 +671,7 @@ export const Cashflow: React.FC = () => {
             className={`px-4 py-2 rounded-lg font-medium text-sm transition-colors ${
               vistaStato === 'stimato'
                 ? 'bg-primary text-white'
-                : 'text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-dark-bg'
+                : 'text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-dark-border'
             }`}
           >
             Stimato ({countByStato.stimate})
@@ -664,7 +681,7 @@ export const Cashflow: React.FC = () => {
         {/* Reset filtri */}
         <button
           onClick={resetAllFilters}
-          className="bg-white dark:bg-dark-card rounded-lg p-2 hover:bg-gray-50 dark:hover:bg-dark-bg transition-colors flex items-center gap-2" shadow-sm
+          className="bg-white dark:bg-dark-card rounded-lg p-2 hover:bg-gray-50 dark:hover:bg-dark-border transition-colors flex items-center gap-2 shadow-sm border border-gray-200 dark:border-dark-border"
           title="Reset tutti i filtri"
         >
           <RotateCcw size={16} className="text-gray-500 dark:text-gray-400 ml-2" />
@@ -821,7 +838,7 @@ export const Cashflow: React.FC = () => {
             <select
               value={filterTipo}
               onChange={(e) => setFilterTipo(e.target.value as 'tutti' | 'Entrata' | 'Uscita')}
-              className="px-3 py-2 border border-gray-200 dark:border-dark-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 bg-white dark:bg-gray-800/30 text-dark dark:text-white"
+              className="pl-3 pr-8 py-2 border border-gray-200 dark:border-dark-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 bg-white dark:bg-gray-800/30 text-dark dark:text-white"
             >
               <option value="tutti">Tutti i tipi</option>
               <option value="Entrata">Entrate</option>
@@ -831,7 +848,7 @@ export const Cashflow: React.FC = () => {
             <select
               value={filterMeseTabella}
               onChange={(e) => setFilterMeseTabella(e.target.value)}
-              className="px-3 py-2 border border-gray-200 dark:border-dark-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 bg-white dark:bg-gray-800/30 text-dark dark:text-white"
+              className="pl-3 pr-8 py-2 border border-gray-200 dark:border-dark-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 bg-white dark:bg-gray-800/30 text-dark dark:text-white"
             >
               <option value="tutti">Tutti i mesi</option>
               {MESI_FULL.map(mese => (
@@ -842,7 +859,7 @@ export const Cashflow: React.FC = () => {
             <select
               value={filterStatoTabella}
               onChange={(e) => setFilterStatoTabella(e.target.value as 'tutti' | 'Stimato' | 'Effettivo' | 'Nessuno')}
-              className="px-3 py-2 border border-gray-200 dark:border-dark-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 bg-white dark:bg-gray-800/30 text-dark dark:text-white"
+              className="pl-3 pr-8 py-2 border border-gray-200 dark:border-dark-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 bg-white dark:bg-gray-800/30 text-dark dark:text-white"
             >
               <option value="tutti">Tutti gli stati</option>
               <option value="Stimato">Stimato</option>
@@ -998,7 +1015,7 @@ export const Cashflow: React.FC = () => {
                       <select
                         value={invoiceFilterTipo}
                         onChange={(e) => setInvoiceFilterTipo(e.target.value as 'tutti' | 'Entrata' | 'Uscita')}
-                        className="flex-1 px-3 py-1.5 border border-gray-200 dark:border-dark-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 bg-white dark:bg-gray-800/30 text-dark dark:text-white"
+                        className="flex-1 pl-3 pr-8 py-1.5 border border-gray-200 dark:border-dark-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 bg-white dark:bg-gray-800/30 text-dark dark:text-white"
                       >
                         <option value="tutti">Tutti i tipi</option>
                         <option value="Entrata">Entrate</option>
@@ -1007,7 +1024,7 @@ export const Cashflow: React.FC = () => {
                       <select
                         value={invoiceFilterAnno}
                         onChange={(e) => setInvoiceFilterAnno(e.target.value === 'tutti' ? 'tutti' : parseInt(e.target.value))}
-                        className="flex-1 px-3 py-1.5 border border-gray-200 dark:border-dark-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 bg-white dark:bg-gray-800/30 text-dark dark:text-white"
+                        className="flex-1 pl-3 pr-8 py-1.5 border border-gray-200 dark:border-dark-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 bg-white dark:bg-gray-800/30 text-dark dark:text-white"
                       >
                         <option value="tutti">Tutti gli anni</option>
                         {anniDisponibiliFatture.map(anno => (
@@ -1167,7 +1184,7 @@ export const Cashflow: React.FC = () => {
             </div>
             <div className="p-6 space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-500 mb-1">
+                <label className="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">
                   Saldo Iniziale (EUR)
                 </label>
                 <div className="relative">
@@ -1177,12 +1194,12 @@ export const Cashflow: React.FC = () => {
                     step="0.01"
                     value={bankBalanceInput}
                     onChange={(e) => setBankBalanceInput(e.target.value)}
-                    className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500/50 text-lg"
+                    className="w-full pl-10 pr-4 py-3 border border-gray-200 dark:border-dark-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 text-lg bg-white dark:bg-gray-800/30 text-dark dark:text-white"
                     placeholder="0,00"
                     autoFocus
                   />
                 </div>
-                <p className="text-xs text-gray-500 mt-2">
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
                   Questo valore rappresenta il saldo del conto corrente al 1° gennaio {filterAnno}
                 </p>
               </div>
@@ -1192,7 +1209,7 @@ export const Cashflow: React.FC = () => {
                 <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400">Anteprima saldo:</h4>
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-500 dark:text-gray-400">Saldo iniziale:</span>
-                  <span className="font-medium">{formatCurrency(parseFloat(bankBalanceInput) || 0)}</span>
+                  <span className="font-medium text-dark dark:text-white">{formatCurrency(parseFloat(bankBalanceInput) || 0)}</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-500 dark:text-gray-400">Saldo netto movimenti:</span>
@@ -1200,9 +1217,9 @@ export const Cashflow: React.FC = () => {
                     {totals.saldo >= 0 ? '+' : ''}{formatCurrency(totals.saldo)}
                   </span>
                 </div>
-                <div className="border-t border-gray-200 pt-2 flex justify-between">
+                <div className="border-t border-gray-200 dark:border-dark-border pt-2 flex justify-between">
                   <span className="font-medium text-gray-500 dark:text-gray-400">Saldo in banca:</span>
-                  <span className={`font-bold ${((parseFloat(bankBalanceInput) || 0) + totals.saldo) >= 0 ? 'text-indigo-600' : 'text-red-600'}`}>
+                  <span className={`font-bold ${((parseFloat(bankBalanceInput) || 0) + totals.saldo) >= 0 ? 'text-primary' : 'text-red-600 dark:text-red-400'}`}>
                     {formatCurrency((parseFloat(bankBalanceInput) || 0) + totals.saldo)}
                   </span>
                 </div>
@@ -1213,13 +1230,13 @@ export const Cashflow: React.FC = () => {
                 <button
                   type="button"
                   onClick={closeBankBalanceModal}
-                  className="flex-1 pl-4 pr-12 py-2 bg-gray-50 dark:bg-dark-bg border border-gray-200 dark:border-dark-border rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                  className="flex-1 px-6 py-3 bg-gray-50 dark:bg-dark-bg border border-gray-200 dark:border-dark-border rounded-lg font-medium text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
                 >
                   Annulla
                 </button>
                 <button
                   onClick={handleSaveBankBalance}
-                  className="flex-1 pl-4 pr-12 py-2 bg-primary text-white rounded-lg hover:opacity-90 transition-all"
+                  className="flex-1 px-6 py-3 bg-primary text-white rounded-lg font-medium hover:opacity-90 transition-all"
                 >
                   Salva
                 </button>
