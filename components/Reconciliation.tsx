@@ -2047,6 +2047,13 @@ export const Reconciliation: React.FC = () => {
   const handleCreateInvoice = async (invoiceData: Omit<Invoice, 'id'>, transaction: BankTransaction) => {
     const newInvoice = await addInvoice(invoiceData);
     if (newInvoice) {
+      // Create a cashflow record automatically for this invoice
+      await addCashflowRecord({
+        invoiceId: newInvoice.id,
+        dataPagamento: transaction.data,
+        note: `Movimento automatico da riconciliazione - ${transaction.descrizione || transaction.causale || ''}`
+      });
+
       // Auto-match the transaction to the new invoice
       await updateBankTransaction(transaction.id, {
         matchStatus: 'matched',
