@@ -24,6 +24,7 @@ export interface ParsedTransaction {
   importo: number;
   tipo: 'Entrata' | 'Uscita';
   saldo?: number;
+  hasErrors?: boolean;    // Flag for problematic rows
 }
 
 // Parse date from various formats (DD/MM/YYYY, DD-MM-YYYY, Excel serial)
@@ -306,7 +307,8 @@ function parseTransactions(rows: any[][], startRow: number, columnMap: Record<st
       descrizione,
       importo: Math.abs(importo),
       tipo: importo >= 0 ? 'Entrata' : 'Uscita',
-      saldo: row[columnMap.saldo] !== undefined ? parseAmount(row[columnMap.saldo]) : undefined
+      saldo: row[columnMap.saldo] !== undefined ? parseAmount(row[columnMap.saldo]) : undefined,
+      hasErrors: warnings.length > 0
     };
 
     transactions.push(transaction);

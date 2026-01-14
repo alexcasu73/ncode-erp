@@ -1594,9 +1594,13 @@ export const Reconciliation: React.FC = () => {
           if (skippedInvalidDate > 0) details.push(`${skippedInvalidDate} con data invalida`);
           if (skippedZeroAmount > 0) details.push(`${skippedZeroAmount} con importo zero`);
 
-          alert(`Importate ${parsed.transactions.length} transazioni.\n\n⚠️ Righe con problemi (${totalProblematic}) importate in "Da verificare":\n${details.join(', ')}\n\nControlla la descrizione per i dettagli.`);
+          alert(`Importate ${parsed.transactions.length} transazioni.\n\n⚠️ Righe con problemi (${totalProblematic}) messe in "Ignorati":\n${details.join(', ')}\n\nControlla la descrizione per i dettagli.`);
         }
       }
+
+      // Calculate counts based on hasErrors flag
+      const ignoredCount = parsed.transactions.filter(tx => tx.hasErrors).length;
+      const pendingCount = parsed.transactions.length - ignoredCount;
 
       // Create session
       const sessionId = crypto.randomUUID();
@@ -1610,8 +1614,8 @@ export const Reconciliation: React.FC = () => {
         saldoFinale: parsed.saldoFinale,
         totalTransactions: parsed.transactions.length,
         matchedCount: 0,
-        pendingCount: parsed.transactions.length,
-        ignoredCount: 0,
+        pendingCount: pendingCount,
+        ignoredCount: ignoredCount,
         status: 'open',
         periodoDal: parsed.periodoDal,
         periodoAl: parsed.periodoAl
@@ -1665,11 +1669,11 @@ export const Reconciliation: React.FC = () => {
           importo: tx.importo,
           tipo: tx.tipo,
           saldo: tx.saldo,
-          matchStatus: 'pending'
+          matchStatus: tx.hasErrors ? 'ignored' : 'pending'
         };
 
-        // Try automatic matching with AI (only if enabled)
-        if (aiMatchingEnabled) {
+        // Try automatic matching with AI (only if enabled and no errors)
+        if (aiMatchingEnabled && !tx.hasErrors) {
         try {
           console.log(`[AI Match ${i+1}/${parsed.transactions.length}] Analyzing transaction:`, {
             descrizione: tx.descrizione,
