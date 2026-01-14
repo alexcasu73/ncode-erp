@@ -1584,6 +1584,20 @@ export const Reconciliation: React.FC = () => {
       const parsed = await parseBankStatementExcel(file);
       console.log('Parsed result:', parsed);
 
+      // Show parsing statistics if any rows were skipped
+      if (parsed.parsingStats) {
+        const { totalRows, skippedNoDate, skippedInvalidDate, skippedZeroAmount } = parsed.parsingStats;
+        const totalSkipped = skippedNoDate + skippedInvalidDate + skippedZeroAmount;
+        if (totalSkipped > 0) {
+          const details: string[] = [];
+          if (skippedNoDate > 0) details.push(`${skippedNoDate} senza data`);
+          if (skippedInvalidDate > 0) details.push(`${skippedInvalidDate} con data invalida`);
+          if (skippedZeroAmount > 0) details.push(`${skippedZeroAmount} con importo zero`);
+
+          alert(`Importate ${parsed.transactions.length} transazioni valide.\n\nRighe scartate (${totalSkipped}): ${details.join(', ')}`);
+        }
+      }
+
       // Create session
       const sessionId = crypto.randomUUID();
       const session: ReconciliationSession = {

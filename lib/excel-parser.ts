@@ -8,6 +8,12 @@ export interface ParsedBankStatement {
   periodoDal?: string;
   periodoAl?: string;
   transactions: ParsedTransaction[];
+  parsingStats?: {
+    totalRows: number;
+    skippedNoDate: number;
+    skippedInvalidDate: number;
+    skippedZeroAmount: number;
+  };
 }
 
 export interface ParsedTransaction {
@@ -229,12 +235,13 @@ function findHeaders(rows: any[][]): { headerRowIndex: number; columnMap: Record
 }
 
 // Parse transactions from data rows
-function parseTransactions(rows: any[][], startRow: number, columnMap: Record<string, number>): ParsedTransaction[] {
+function parseTransactions(rows: any[][], startRow: number, columnMap: Record<string, number>): { transactions: ParsedTransaction[]; stats: { totalRows: number; skippedNoDate: number; skippedInvalidDate: number; skippedZeroAmount: number } } {
   const transactions: ParsedTransaction[] = [];
   let skippedNoDate = 0;
   let skippedInvalidDate = 0;
   let skippedZeroAmount = 0;
   let consecutiveEmptyRows = 0;
+  const totalRows = rows.length - startRow;
 
   console.log(`📊 Parsing transactions starting from row ${startRow}, total rows: ${rows.length}`);
   console.log('Column mapping:', columnMap);
@@ -291,7 +298,10 @@ function parseTransactions(rows: any[][], startRow: number, columnMap: Record<st
   console.log(`✅ Parsed ${transactions.length} transactions`);
   console.log(`⏭️  Skipped: ${skippedNoDate} (no date), ${skippedInvalidDate} (invalid date), ${skippedZeroAmount} (zero amount)`);
 
-  return transactions;
+  return {
+    transactions,
+    stats: { totalRows, skippedNoDate, skippedInvalidDate, skippedZeroAmount }
+  };
 }
 
 // Main parser function
@@ -358,11 +368,12 @@ export function parseBankStatementExcel(file: File): Promise<ParsedBankStatement
         console.log('📍 Column mapping:', columnMap);
 
         // Parse transactions starting from row 10 (index 9)
-        const transactions = parseTransactions(rows, headerRowIndex + 1, columnMap);
+        const { transactions, stats } = parseTransactions(rows, headerRowIndex + 1, columnMap);
 
         const result: ParsedBankStatement = {
           ...metadata,
-          transactions
+          transactions,
+          parsingStats: stats
         };
 
         resolve(result);
