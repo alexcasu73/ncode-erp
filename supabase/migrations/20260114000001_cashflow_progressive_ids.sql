@@ -1,8 +1,11 @@
 -- Create a sequence for progressive cashflow IDs
 CREATE SEQUENCE IF NOT EXISTS cashflow_id_seq START WITH 1;
 
+-- Remove the default value from the column before dropping the function
+ALTER TABLE cashflow_records ALTER COLUMN id DROP DEFAULT;
+
 -- Drop the old function
-DROP FUNCTION IF EXISTS generate_cashflow_id();
+DROP FUNCTION IF EXISTS generate_cashflow_id() CASCADE;
 
 -- Create a new function to generate progressive IDs in format CF-001, CF-002, etc.
 CREATE OR REPLACE FUNCTION generate_cashflow_id()
@@ -11,6 +14,9 @@ BEGIN
   RETURN 'CF-' || LPAD(nextval('cashflow_id_seq')::TEXT, 4, '0');
 END;
 $$ LANGUAGE plpgsql;
+
+-- Restore the default value
+ALTER TABLE cashflow_records ALTER COLUMN id SET DEFAULT generate_cashflow_id();
 
 -- Update existing cashflow_records to use progressive IDs
 -- This will reassign IDs starting from CF-0001

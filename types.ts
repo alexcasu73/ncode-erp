@@ -73,6 +73,7 @@ export interface CashflowRecord {
   dataPagamento?: string; // Data effettiva del pagamento
   importo?: number; // Importo (obbligatorio per standalone, opzionale se da fattura)
   note?: string; // Note aggiuntive sul movimento
+  statoFatturazione?: 'Stimato' | 'Effettivo' | 'Nessuno'; // Stato indipendente del movimento
   createdAt?: string;
   // Campi per movimenti standalone (senza fattura)
   tipo?: 'Entrata' | 'Uscita'; // Tipo movimento (solo per standalone)

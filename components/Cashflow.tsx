@@ -155,6 +155,7 @@ export const Cashflow: React.FC = () => {
   const [formImporto, setFormImporto] = useState<string>('');
   const [formNote, setFormNote] = useState('');
   const [formStatoFatturazione, setFormStatoFatturazione] = useState<'Stimato' | 'Effettivo' | 'Nessuno'>('Effettivo');
+  const [formTipoStandalone, setFormTipoStandalone] = useState<'Entrata' | 'Uscita'>('Entrata');
 
   // Filtri per la selezione fatture nel modal
   const [invoiceSearchTerm, setInvoiceSearchTerm] = useState('');
@@ -224,15 +225,15 @@ export const Cashflow: React.FC = () => {
     }
     if (vistaStato === 'effettivo') {
       filtered = filtered.filter(cf => {
-        // Movimenti standalone sono sempre considerati "effettivi"
-        if (!cf.invoiceId) return true;
-        return cf.invoice?.statoFatturazione === 'Effettivo';
+        // Usa lo stato del cashflow record se presente, altrimenti della fattura
+        const stato = cf.statoFatturazione || cf.invoice?.statoFatturazione;
+        return stato === 'Effettivo';
       });
     } else if (vistaStato === 'stimato') {
       filtered = filtered.filter(cf => {
-        // Movimenti standalone NON sono stimati
-        if (!cf.invoiceId) return false;
-        return cf.invoice?.statoFatturazione === 'Stimato';
+        // Usa lo stato del cashflow record se presente, altrimenti della fattura
+        const stato = cf.statoFatturazione || cf.invoice?.statoFatturazione;
+        return stato === 'Stimato';
       });
     }
     return filtered;
@@ -242,7 +243,20 @@ export const Cashflow: React.FC = () => {
   const recordsPerTabella = useMemo(() => {
     return cashflowWithInvoices.filter(cf => {
       const inv = cf.invoice;
-      if (!inv) return false;
+
+      // Gestione movimenti standalone (senza fattura)
+      if (!inv) {
+        // Per movimenti standalone usa i campi del cashflow record stesso
+        const matchesSearch = searchTerm === '' ||
+          cf.note?.toLowerCase().includes(searchTerm.toLowerCase());
+        const matchesTipo = filterTipo === 'tutti' || cf.tipo === filterTipo;
+        const matchesMeseTabella = filterMeseTabella === 'tutti' || getMeseFromDate(cf.dataPagamento) === filterMeseTabella;
+        // Movimenti standalone non hanno stato fatturazione, considerali sempre "Nessuno"
+        const matchesStatoTabella = filterStatoTabella === 'tutti' || filterStatoTabella === 'Nessuno';
+        return matchesSearch && matchesTipo && matchesMeseTabella && matchesStatoTabella;
+      }
+
+      // Gestione movimenti con fattura
       const matchesSearch = searchTerm === '' ||
         inv.nomeProgetto?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         inv.spesa?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -250,7 +264,9 @@ export const Cashflow: React.FC = () => {
         cf.note?.toLowerCase().includes(searchTerm.toLowerCase());
       const matchesTipo = filterTipo === 'tutti' || inv.tipo === filterTipo;
       const matchesMeseTabella = filterMeseTabella === 'tutti' || getMeseFromDate(cf.dataPagamento) === filterMeseTabella;
-      const matchesStatoTabella = filterStatoTabella === 'tutti' || inv.statoFatturazione === filterStatoTabella;
+      // Usa lo stato del cashflow record se presente, altrimenti della fattura
+      const stato = cf.statoFatturazione || inv.statoFatturazione;
+      const matchesStatoTabella = filterStatoTabella === 'tutti' || stato === filterStatoTabella;
       return matchesSearch && matchesTipo && matchesMeseTabella && matchesStatoTabella;
     });
   }, [cashflowWithInvoices, searchTerm, filterTipo, filterMeseTabella, filterStatoTabella]);
@@ -260,7 +276,6 @@ export const Cashflow: React.FC = () => {
     return [...recordsPerTabella].sort((a, b) => {
       const invA = a.invoice;
       const invB = b.invoice;
-      if (!invA || !invB) return 0;
 
       let comparison = 0;
       switch (sortColumn) {
@@ -269,21 +284,27 @@ export const Cashflow: React.FC = () => {
           comparison = (a.dataPagamento || '').localeCompare(b.dataPagamento || '');
           break;
         case 'progetto':
-          comparison = (invA.nomeProgetto || '').localeCompare(invB.nomeProgetto || '');
+          comparison = (invA?.nomeProgetto || '').localeCompare(invB?.nomeProgetto || '');
           break;
         case 'spesa':
-          comparison = (invA.spesa || '').localeCompare(invB.spesa || '');
+          comparison = (invA?.spesa || '').localeCompare(invB?.spesa || '');
           break;
         case 'tipo':
-          comparison = (invA.tipo || '').localeCompare(invB.tipo || '');
+          const tipoA = invA?.tipo || a.tipo || '';
+          const tipoB = invB?.tipo || b.tipo || '';
+          comparison = tipoA.localeCompare(tipoB);
           break;
         case 'stato':
-          comparison = (invA.statoFatturazione || '').localeCompare(invB.statoFatturazione || '');
+          const statoA = a.statoFatturazione || invA?.statoFatturazione || 'Nessuno';
+          const statoB = b.statoFatturazione || invB?.statoFatturazione || 'Nessuno';
+          comparison = statoA.localeCompare(statoB);
           break;
         case 'totale':
           // Considera il segno: uscite negative, entrate positive
-          const valA = invA.tipo === 'Uscita' ? -getImportoEffettivo(a) : getImportoEffettivo(a);
-          const valB = invB.tipo === 'Uscita' ? -getImportoEffettivo(b) : getImportoEffettivo(b);
+          const tipoEffettivoA = invA?.tipo || a.tipo || 'Entrata';
+          const tipoEffettivoB = invB?.tipo || b.tipo || 'Entrata';
+          const valA = tipoEffettivoA === 'Uscita' ? -getImportoEffettivo(a) : getImportoEffettivo(a);
+          const valB = tipoEffettivoB === 'Uscita' ? -getImportoEffettivo(b) : getImportoEffettivo(b);
           comparison = valA - valB;
           break;
       }
@@ -349,15 +370,15 @@ export const Cashflow: React.FC = () => {
     // Filter by vistaStato
     if (vistaStato === 'effettivo') {
       filtered = filtered.filter(cf => {
-        // Movimenti standalone sono sempre considerati "effettivi"
-        if (!cf.invoiceId) return true;
-        return cf.invoice?.statoFatturazione === 'Effettivo';
+        // Usa lo stato del cashflow record se presente, altrimenti della fattura
+        const stato = cf.statoFatturazione || cf.invoice?.statoFatturazione;
+        return stato === 'Effettivo';
       });
     } else if (vistaStato === 'stimato') {
       filtered = filtered.filter(cf => {
-        // Movimenti standalone NON sono stimati
-        if (!cf.invoiceId) return false;
-        return cf.invoice?.statoFatturazione === 'Stimato';
+        // Usa lo stato del cashflow record se presente, altrimenti della fattura
+        const stato = cf.statoFatturazione || cf.invoice?.statoFatturazione;
+        return stato === 'Stimato';
       });
     }
 
@@ -389,14 +410,14 @@ export const Cashflow: React.FC = () => {
     }
     return {
       effettive: baseFiltered.filter(cf => {
-        // Movimenti standalone sono considerati "effettivi"
-        if (!cf.invoiceId) return true;
-        return cf.invoice?.statoFatturazione === 'Effettivo';
+        // Usa lo stato del cashflow record se presente, altrimenti della fattura
+        const stato = cf.statoFatturazione || cf.invoice?.statoFatturazione;
+        return stato === 'Effettivo';
       }).length,
       stimate: baseFiltered.filter(cf => {
-        // Movimenti standalone NON sono stimati
-        if (!cf.invoiceId) return false;
-        return cf.invoice?.statoFatturazione === 'Stimato';
+        // Usa lo stato del cashflow record se presente, altrimenti della fattura
+        const stato = cf.statoFatturazione || cf.invoice?.statoFatturazione;
+        return stato === 'Stimato';
       }).length,
     };
   }, [cashflowWithInvoices, filterAnno, filterMese]);
@@ -484,17 +505,35 @@ export const Cashflow: React.FC = () => {
 
   const openEditModal = (record: CashflowRecord & { invoice?: Invoice }) => {
     setEditingRecord(record);
-    setFormInvoiceId(record.invoiceId);
+    setFormInvoiceId(record.invoiceId || '');
     setFormDataPagamento(record.dataPagamento || '');
-    // Se c'è un importo personalizzato, mostralo; altrimenti mostra il totale fattura
+
+    // Se c'è un importo personalizzato, mostralo
     if (record.importo !== undefined && record.importo !== null) {
       setFormImporto(record.importo.toString());
-    } else {
-      const totale = (record.invoice?.flusso || 0) + (record.invoice?.iva || 0);
+    } else if (record.invoice) {
+      // Altrimenti mostra il totale fattura se c'è una fattura
+      const totale = (record.invoice.flusso || 0) + (record.invoice.iva || 0);
       setFormImporto(totale.toString());
+    } else {
+      // Movimento standalone senza importo personalizzato (raro ma possibile)
+      setFormImporto('0');
     }
+
     setFormNote(record.note || '');
-    setFormStatoFatturazione(record.invoice?.statoFatturazione || 'Effettivo');
+    // Leggi lo stato dal cashflow record, se non presente usa quello della fattura
+    setFormStatoFatturazione(record.statoFatturazione || record.invoice?.statoFatturazione || 'Nessuno');
+
+    // Per movimenti standalone, imposta il tipo
+    if (!record.invoiceId) {
+      setFormTipoStandalone(record.tipo || 'Entrata');
+    }
+
+    // Reset filtri fatture per facilitare la ricerca
+    setInvoiceSearchTerm('');
+    setInvoiceFilterTipo('tutti');
+    setInvoiceFilterAnno('tutti');
+
     setShowModal(true);
   };
 
@@ -530,31 +569,61 @@ export const Cashflow: React.FC = () => {
     e.preventDefault();
 
     const importoValue = parseFloat(formImporto) || 0;
-    const invoice = invoices.find(i => i.id === formInvoiceId);
-    const totaleInvoice = invoice ? (invoice.flusso || 0) + (invoice.iva || 0) : 0;
+    const hasInvoice = formInvoiceId && formInvoiceId.trim() !== '';
+    const invoice = hasInvoice ? invoices.find(i => i.id === formInvoiceId) : undefined;
 
-    // Salva importo solo se diverso dal totale fattura
-    const importoToSave = Math.abs(importoValue - totaleInvoice) < 0.01 ? undefined : importoValue;
-
-    const recordData = {
-      invoiceId: formInvoiceId,
-      dataPagamento: formDataPagamento || undefined,
-      importo: importoToSave,
-      note: formNote || undefined,
-    };
-
-    // Aggiorna lo stato della fattura se è cambiato
-    if (invoice && invoice.statoFatturazione !== formStatoFatturazione) {
-      await updateInvoice(invoice.id, {
-        ...invoice,
-        statoFatturazione: formStatoFatturazione
-      });
+    // Validazione: se è selezionata una fattura, deve esistere
+    if (hasInvoice && !invoice) {
+      alert(`Errore: La fattura con ID "${formInvoiceId}" non esiste. Seleziona una fattura valida o crea un movimento standalone.`);
+      console.error('Invoice not found:', formInvoiceId);
+      return;
     }
 
-    if (editingRecord) {
-      await updateCashflowRecord(editingRecord.id, recordData);
+    let recordData: any;
+
+    if (hasInvoice && invoice) {
+      // Movimento con fattura
+      const totaleInvoice = (invoice.flusso || 0) + (invoice.iva || 0);
+      // Salva importo solo se diverso dal totale fattura
+      const importoToSave = Math.abs(importoValue - totaleInvoice) < 0.01 ? undefined : importoValue;
+
+      recordData = {
+        invoiceId: formInvoiceId,
+        dataPagamento: formDataPagamento || undefined,
+        importo: importoToSave,
+        note: formNote || undefined,
+        statoFatturazione: formStatoFatturazione, // Salva lo stato nel cashflow record
+      };
     } else {
-      await addCashflowRecord(recordData);
+      // Movimento standalone (senza fattura)
+      recordData = {
+        invoiceId: null,
+        dataPagamento: formDataPagamento || undefined,
+        importo: Math.abs(importoValue), // Per standalone l'importo è sempre obbligatorio e positivo
+        note: formNote || undefined,
+        tipo: formTipoStandalone, // Usa il tipo selezionato nel form
+        statoFatturazione: 'Nessuno' // Movimenti standalone hanno sempre stato "Nessuno"
+      };
+    }
+
+    console.log('💾 Saving cashflow record:', recordData);
+
+    let result;
+    if (editingRecord) {
+      const success = await updateCashflowRecord(editingRecord.id, recordData);
+      if (!success) {
+        alert('Errore durante l\'aggiornamento del movimento. Controlla la console per i dettagli.');
+        console.error('Failed to update cashflow record:', editingRecord.id, recordData);
+        return;
+      }
+    } else {
+      result = await addCashflowRecord(recordData);
+      if (!result) {
+        alert('Errore durante il salvataggio del movimento. Controlla la console per i dettagli.');
+        console.error('Failed to add cashflow record:', recordData);
+        return;
+      }
+      console.log('✅ Cashflow record saved:', result);
     }
 
     closeModal();
@@ -818,11 +887,13 @@ export const Cashflow: React.FC = () => {
       </div>
 
       {/* Tabella Movimenti */}
-      <div className="bg-white dark:bg-dark-card rounded-lg overflow-hidden" shadow-sm>
-        {/* Header tabella con ricerca e filtri */}
-        <div className="p-4 border-b border-gray-200 dark:border-dark-border flex flex-wrap gap-4 items-center justify-between">
-          <h3 className="text-section-title text-dark dark:text-white">Dettaglio Movimenti</h3>
-          <div className="flex flex-wrap gap-3 items-center">
+      <div className="bg-white dark:bg-dark-card rounded-lg shadow-sm">
+        <div className="overflow-x-auto">
+          <div className="min-w-[1200px]">
+            {/* Header tabella con ricerca e filtri */}
+            <div className="p-4 border-b border-gray-200 dark:border-dark-border flex gap-4 items-center justify-between">
+              <h3 className="text-section-title text-dark dark:text-white whitespace-nowrap">Dettaglio Movimenti</h3>
+              <div className="flex gap-3 items-center flex-nowrap">
             {/* Ricerca */}
             <div className="relative">
               <Search size={16} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 dark:text-gray-400" />
@@ -867,42 +938,96 @@ export const Cashflow: React.FC = () => {
               <option value="Nessuno">Nessuno</option>
             </select>
           </div>
-        </div>
+          </div>
 
-        {/* Tabella */}
-        <div className="overflow-x-auto">
+          {/* Tabella */}
           <table className="w-full">
             <thead className="bg-gray-50 dark:bg-dark-bg">
               <tr className="text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                <th className="px-6 py-4 whitespace-nowrap cursor-pointer hover:bg-gray-50 dark:bg-dark-bg" onClick={() => handleSort('mese')}>
+                <th className="px-6 py-4 whitespace-nowrap cursor-pointer hover:bg-gray-50 dark:bg-dark-bg min-w-[120px]" onClick={() => handleSort('mese')}>
                   <div className="flex items-center gap-1">Data Pag. <SortIcon column="mese" /></div>
                 </th>
-                <th className="px-6 py-4 whitespace-nowrap">ID Fattura</th>
-                <th className="px-6 py-4 whitespace-nowrap cursor-pointer hover:bg-gray-50 dark:bg-dark-bg" onClick={() => handleSort('progetto')}>
+                <th className="px-6 py-4 whitespace-nowrap min-w-[120px]">ID Fattura</th>
+                <th className="px-6 py-4 whitespace-nowrap cursor-pointer hover:bg-gray-50 dark:bg-dark-bg min-w-[150px]" onClick={() => handleSort('progetto')}>
                   <div className="flex items-center gap-1">Progetto <SortIcon column="progetto" /></div>
                 </th>
-                <th className="px-6 py-4 whitespace-nowrap cursor-pointer hover:bg-gray-50 dark:bg-dark-bg" onClick={() => handleSort('spesa')}>
+                <th className="px-6 py-4 whitespace-nowrap cursor-pointer hover:bg-gray-50 dark:bg-dark-bg min-w-[120px]" onClick={() => handleSort('spesa')}>
                   <div className="flex items-center gap-1">Spesa <SortIcon column="spesa" /></div>
                 </th>
-                <th className="px-6 py-4 whitespace-nowrap">Tipo Spesa</th>
-                <th className="px-6 py-4 whitespace-nowrap">Note</th>
-                <th className="px-6 py-4 whitespace-nowrap cursor-pointer hover:bg-gray-50 dark:bg-dark-bg" onClick={() => handleSort('tipo')}>
+                <th className="px-6 py-4 whitespace-nowrap min-w-[100px]">Tipo Spesa</th>
+                <th className="px-6 py-4 whitespace-nowrap min-w-[150px]">Note</th>
+                <th className="px-6 py-4 whitespace-nowrap cursor-pointer hover:bg-gray-50 dark:bg-dark-bg min-w-[100px]" onClick={() => handleSort('tipo')}>
                   <div className="flex items-center gap-1">Tipo <SortIcon column="tipo" /></div>
                 </th>
-                <th className="px-6 py-4 whitespace-nowrap cursor-pointer hover:bg-gray-50 dark:bg-dark-bg" onClick={() => handleSort('stato')}>
+                <th className="px-6 py-4 whitespace-nowrap cursor-pointer hover:bg-gray-50 dark:bg-dark-bg min-w-[100px]" onClick={() => handleSort('stato')}>
                   <div className="flex items-center gap-1">Stato <SortIcon column="stato" /></div>
                 </th>
-                <th className="px-6 py-4 whitespace-nowrap text-right cursor-pointer hover:bg-gray-50 dark:bg-dark-bg" onClick={() => handleSort('totale')}>
+                <th className="px-6 py-4 whitespace-nowrap text-right cursor-pointer hover:bg-gray-50 dark:bg-dark-bg min-w-[120px]" onClick={() => handleSort('totale')}>
                   <div className="flex items-center gap-1 justify-end">Totale <SortIcon column="totale" /></div>
                 </th>
-                <th className="px-6 py-4 whitespace-nowrap text-right">Azioni</th>
+                <th className="px-6 py-4 whitespace-nowrap text-right min-w-[120px]">Azioni</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200 dark:divide-dark-border">
               {sortedRecords.map((record) => {
                 const inv = record.invoice;
-                if (!inv) return null;
                 const totale = getImportoEffettivo(record);
+
+                // Movimento standalone (senza fattura)
+                if (!inv) {
+                  const tipo = record.tipo || 'Entrata';
+                  return (
+                    <tr key={record.id} className="hover:bg-gray-50 dark:hover:bg-dark-bg transition-colors">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{formatDate(record.dataPagamento)}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-400 italic">
+                        Movimento Standalone
+                      </td>
+                      <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">-</td>
+                      <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">-</td>
+                      <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">-</td>
+                      <td className="px-6 py-4 text-sm text-gray-500 max-w-[200px] truncate" title={record.note}>{record.note || '-'}</td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className={`px-2 py-1 text-xs font-medium rounded-md text-white ${
+                          tipo === 'Entrata'
+                            ? 'bg-secondary'
+                            : 'bg-red-600'
+                        }`}>
+                          {tipo}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className="px-2 py-1 text-xs font-medium rounded-md text-white bg-gray-500">
+                          Nessuno
+                        </span>
+                      </td>
+                      <td className={`px-6 py-4 whitespace-nowrap text-sm font-bold text-right ${
+                        tipo === 'Entrata' ? 'text-green-600 dark:text-green-400' : 'text-orange-600 dark:text-orange-400'
+                      }`}>
+                        {tipo === 'Entrata' ? '+' : '-'}{formatCurrency(totale)}
+                      </td>
+                      <td className="px-6 py-4 text-right">
+                        <div className="flex justify-end gap-2">
+                          <button
+                            onClick={() => openEditModal(record)}
+                            className="p-1 text-gray-500 hover:text-dark transition-colors"
+                            title="Modifica movimento standalone"
+                          >
+                            <Edit2 size={16} />
+                          </button>
+                          <button
+                            onClick={() => handleDelete(record.id)}
+                            className="p-1 text-gray-500 hover:text-red-500 transition-colors"
+                            title="Elimina movimento standalone"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                }
+
+                // Movimento con fattura
                 const totaleFattura = (inv.flusso || 0) + (inv.iva || 0);
                 const isParziale = record.importo !== undefined && record.importo !== null && Math.abs(record.importo - totaleFattura) > 0.01;
                 return (
@@ -926,13 +1051,13 @@ export const Cashflow: React.FC = () => {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className={`px-2 py-1 text-xs font-medium rounded-md text-white ${
-                        inv.statoFatturazione === 'Effettivo'
+                        (record.statoFatturazione || inv.statoFatturazione) === 'Effettivo'
                           ? 'bg-secondary'
-                          : inv.statoFatturazione === 'Stimato'
+                          : (record.statoFatturazione || inv.statoFatturazione) === 'Stimato'
                           ? 'bg-primary'
                           : 'bg-gray-500'
                       }`}>
-                        {inv.statoFatturazione}
+                        {record.statoFatturazione || inv.statoFatturazione}
                       </span>
                     </td>
                     <td className={`px-6 py-4 whitespace-nowrap text-sm font-bold text-right ${
@@ -969,10 +1094,12 @@ export const Cashflow: React.FC = () => {
               Nessun movimento trovato. Aggiungi un movimento collegandolo a una fattura.
             </div>
           )}
-        </div>
-        {/* Footer con conteggio */}
-        <div className="p-4 border-t border-gray-200 bg-gray-50 text-sm text-gray-500 dark:text-gray-400">
-          {sortedRecords.length} movimenti visualizzati
+
+          {/* Footer con conteggio */}
+          <div className="p-4 border-t border-gray-200 bg-gray-50 dark:bg-gray-800/30 text-sm text-gray-500 dark:text-gray-400">
+            {sortedRecords.length} movimenti visualizzati
+          </div>
+          </div>
         </div>
       </div>
 
@@ -996,7 +1123,7 @@ export const Cashflow: React.FC = () => {
                 </label>
 
                 {/* Filtri per ricerca fatture */}
-                {!editingRecord && (
+                {(!editingRecord || (editingRecord && !editingRecord.invoiceId)) && (
                   <div className="mb-3 p-3 bg-gray-50 dark:bg-gray-800/30 rounded-lg space-y-2">
                     {/* Campo ricerca */}
                     <div className="relative">
@@ -1043,12 +1170,11 @@ export const Cashflow: React.FC = () => {
                 <select
                   value={formInvoiceId}
                   onChange={(e) => handleInvoiceChange(e.target.value)}
-                  required
-                  disabled={!!editingRecord}
+                  disabled={editingRecord && !!editingRecord.invoiceId}
                   className="w-full pl-4 pr-12 py-2 border border-gray-200 dark:border-dark-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 disabled:bg-gray-50 bg-white dark:bg-gray-800/30 text-dark dark:text-white"
                 >
-                  <option value="">Seleziona una fattura...</option>
-                  {(editingRecord ? invoices : invoicesDisponibili).map(inv => (
+                  <option value="">Nessuna fattura (movimento standalone)</option>
+                  {(editingRecord && editingRecord.invoiceId ? invoices : invoicesDisponibili).map(inv => (
                     <option key={inv.id} value={inv.id}>
                       {formatInvoiceNumber(inv.id, inv.anno)} | {formatInvoiceDate(inv.data)} | {inv.nomeProgetto || inv.spesa || 'N/A'} ({inv.tipo}) - {formatCurrency((inv.flusso || 0) + (inv.iva || 0))}
                     </option>
@@ -1109,10 +1235,32 @@ export const Cashflow: React.FC = () => {
                     placeholder="0,00"
                   />
                 </div>
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                  Modifica se il pagamento è parziale (es. solo IVA o solo netto)
-                </p>
+                {formInvoiceId && (
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                    Modifica se il pagamento è parziale (es. solo IVA o solo netto)
+                  </p>
+                )}
               </div>
+
+              {/* Tipo (solo per movimenti standalone) */}
+              {!formInvoiceId && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">
+                    Tipo Movimento *
+                  </label>
+                  <select
+                    value={formTipoStandalone}
+                    onChange={(e) => setFormTipoStandalone(e.target.value as 'Entrata' | 'Uscita')}
+                    className="w-full pl-4 pr-12 py-2 border border-gray-200 dark:border-dark-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 bg-white dark:bg-gray-800/30 text-dark dark:text-white"
+                  >
+                    <option value="Entrata">Entrata</option>
+                    <option value="Uscita">Uscita</option>
+                  </select>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                    Seleziona se è un'entrata o un'uscita
+                  </p>
+                </div>
+              )}
 
               {/* Note */}
               <div>
@@ -1128,24 +1276,26 @@ export const Cashflow: React.FC = () => {
                 />
               </div>
 
-              {/* Stato Fatturazione */}
-              <div>
-                <label className="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">
-                  Stato Fatturazione *
-                </label>
-                <select
-                  value={formStatoFatturazione}
-                  onChange={(e) => setFormStatoFatturazione(e.target.value as 'Stimato' | 'Effettivo' | 'Nessuno')}
-                  className="w-full pl-4 pr-12 py-2 border border-gray-200 dark:border-dark-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 bg-white dark:bg-gray-800/30 text-dark dark:text-white"
-                >
-                  <option value="Stimato">Stimato</option>
-                  <option value="Effettivo">Effettivo</option>
-                  <option value="Nessuno">Nessuno</option>
-                </select>
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                  Modifica lo stato della fattura collegata
-                </p>
-              </div>
+              {/* Stato Fatturazione (solo per movimenti con fattura) */}
+              {formInvoiceId && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">
+                    Stato Fatturazione *
+                  </label>
+                  <select
+                    value={formStatoFatturazione}
+                    onChange={(e) => setFormStatoFatturazione(e.target.value as 'Stimato' | 'Effettivo' | 'Nessuno')}
+                    className="w-full pl-4 pr-12 py-2 border border-gray-200 dark:border-dark-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 bg-white dark:bg-gray-800/30 text-dark dark:text-white"
+                  >
+                    <option value="Stimato">Stimato</option>
+                    <option value="Effettivo">Effettivo</option>
+                    <option value="Nessuno">Nessuno</option>
+                  </select>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                    Modifica lo stato della fattura collegata
+                  </p>
+                </div>
+              )}
 
               {/* Actions */}
               <div className="flex gap-3 pt-4">

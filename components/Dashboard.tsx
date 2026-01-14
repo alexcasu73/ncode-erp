@@ -1,18 +1,37 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useRef } from 'react';
 import {
   BarChart, Bar, XAxis, Tooltip, ResponsiveContainer,
   LineChart, Line, PieChart, Pie, Cell
 } from 'recharts';
 import { useData } from '../context/DataContext';
-import { ArrowUpRight, TrendingUp, Users, Wallet, TrendingDown } from 'lucide-react';
-import { formatCurrency, formatCurrencyNoDecimals } from '../lib/currency';
+import { ArrowUpRight, TrendingUp, Users, Wallet, TrendingDown, Download, FileText } from 'lucide-react';
+import { formatCurrency } from '../lib/currency';
+import * as XLSX from 'xlsx';
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
 
 const COLORS = ['#D1F366', '#E5E7EB']; // Primary Green, Gray
 
 const MESI = ['Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno', 'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre'];
 
+// Helper per estrarre anno dalla data di pagamento (formato YYYY-MM-DD)
+const getAnnoFromDate = (dateStr?: string): number | null => {
+  if (!dateStr) return null;
+  const year = parseInt(dateStr.substring(0, 4));
+  return isNaN(year) ? null : year;
+};
+
+// Ottiene l'importo effettivo del movimento (importo personalizzato o totale fattura)
+const getImportoEffettivo = (cf: { importo?: number; invoice?: { flusso?: number; iva?: number } }): number => {
+  if (cf.importo !== undefined && cf.importo !== null) {
+    return cf.importo;
+  }
+  return (cf.invoice?.flusso || 0) + (cf.invoice?.iva || 0);
+};
+
 export const Dashboard: React.FC = () => {
-  const { customers, invoices, cashflowRecords, loading } = useData();
+  const { customers, invoices, cashflowRecords, loading, getBankBalance } = useData();
+  const dashboardRef = useRef<HTMLDivElement>(null);
 
   // Calcola dati reali
   const dashboardData = useMemo(() => {
@@ -73,26 +92,76 @@ export const Dashboard: React.FC = () => {
       ? ((currentTransactions - lastTransactions) / lastTransactions) * 100
       : currentTransactions > 0 ? 100 : 0;
 
-    // SALDO CASSA CUMULATIVO basato sulle fatture effettive (con IVA)
-    const currentCashflowIn = invoicesUpToCurrentYear
-      .filter(inv => inv.tipo === 'Entrata')
-      .reduce((sum, inv) => sum + (inv.flusso || 0) + (inv.iva || 0), 0);
+    // SALDO CASSA (SALDO IN BANCA) - usa stessa logica del Flusso di Cassa
+    // Mappa cashflow records con le fatture
+    const cashflowWithInvoices = cashflowRecords.map(cf => {
+      const invoice = invoices.find(inv => inv.id === cf.invoiceId);
+      return { ...cf, invoice };
+    });
 
-    const currentCashflowOut = invoicesUpToCurrentYear
-      .filter(inv => inv.tipo === 'Uscita')
-      .reduce((sum, inv) => sum + (inv.flusso || 0) + (inv.iva || 0), 0);
+    // Filtra per anno corrente e stato effettivo
+    const currentYearCashflows = cashflowWithInvoices.filter(cf => {
+      const anno = getAnnoFromDate(cf.dataPagamento);
+      if (anno !== currentYear) return false;
+      // Solo movimenti effettivi - usa lo stato del cashflow record se presente
+      const stato = cf.statoFatturazione || cf.invoice?.statoFatturazione;
+      return stato === 'Effettivo';
+    });
 
-    const currentCashBalance = currentCashflowIn - currentCashflowOut;
+    // Filtra per anno scorso e stato effettivo
+    const lastYearCashflows = cashflowWithInvoices.filter(cf => {
+      const anno = getAnnoFromDate(cf.dataPagamento);
+      if (anno !== lastYear) return false;
+      // Solo movimenti effettivi - usa lo stato del cashflow record se presente
+      const stato = cf.statoFatturazione || cf.invoice?.statoFatturazione;
+      return stato === 'Effettivo';
+    });
 
-    const lastCashflowIn = invoicesUpToLastYear
-      .filter(inv => inv.tipo === 'Entrata')
-      .reduce((sum, inv) => sum + (inv.flusso || 0) + (inv.iva || 0), 0);
+    // Calcola entrate e uscite per anno corrente
+    const currentCashflowIn = currentYearCashflows
+      .filter(cf => {
+        const tipo = cf.invoice?.tipo || cf.tipo;
+        return tipo === 'Entrata';
+      })
+      .reduce((sum, cf) => sum + getImportoEffettivo(cf), 0);
 
-    const lastCashflowOut = invoicesUpToLastYear
-      .filter(inv => inv.tipo === 'Uscita')
-      .reduce((sum, inv) => sum + (inv.flusso || 0) + (inv.iva || 0), 0);
+    const currentCashflowOut = currentYearCashflows
+      .filter(cf => {
+        const tipo = cf.invoice?.tipo || cf.tipo;
+        return tipo === 'Uscita';
+      })
+      .reduce((sum, cf) => sum + getImportoEffettivo(cf), 0);
 
-    const lastCashBalance = lastCashflowIn - lastCashflowOut;
+    // Calcola entrate e uscite per anno scorso
+    const lastCashflowIn = lastYearCashflows
+      .filter(cf => {
+        const tipo = cf.invoice?.tipo || cf.tipo;
+        return tipo === 'Entrata';
+      })
+      .reduce((sum, cf) => sum + getImportoEffettivo(cf), 0);
+
+    const lastCashflowOut = lastYearCashflows
+      .filter(cf => {
+        const tipo = cf.invoice?.tipo || cf.tipo;
+        return tipo === 'Uscita';
+      })
+      .reduce((sum, cf) => sum + getImportoEffettivo(cf), 0);
+
+    // Saldo netto movimenti
+    const currentNetCashflow = currentCashflowIn - currentCashflowOut;
+    const lastNetCashflow = lastCashflowIn - lastCashflowOut;
+
+    // Saldo iniziale (saldo in banca ad inizio anno)
+    const currentBankBalance = getBankBalance(currentYear);
+    const saldoIniziale = currentBankBalance?.saldoIniziale || 0;
+
+    // Saldo in banca = saldo iniziale + movimenti netti
+    const currentCashBalance = saldoIniziale + currentNetCashflow;
+
+    // Saldo anno scorso (per comparazione)
+    const lastYearBankBalance = getBankBalance(lastYear);
+    const lastSaldoIniziale = lastYearBankBalance?.saldoIniziale || 0;
+    const lastCashBalance = lastSaldoIniziale + lastNetCashflow;
 
     const cashBalanceChange = lastCashBalance !== 0
       ? ((currentCashBalance - lastCashBalance) / Math.abs(lastCashBalance)) * 100
@@ -156,20 +225,206 @@ export const Dashboard: React.FC = () => {
       currentCashBalance,
       lastCashBalance,
       cashBalanceChange,
+      saldoIniziale,
       totalCustomers,
       activeCustomers,
       customersWithInvoices,
       revenueChartData,
       transactionsChartData
     };
-  }, [invoices, cashflowRecords, customers]);
+  }, [invoices, cashflowRecords, customers, getBankBalance]);
 
   if (loading) {
     return <div className="flex items-center justify-center h-64">Caricamento...</div>;
   }
 
+  const handleExport = () => {
+    const currentYear = new Date().getFullYear();
+
+    // Sheet 1: KPI Principali
+    const kpiData = [
+      ['PANORAMICA AZIENDALE', ''],
+      ['Data Export', new Date().toLocaleDateString('it-IT')],
+      ['Anno', currentYear],
+      [''],
+      ['METRICHE PRINCIPALI', ''],
+      ['Fatturato Totale', formatCurrency(dashboardData.currentRevenue)],
+      ['Saldo in Banca', formatCurrency(dashboardData.currentCashBalance)],
+      ['Progetti Attivi', dashboardData.currentProjects],
+      ['Fatture Totali', dashboardData.currentTransactions],
+      ['Clienti Totali', dashboardData.totalCustomers],
+      ['Clienti Attivi', dashboardData.activeCustomers],
+      ['Clienti con Fatture', dashboardData.customersWithInvoices],
+      [],
+      ['DETTAGLI FLUSSO DI CASSA'],
+      ['Saldo Iniziale', formatCurrency(dashboardData.saldoIniziale)],
+      ['Entrate', formatCurrency(dashboardData.currentCashflowIn)],
+      ['Uscite', formatCurrency(dashboardData.currentCashflowOut)],
+      ['Saldo Netto Movimenti', formatCurrency(dashboardData.currentCashflowIn - dashboardData.currentCashflowOut)],
+      ['Saldo in Banca', formatCurrency(dashboardData.currentCashBalance)]
+    ];
+
+    // Crea il workbook
+    const wb = XLSX.utils.book_new();
+
+    // Aggiungi foglio KPI
+    const wsKPI = XLSX.utils.aoa_to_sheet(kpiData);
+    XLSX.utils.book_append_sheet(wb, wsKPI, 'Metriche KPI');
+
+    // Aggiungi foglio fatturato mensile
+    const wsRevenue = XLSX.utils.json_to_sheet(dashboardData.revenueChartData.map(item => ({
+      Mese: item.name,
+      Fatturato: item.value
+    })));
+    XLSX.utils.book_append_sheet(wb, wsRevenue, 'Fatturato Mensile');
+
+    // Aggiungi foglio fatture mensili
+    const wsTransactions = XLSX.utils.json_to_sheet(dashboardData.transactionsChartData.map(item => ({
+      Mese: item.name,
+      'Numero Fatture': item.sales
+    })));
+    XLSX.utils.book_append_sheet(wb, wsTransactions, 'Fatture Mensili');
+
+    // Genera e scarica il file
+    XLSX.writeFile(wb, `Panoramica_${currentYear}_${new Date().toISOString().split('T')[0]}.xlsx`);
+  };
+
+  const handleExportPDF = async () => {
+    if (!dashboardRef.current) return;
+
+    const currentYear = new Date().getFullYear();
+    const pdf = new jsPDF('p', 'mm', 'a4');
+    const pageWidth = pdf.internal.pageSize.getWidth();
+    const pageHeight = pdf.internal.pageSize.getHeight();
+    const margin = 15;
+
+    // Header con colore primario
+    pdf.setFillColor(255, 138, 0); // Arancione primary
+    pdf.rect(0, 0, pageWidth, 35, 'F');
+
+    pdf.setTextColor(255, 255, 255);
+    pdf.setFontSize(24);
+    pdf.text('Panoramica Aziendale', margin, 18);
+
+    pdf.setFontSize(11);
+    pdf.text(`Anno ${currentYear}`, margin, 26);
+    pdf.text(`Generato il ${new Date().toLocaleDateString('it-IT')}`, pageWidth - margin - 50, 26);
+
+    pdf.setTextColor(0, 0, 0);
+    let yPos = 45;
+
+    // Sezione KPI Cards
+    pdf.setFontSize(16);
+    pdf.setTextColor(255, 138, 0);
+    pdf.text('Indicatori Chiave', margin, yPos);
+    yPos += 10;
+
+    pdf.setTextColor(0, 0, 0);
+
+    // Cattura i KPI cards
+    const kpiGrid = dashboardRef.current.querySelector('.grid') as HTMLElement;
+    if (kpiGrid) {
+      const canvas = await html2canvas(kpiGrid, {
+        scale: 2,
+        useCORS: true,
+        logging: false,
+        backgroundColor: '#ffffff'
+      });
+      const imgData = canvas.toDataURL('image/png');
+      const imgWidth = pageWidth - (margin * 2);
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+
+      if (yPos + imgHeight > pageHeight - margin) {
+        pdf.addPage();
+
+        // Header su nuova pagina
+        pdf.setFillColor(255, 138, 0);
+        pdf.rect(0, 0, pageWidth, 20, 'F');
+        pdf.setTextColor(255, 255, 255);
+        pdf.setFontSize(14);
+        pdf.text('Panoramica Aziendale', margin, 12);
+        pdf.setTextColor(0, 0, 0);
+
+        yPos = 30;
+      }
+
+      pdf.addImage(imgData, 'PNG', margin, yPos, imgWidth, imgHeight);
+      yPos += imgHeight + 15;
+    }
+
+    // Sezione Andamento Mensile
+    pdf.setFontSize(16);
+    pdf.setTextColor(255, 138, 0);
+
+    if (yPos > pageHeight - 100) {
+      pdf.addPage();
+      pdf.setFillColor(255, 138, 0);
+      pdf.rect(0, 0, pageWidth, 20, 'F');
+      pdf.setTextColor(255, 255, 255);
+      pdf.setFontSize(14);
+      pdf.text('Panoramica Aziendale', margin, 12);
+      pdf.setTextColor(0, 0, 0);
+      yPos = 30;
+      pdf.setTextColor(255, 138, 0);
+      pdf.setFontSize(16);
+    }
+
+    pdf.text('Andamento Mensile', margin, yPos);
+    yPos += 10;
+
+    pdf.setTextColor(0, 0, 0);
+
+    // Trova tutti i chart containers con p-8 (grafici grandi)
+    const chartSections = dashboardRef.current.querySelectorAll('.bg-white.dark\\:bg-dark-card.p-8.rounded-xl, .bg-white.dark\\:bg-dark-card.p-6.rounded-xl');
+
+    // Cerca e cattura la sezione "Andamento Mensile Fatturato"
+    for (let section of Array.from(chartSections)) {
+      const heading = section.querySelector('h3');
+      if (heading?.textContent?.includes('Andamento Mensile Fatturato')) {
+        const canvas = await html2canvas(section as HTMLElement, {
+          scale: 2,
+          useCORS: true,
+          logging: false,
+          backgroundColor: '#ffffff'
+        });
+
+        const imgData = canvas.toDataURL('image/png');
+        const imgWidth = pageWidth - (margin * 2);
+        const imgHeight = (canvas.height * imgWidth) / canvas.width;
+
+        if (yPos + imgHeight > pageHeight - margin) {
+          pdf.addPage();
+          pdf.setFillColor(255, 138, 0);
+          pdf.rect(0, 0, pageWidth, 20, 'F');
+          pdf.setTextColor(255, 255, 255);
+          pdf.setFontSize(14);
+          pdf.text('Panoramica Aziendale', margin, 12);
+          pdf.setTextColor(0, 0, 0);
+          yPos = 30;
+        }
+
+        pdf.addImage(imgData, 'PNG', margin, yPos, imgWidth, imgHeight);
+        yPos += imgHeight + 10;
+        break;
+      }
+    }
+
+    // Footer su ogni pagina
+    const pageCount = pdf.getNumberOfPages();
+    for (let i = 1; i <= pageCount; i++) {
+      pdf.setPage(i);
+      pdf.setFontSize(9);
+      pdf.setTextColor(128, 128, 128);
+      pdf.text(`Pagina ${i} di ${pageCount}`, pageWidth / 2, pageHeight - 10, { align: 'center' });
+      pdf.text('Generato da nCode ERP', pageWidth - margin - 35, pageHeight - 10);
+    }
+
+    // Salva il PDF
+    pdf.save(`Panoramica_${currentYear}_${new Date().toISOString().split('T')[0]}.pdf`);
+  };
+
   return (
-    <div className="space-y-6 animate-fade-in pb-8">
+    <div ref={dashboardRef} className="space-y-6 animate-fade-in pb-8">
       {/* Header Section for Dashboard */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
@@ -180,9 +435,19 @@ export const Dashboard: React.FC = () => {
             <div className="bg-white dark:bg-dark-card rounded-lg px-4 py-2 flex items-center gap-2 border border-gray-200 dark:border-dark-border shadow-sm">
                 <span className="text-sm font-medium text-dark dark:text-white">Anno {new Date().getFullYear()}</span>
             </div>
-            <button className="bg-primary text-white px-6 py-2 rounded-lg font-medium hover:opacity-90 transition-all flex items-center gap-2 shadow-sm">
-                <ArrowUpRight size={18} />
-                Esporta
+            <button
+              onClick={handleExportPDF}
+              className="bg-white dark:bg-dark-card text-dark dark:text-white border border-gray-200 dark:border-dark-border px-6 py-2 rounded-lg font-medium hover:bg-gray-50 dark:hover:bg-gray-800 transition-all flex items-center gap-2 shadow-sm"
+            >
+                <FileText size={18} />
+                PDF
+            </button>
+            <button
+              onClick={handleExport}
+              className="bg-primary text-white px-6 py-2 rounded-lg font-medium hover:opacity-90 transition-all flex items-center gap-2 shadow-sm"
+            >
+                <Download size={18} />
+                Excel
             </button>
         </div>
       </div>
@@ -195,7 +460,7 @@ export const Dashboard: React.FC = () => {
             <h3 className="text-card-title text-gray-500 dark:text-gray-400">Fatturato Totale</h3>
             <div className="flex items-center gap-3 mt-2">
               <span className={`text-kpi-value ${dashboardData.currentRevenue >= 0 ? 'text-secondary' : 'text-red-600'}`}>
-                {formatCurrencyNoDecimals(dashboardData.currentRevenue)}
+                {formatCurrency(dashboardData.currentRevenue)}
               </span>
               {dashboardData.lastRevenue !== 0 && (
                 <span className={`text-white text-xs px-2 py-1 rounded-md font-medium ${dashboardData.revenueChange >= 0 ? 'bg-secondary' : 'bg-red-600'}`}>
@@ -205,7 +470,7 @@ export const Dashboard: React.FC = () => {
             </div>
             {dashboardData.lastRevenue !== 0 && (
               <p className="text-small text-gray-500 dark:text-gray-400 mt-1">
-                {formatCurrencyNoDecimals(dashboardData.lastRevenue)} anno scorso
+                {formatCurrency(dashboardData.lastRevenue)} anno scorso
               </p>
             )}
           </div>
@@ -223,11 +488,11 @@ export const Dashboard: React.FC = () => {
           <div>
             <div className="flex items-center gap-2 mb-2">
               <Wallet size={18} className="text-primary" />
-              <h3 className="text-card-title text-gray-500 dark:text-gray-400">Saldo Cassa</h3>
+              <h3 className="text-card-title text-gray-500 dark:text-gray-400">Saldo in Banca (Effettivo)</h3>
             </div>
             <div className="flex items-center gap-3 mt-2">
               <span className={`text-kpi-value ${dashboardData.currentCashBalance >= 0 ? 'text-secondary' : 'text-red-600'}`}>
-                {formatCurrencyNoDecimals(dashboardData.currentCashBalance)}
+                {formatCurrency(dashboardData.currentCashBalance)}
               </span>
               {dashboardData.lastCashBalance !== 0 && (
                 <span className={`text-white text-xs px-2 py-1 rounded-md font-medium ${dashboardData.cashBalanceChange >= 0 ? 'bg-secondary' : 'bg-red-600'}`}>
@@ -235,14 +500,19 @@ export const Dashboard: React.FC = () => {
                 </span>
               )}
             </div>
-            <div className="flex items-center gap-3 mt-2">
-              <div className="flex items-center gap-1">
-                <TrendingUp size={14} className="text-secondary" />
-                <span className="text-xs text-gray-500 dark:text-gray-400">{formatCurrencyNoDecimals(dashboardData.currentCashflowIn)}</span>
-              </div>
-              <div className="flex items-center gap-1">
-                <TrendingDown size={14} className="text-red-500" />
-                <span className="text-xs text-gray-500 dark:text-gray-400">{formatCurrencyNoDecimals(dashboardData.currentCashflowOut)}</span>
+            <div className="space-y-1 mt-2">
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                Iniziale: {formatCurrency(dashboardData.saldoIniziale || 0)}
+              </p>
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-1">
+                  <TrendingUp size={14} className="text-secondary" />
+                  <span className="text-xs text-gray-500 dark:text-gray-400">{formatCurrency(dashboardData.currentCashflowIn)}</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <TrendingDown size={14} className="text-red-500" />
+                  <span className="text-xs text-gray-500 dark:text-gray-400">{formatCurrency(dashboardData.currentCashflowOut)}</span>
+                </div>
               </div>
             </div>
           </div>

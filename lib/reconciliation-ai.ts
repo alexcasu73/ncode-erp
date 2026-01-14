@@ -96,6 +96,8 @@ export async function suggestMatch(
 
   const prompt = `Sei un assistente esperto in contabilità per la riconciliazione bancaria di una piccola azienda italiana. Analizza questa transazione bancaria e trova il miglior abbinamento tra le fatture e i movimenti di cassa disponibili.
 
+⚠️ ATTENZIONE: L'IMPORTO È IL CRITERIO PIÙ IMPORTANTE! Se gli importi non corrispondono (differenza >2€), NON fare il match anche se le descrizioni sono simili!
+
 TRANSAZIONE BANCARIA DA RICONCILIARE:
 ${formatBankTransaction(transaction)}
 
@@ -109,16 +111,31 @@ ${cashflowWithInvoices.length > 0
   ? cashflowWithInvoices.map(({ cf, invoice }) => formatCashflow(cf, invoice)).join('\n')
   : 'Nessun movimento registrato'}
 
-ISTRUZIONI:
-1. Cerca SEMPRE tra i movimenti di cassa già registrati - se trovi una corrispondenza esatta o molto probabile, usa il cashflowId
-2. Se non c'è un movimento di cassa corrispondente, cerca tra le fatture non ancora pagate
-3. Per la corrispondenza considera IN ORDINE DI IMPORTANZA:
-   - **Importo**: CRITERIO FONDAMENTALE - Gli importi devono corrispondere con tolleranza massima di 2€. Se l'importo non corrisponde, NON creare l'abbinamento (confidence = 0).
-   - **Descrizione/Note**: Confronta la descrizione della transazione bancaria con le note dei movimenti di cassa. Cerca parole chiave comuni, nomi di progetti, riferimenti.
-   - **Data**: La transazione bancaria dovrebbe essere vicina alla data pagamento del movimento (tolleranza ±30 giorni).
-4. REGOLA FONDAMENTALE: Se l'importo della transazione è significativamente diverso (differenza >2€), NON abbinare anche se la descrizione sembra corrispondere. In quel caso rispondi con confidence 0.
-5. Solo se IMPORTO + DESCRIZIONE matchano, allora considera anche la data per aumentare la confidence.
-6. Se non trovi corrispondenze affidabili (importo + descrizione), rispondi con confidence 0
+ISTRUZIONI FONDAMENTALI:
+
+🔴 STEP 1 - VERIFICA IMPORTO (OBBLIGATORIO):
+Prima di tutto, calcola la differenza assoluta tra l'importo della transazione bancaria e l'importo di ogni movimento/fattura.
+- Se la differenza è >2€, IGNORA quel movimento/fattura completamente, anche se la descrizione è identica.
+- Esempio: Transazione -20€ vs Movimento 50€ = differenza 30€ → NON ABBINARE (confidence = 0)
+- Esempio: Transazione -50€ vs Movimento 50€ = differenza 0€ → CONTINUARE con verifica descrizione
+
+🟡 STEP 2 - VERIFICA DESCRIZIONE (se importo ok):
+Solo se l'importo corrisponde (differenza ≤2€), controlla la descrizione:
+- Confronta le parole chiave nella descrizione della transazione con le note del movimento
+- Se ci sono parole comuni significative (>3 caratteri), aumenta la confidence
+
+🟢 STEP 3 - VERIFICA DATA (opzionale):
+Se importo E descrizione matchano, controlla la vicinanza della data (±30 giorni) per aumentare ulteriormente la confidence
+
+PRIORITÀ:
+1. IMPORTO (se non matcha → confidence = 0, STOP)
+2. DESCRIZIONE (se importo ok ma descrizione no → confidence bassa 20-30)
+3. DATA (bonus per aumentare confidence se gli altri 2 criteri matchano)
+
+ESEMPI:
+❌ BAD: Transazione "Anthropic -20€" + Movimento "Anthropic 50€" → confidence = 0 (importi diversi di 30€!)
+✅ GOOD: Transazione "Anthropic -50€" + Movimento "Anthropic 50€" → confidence = 95 (importo identico + descrizione match)
+✅ GOOD: Transazione "Digital Ocean -34.99€" + Movimento "Digital Ocean 34.99€" → confidence = 95
 
 Rispondi ESCLUSIVAMENTE con un oggetto JSON valido (senza markdown, senza backticks) nel seguente formato:
 {"invoiceId": "id_fattura_o_null", "cashflowId": "id_cashflow_o_null", "confidence": numero_da_0_a_100, "reason": "breve spiegazione in italiano"}
@@ -127,9 +144,10 @@ IMPORTANTE:
 - Usa "null" (senza virgolette) per i campi vuoti, non la stringa "null"
 - Non includere testo prima o dopo il JSON
 - Nel campo "reason" fai SEMPRE riferimento al MOVIMENTO DI CASSA (con il suo ID: es. "CF-xxx"), NON alla fattura
-- Esempio reason corretto: "Match perfetto: movimento CF-123456 del 06/01/26 per €50.00 con note 'Anthropic'"
+- Se confidence = 0 per differenza importo, scrivi nel reason: "Importi non corrispondenti: transazione €X vs movimento CF-YYY €Z (diff: €W)"
+- Se confidence > 0, esempio reason corretto: "Match perfetto: movimento CF-0053 del 06/01/26 per €50.00 con note 'Anthropic'"
 - Esempio reason ERRATO: "Match perfetto con Fattura_295"
-- Il campo reason deve spiegare brevemente perché hai scelto quel MOVIMENTO DI CASSA`;
+- Il campo reason deve spiegare brevemente perché hai scelto o scartato quel MOVIMENTO DI CASSA`;
 
   try {
     const selectedModel = model || 'claude-3-5-haiku-20241022';

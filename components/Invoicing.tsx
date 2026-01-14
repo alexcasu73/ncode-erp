@@ -285,7 +285,7 @@ export const Invoicing: React.FC = () => {
           <select
             value={filterAnno === 'tutti' ? 'tutti' : filterAnno}
             onChange={(e) => setFilterAnno(e.target.value === 'tutti' ? 'tutti' : parseInt(e.target.value))}
-            className="px-3 py-2 bg-transparent border-none font-medium text-dark dark:text-white text-sm focus:ring-0 focus:outline-none cursor-pointer"
+            className="pl-3 pr-8 py-2 bg-transparent border-none font-medium text-dark dark:text-white text-sm focus:ring-0 focus:outline-none cursor-pointer"
           >
             <option value="tutti">Tutti gli anni</option>
             {anniDisponibili.map(anno => (
@@ -300,7 +300,7 @@ export const Invoicing: React.FC = () => {
           <select
             value={filterMese}
             onChange={(e) => setFilterMese(e.target.value)}
-            className="px-3 py-2 bg-transparent border-none font-medium text-dark dark:text-white text-sm focus:ring-0 focus:outline-none cursor-pointer"
+            className="pl-3 pr-8 py-2 bg-transparent border-none font-medium text-dark dark:text-white text-sm focus:ring-0 focus:outline-none cursor-pointer"
           >
             <option value="tutti">Tutti i mesi</option>
             {MESI.map(mese => (

@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useRef } from 'react';
-import { Upload, FileCheck, AlertCircle, Check, X, RefreshCw, ChevronDown, ChevronUp, Search, Eye, Link2, Trash2, CheckSquare, Square, MinusSquare, FilePlus, PlusCircle } from 'lucide-react';
+import { Upload, FileCheck, AlertCircle, Check, X, RefreshCw, ChevronDown, ChevronUp, Search, Eye, Link2, Trash2, CheckSquare, Square, MinusSquare, FilePlus, PlusCircle, StopCircle } from 'lucide-react';
 import { useData } from '../context/DataContext';
 import { parseBankStatementExcel, formatPeriodo, type ParsedBankStatement, type ParsedTransaction } from '../lib/excel-parser';
 import { suggestMatch, quickMatch, type MatchSuggestion } from '../lib/reconciliation-ai';
@@ -2458,13 +2458,21 @@ export const Reconciliation: React.FC = () => {
 
               {stats.pending > 0 && (
                 <button
-                  onClick={handleRunAIAll}
-                  disabled={aiProcessing.isProcessing || currentSession.status === 'closed'}
-                  className="flex items-center gap-2 pl-4 pr-12 py-2 bg-accent text-white rounded-lg font-medium hover:opacity-90 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  onClick={aiProcessing.isProcessing ? stopAiProcessing : handleRunAIAll}
+                  disabled={currentSession.status === 'closed'}
+                  className={`flex items-center gap-2 pl-4 pr-12 py-2 rounded-lg font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
+                    aiProcessing.isProcessing
+                      ? 'bg-red-600 hover:bg-red-700 text-white'
+                      : 'bg-accent hover:opacity-90 text-white'
+                  }`}
                 >
-                  <RefreshCw size={16} className={aiProcessing.isProcessing ? 'animate-spin' : ''} />
+                  {aiProcessing.isProcessing ? (
+                    <StopCircle size={16} />
+                  ) : (
+                    <RefreshCw size={16} />
+                  )}
                   {aiProcessing.isProcessing
-                    ? `Analisi AI ${aiProcessing.current}/${aiProcessing.total}...`
+                    ? `Termina (${aiProcessing.current}/${aiProcessing.total})`
                     : `Analizza Tutti con AI (${stats.pending})`
                   }
                 </button>

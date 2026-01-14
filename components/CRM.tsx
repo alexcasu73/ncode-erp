@@ -10,6 +10,7 @@ export const CRM: React.FC = () => {
   const [filterStato, setFilterStato] = useState<'tutti' | 'Attivo' | 'Prospetto' | 'Inattivo'>('tutti');
   const [showModal, setShowModal] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   // Sorting state
   type SortColumn = 'name' | 'company' | 'status' | 'revenue';
@@ -106,6 +107,36 @@ export const CRM: React.FC = () => {
     }
   };
 
+  // Bulk selection handlers
+  const toggleSelectAll = () => {
+    if (selectedIds.size === sortedCustomers.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(sortedCustomers.map(c => c.id)));
+    }
+  };
+
+  const toggleSelect = (id: string) => {
+    const newSelected = new Set(selectedIds);
+    if (newSelected.has(id)) {
+      newSelected.delete(id);
+    } else {
+      newSelected.add(id);
+    }
+    setSelectedIds(newSelected);
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedIds.size === 0) return;
+
+    if (confirm(`Sei sicuro di voler eliminare ${selectedIds.size} clienti selezionati?`)) {
+      for (const id of selectedIds) {
+        await deleteCustomer(id);
+      }
+      setSelectedIds(new Set());
+    }
+  };
+
   return (
     <div className="space-y-6 animate-fade-in pb-8">
       {/* Header */}
@@ -159,7 +190,7 @@ export const CRM: React.FC = () => {
           <select
             value={filterStato}
             onChange={(e) => setFilterStato(e.target.value as any)}
-            className="px-4 py-2 bg-gray-50 dark:bg-gray-800/30 border-none rounded-lg focus:ring-2 focus:ring-primary focus:outline-none text-dark dark:text-white"
+            className="pl-4 pr-10 py-2 bg-gray-50 dark:bg-gray-800/30 border-none rounded-lg focus:ring-2 focus:ring-primary focus:outline-none text-dark dark:text-white"
           >
             <option value="tutti">Tutti gli stati</option>
             <option value="Attivo">Attivo</option>
@@ -169,12 +200,64 @@ export const CRM: React.FC = () => {
         </div>
       </div>
 
+      {/* Bulk Actions Bar */}
+      {selectedIds.size > 0 && (
+        <div className="bg-gradient-to-r from-primary/10 to-primary/5 dark:from-primary/20 dark:to-primary/10 border-2 border-primary/30 dark:border-primary/40 rounded-xl p-5 flex items-center justify-between shadow-lg animate-fade-in backdrop-blur-sm">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-primary/20 dark:bg-primary/30 rounded-full flex items-center justify-center">
+              <Check size={20} className="text-primary dark:text-primary" strokeWidth={2.5} />
+            </div>
+            <div>
+              <p className="text-sm font-bold text-dark dark:text-white">
+                {selectedIds.size} {selectedIds.size === 1 ? 'cliente selezionato' : 'clienti selezionati'}
+              </p>
+              <p className="text-xs text-gray-600 dark:text-gray-400">
+                Pronto per l'eliminazione
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setSelectedIds(new Set())}
+              className="px-4 py-2 bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 rounded-lg font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition-all flex items-center gap-2"
+            >
+              <X size={16} />
+              Annulla
+            </button>
+            <button
+              onClick={handleBulkDelete}
+              className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-all shadow-md hover:shadow-lg flex items-center gap-2"
+            >
+              <Trash2 size={16} />
+              Elimina {selectedIds.size > 1 ? 'tutti' : ''}
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Table */}
       <div className="bg-white dark:bg-dark-card rounded-lg overflow-hidden shadow-sm border border-gray-200 dark:border-dark-border">
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead className="bg-gray-50 dark:bg-dark-bg">
               <tr className="text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                <th className="px-6 py-4 w-16">
+                  <label className="inline-flex items-center cursor-pointer group">
+                    <input
+                      type="checkbox"
+                      checked={selectedIds.size === sortedCustomers.length && sortedCustomers.length > 0}
+                      onChange={toggleSelectAll}
+                      className="sr-only peer"
+                    />
+                    <div className="relative w-5 h-5 bg-white dark:bg-gray-700 border-2 border-gray-300 dark:border-gray-600 rounded-md peer-checked:bg-primary peer-checked:border-primary transition-all duration-200 group-hover:border-primary/50 peer-focus:ring-2 peer-focus:ring-primary/20">
+                      <Check
+                        size={14}
+                        className="absolute inset-0 m-auto text-white opacity-0 peer-checked:opacity-100 transition-opacity duration-200"
+                        strokeWidth={3}
+                      />
+                    </div>
+                  </label>
+                </th>
                 <th
                   className="px-6 py-4 cursor-pointer hover:bg-gray-100 dark:hover:bg-dark-border transition-colors"
                   onClick={() => handleSort('name')}
@@ -226,6 +309,23 @@ export const CRM: React.FC = () => {
             <tbody className="divide-y divide-gray-200 dark:divide-dark-border">
               {sortedCustomers.map((customer) => (
                 <tr key={customer.id} className="hover:bg-gray-50 dark:hover:bg-dark-bg transition-colors">
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <label className="inline-flex items-center cursor-pointer group">
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.has(customer.id)}
+                        onChange={() => toggleSelect(customer.id)}
+                        className="sr-only peer"
+                      />
+                      <div className="relative w-5 h-5 bg-white dark:bg-gray-700 border-2 border-gray-300 dark:border-gray-600 rounded-md peer-checked:bg-primary peer-checked:border-primary transition-all duration-200 group-hover:border-primary/50 peer-focus:ring-2 peer-focus:ring-primary/20">
+                        <Check
+                          size={14}
+                          className="absolute inset-0 m-auto text-white opacity-0 peer-checked:opacity-100 transition-opacity duration-200"
+                          strokeWidth={3}
+                        />
+                      </div>
+                    </label>
+                  </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">
                       <div className="flex-shrink-0 h-10 w-10">

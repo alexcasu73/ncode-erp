@@ -1,8 +1,10 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import { useData } from '../context/DataContext';
 import { Download, Printer, Filter, Building2, TrendingUp, TrendingDown, Scale, Edit2, Plus, X, Check } from 'lucide-react';
 import { FinancialItem } from '../types';
 import { formatCurrency, formatCurrencyNoDecimals } from '../lib/currency';
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
 
 const MESI = ['Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno', 'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre'];
 
@@ -22,6 +24,8 @@ export const FinancialStatement: React.FC = () => {
   const [editingItem, setEditingItem] = useState<FinancialItem | null>(null);
   const [isAddingItem, setIsAddingItem] = useState(false);
   const [newItemForm, setNewItemForm] = useState<Partial<FinancialItem>>({});
+  const [isExporting, setIsExporting] = useState(false);
+  const bilancioRef = useRef<HTMLDivElement>(null);
 
   if (loading) {
     return <div className="flex items-center justify-center h-64">Caricamento...</div>;
@@ -72,8 +76,273 @@ export const FinancialStatement: React.FC = () => {
   const totalLiabilities = liabilities.reduce((sum, item) => sum + item.amount, 0);
   const equityGap = totalAssets - totalLiabilities;
 
+  const handleExportPDF = async () => {
+    if (!bilancioRef.current) return;
+
+    try {
+      setIsExporting(true);
+      // Aspetta che l'overlay si renderizzi
+      await new Promise(resolve => setTimeout(resolve, 200));
+
+      const originalTab = activeTab;
+
+      // Cattura Stato Patrimoniale
+      const balanceScreenshots: any = {};
+      setActiveTab('balance');
+      await new Promise(resolve => setTimeout(resolve, 300));
+
+      const balanceKpiGrid = bilancioRef.current.querySelector('.grid.grid-cols-1.md\\:grid-cols-3') as HTMLElement;
+      if (balanceKpiGrid) {
+        balanceScreenshots.kpi = await html2canvas(balanceKpiGrid, {
+          scale: 2,
+          useCORS: true,
+          logging: false,
+          backgroundColor: '#ffffff'
+        });
+      }
+
+      const balanceDetailGrid = bilancioRef.current.querySelector('.grid.grid-cols-1.lg\\:grid-cols-2') as HTMLElement;
+      if (balanceDetailGrid) {
+        balanceScreenshots.detail = await html2canvas(balanceDetailGrid, {
+          scale: 2,
+          useCORS: true,
+          logging: false,
+          backgroundColor: '#ffffff'
+        });
+      }
+
+      // Cattura Conto Economico
+      const incomeScreenshots: any = {};
+      setActiveTab('income');
+      await new Promise(resolve => setTimeout(resolve, 300));
+
+      const incomeKpiGrid = bilancioRef.current.querySelector('.grid.grid-cols-1.md\\:grid-cols-3') as HTMLElement;
+      if (incomeKpiGrid) {
+        incomeScreenshots.kpi = await html2canvas(incomeKpiGrid, {
+          scale: 2,
+          useCORS: true,
+          logging: false,
+          backgroundColor: '#ffffff'
+        });
+      }
+
+      const incomeDetailTable = bilancioRef.current.querySelector('.bg-white.dark\\:bg-dark-card.rounded-xl.overflow-hidden') as HTMLElement;
+      if (incomeDetailTable) {
+        incomeScreenshots.detail = await html2canvas(incomeDetailTable, {
+          scale: 2,
+          useCORS: true,
+          logging: false,
+          backgroundColor: '#ffffff'
+        });
+      }
+
+      // Ripristina tab originale
+      setActiveTab(originalTab);
+
+      // Crea PDF
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
+      const margin = 15;
+
+      // Header con colore primario
+      pdf.setFillColor(255, 138, 0);
+      pdf.rect(0, 0, pageWidth, 35, 'F');
+
+      pdf.setTextColor(255, 255, 255);
+      pdf.setFontSize(24);
+      pdf.text('Bilancio', margin, 18);
+
+      pdf.setFontSize(11);
+      pdf.text(`Anno ${filterAnno}`, margin, 26);
+      pdf.text(`Generato il ${new Date().toLocaleDateString('it-IT')}`, pageWidth - margin - 50, 26);
+
+      pdf.setTextColor(0, 0, 0);
+      let yPos = 45;
+
+      // Sezione 1: Stato Patrimoniale
+      pdf.setFontSize(16);
+      pdf.setTextColor(255, 138, 0);
+      pdf.text('Stato Patrimoniale', margin, yPos);
+      yPos += 10;
+      pdf.setTextColor(0, 0, 0);
+
+      // KPI Stato Patrimoniale
+      if (balanceScreenshots.kpi) {
+        const imgData = balanceScreenshots.kpi.toDataURL('image/png');
+        const imgWidth = pageWidth - (margin * 2);
+        const imgHeight = (balanceScreenshots.kpi.height * imgWidth) / balanceScreenshots.kpi.width;
+
+        if (yPos + imgHeight > pageHeight - margin) {
+          pdf.addPage();
+          pdf.setFillColor(255, 138, 0);
+          pdf.rect(0, 0, pageWidth, 20, 'F');
+          pdf.setTextColor(255, 255, 255);
+          pdf.setFontSize(14);
+          pdf.text('Bilancio', margin, 12);
+          pdf.setTextColor(0, 0, 0);
+          yPos = 30;
+        }
+
+        pdf.addImage(imgData, 'PNG', margin, yPos, imgWidth, imgHeight);
+        yPos += imgHeight + 15;
+      }
+
+      // Dettaglio Stato Patrimoniale
+      if (balanceScreenshots.detail) {
+        pdf.setFontSize(16);
+        pdf.setTextColor(255, 138, 0);
+
+        if (yPos > pageHeight - 100) {
+          pdf.addPage();
+          pdf.setFillColor(255, 138, 0);
+          pdf.rect(0, 0, pageWidth, 20, 'F');
+          pdf.setTextColor(255, 255, 255);
+          pdf.setFontSize(14);
+          pdf.text('Bilancio', margin, 12);
+          pdf.setTextColor(0, 0, 0);
+          yPos = 30;
+          pdf.setTextColor(255, 138, 0);
+          pdf.setFontSize(16);
+        }
+
+        pdf.text('Dettaglio', margin, yPos);
+        yPos += 10;
+        pdf.setTextColor(0, 0, 0);
+
+        const imgData = balanceScreenshots.detail.toDataURL('image/png');
+        const imgWidth = pageWidth - (margin * 2);
+        const imgHeight = (balanceScreenshots.detail.height * imgWidth) / balanceScreenshots.detail.width;
+
+        if (yPos + imgHeight > pageHeight - margin) {
+          pdf.addPage();
+          pdf.setFillColor(255, 138, 0);
+          pdf.rect(0, 0, pageWidth, 20, 'F');
+          pdf.setTextColor(255, 255, 255);
+          pdf.setFontSize(14);
+          pdf.text('Bilancio', margin, 12);
+          pdf.setTextColor(0, 0, 0);
+          yPos = 30;
+        }
+
+        pdf.addImage(imgData, 'PNG', margin, yPos, imgWidth, imgHeight);
+      }
+
+      // Nuova pagina per Conto Economico
+      pdf.addPage();
+      pdf.setFillColor(255, 138, 0);
+      pdf.rect(0, 0, pageWidth, 20, 'F');
+      pdf.setTextColor(255, 255, 255);
+      pdf.setFontSize(14);
+      pdf.text('Bilancio', margin, 12);
+      pdf.setTextColor(0, 0, 0);
+      yPos = 30;
+
+      // Sezione 2: Conto Economico
+      pdf.setFontSize(16);
+      pdf.setTextColor(255, 138, 0);
+      pdf.text('Conto Economico', margin, yPos);
+      yPos += 10;
+      pdf.setTextColor(0, 0, 0);
+
+      // KPI Conto Economico
+      if (incomeScreenshots.kpi) {
+        const imgData = incomeScreenshots.kpi.toDataURL('image/png');
+        const imgWidth = pageWidth - (margin * 2);
+        const imgHeight = (incomeScreenshots.kpi.height * imgWidth) / incomeScreenshots.kpi.width;
+
+        if (yPos + imgHeight > pageHeight - margin) {
+          pdf.addPage();
+          pdf.setFillColor(255, 138, 0);
+          pdf.rect(0, 0, pageWidth, 20, 'F');
+          pdf.setTextColor(255, 255, 255);
+          pdf.setFontSize(14);
+          pdf.text('Bilancio', margin, 12);
+          pdf.setTextColor(0, 0, 0);
+          yPos = 30;
+        }
+
+        pdf.addImage(imgData, 'PNG', margin, yPos, imgWidth, imgHeight);
+        yPos += imgHeight + 15;
+      }
+
+      // Dettaglio Conto Economico
+      if (incomeScreenshots.detail) {
+        pdf.setFontSize(16);
+        pdf.setTextColor(255, 138, 0);
+
+        if (yPos > pageHeight - 100) {
+          pdf.addPage();
+          pdf.setFillColor(255, 138, 0);
+          pdf.rect(0, 0, pageWidth, 20, 'F');
+          pdf.setTextColor(255, 255, 255);
+          pdf.setFontSize(14);
+          pdf.text('Bilancio', margin, 12);
+          pdf.setTextColor(0, 0, 0);
+          yPos = 30;
+          pdf.setTextColor(255, 138, 0);
+          pdf.setFontSize(16);
+        }
+
+        pdf.text('Dettaglio', margin, yPos);
+        yPos += 10;
+        pdf.setTextColor(0, 0, 0);
+
+        const imgData = incomeScreenshots.detail.toDataURL('image/png');
+        const imgWidth = pageWidth - (margin * 2);
+        const imgHeight = (incomeScreenshots.detail.height * imgWidth) / incomeScreenshots.detail.width;
+
+        if (yPos + imgHeight > pageHeight - margin) {
+          pdf.addPage();
+          pdf.setFillColor(255, 138, 0);
+          pdf.rect(0, 0, pageWidth, 20, 'F');
+          pdf.setTextColor(255, 255, 255);
+          pdf.setFontSize(14);
+          pdf.text('Bilancio', margin, 12);
+          pdf.setTextColor(0, 0, 0);
+          yPos = 30;
+        }
+
+        pdf.addImage(imgData, 'PNG', margin, yPos, imgWidth, imgHeight);
+      }
+
+      // Footer su ogni pagina
+      const pageCount = pdf.getNumberOfPages();
+      for (let i = 1; i <= pageCount; i++) {
+        pdf.setPage(i);
+        pdf.setFontSize(9);
+        pdf.setTextColor(128, 128, 128);
+        pdf.text(`Pagina ${i} di ${pageCount}`, pageWidth / 2, pageHeight - 10, { align: 'center' });
+        pdf.text('Generato da nCode ERP', pageWidth - margin - 35, pageHeight - 10);
+      }
+
+      // Salva il PDF
+      const fileName = `Bilancio_Completo_${filterAnno}_${new Date().toISOString().split('T')[0]}.pdf`;
+      console.log('Saving PDF:', fileName);
+
+      // Usa blob per forzare il download
+      const blob = pdf.output('blob');
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = fileName;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      console.log('PDF saved successfully');
+
+    } catch (error) {
+      console.error('Error exporting PDF:', error);
+      alert('Errore durante la generazione del PDF. Riprova.');
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   return (
-    <div className="space-y-6 animate-fade-in pb-8">
+    <div ref={bilancioRef} className="space-y-6 animate-fade-in pb-8">
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
@@ -100,7 +369,7 @@ export const FinancialStatement: React.FC = () => {
               <select
                 value={filterStato}
                 onChange={(e) => setFilterStato(e.target.value as 'Stimato' | 'Effettivo')}
-                className="border-none outline-none bg-transparent text-sm font-medium text-gray-500 dark:text-gray-400 cursor-pointer pl-2 pr-6"
+                className="border-none outline-none bg-transparent text-sm font-medium text-gray-500 dark:text-gray-400 cursor-pointer pl-3 pr-8"
               >
                 <option value="Effettivo">Effettivo</option>
                 <option value="Stimato">Stimato</option>
@@ -108,11 +377,17 @@ export const FinancialStatement: React.FC = () => {
             </div>
           )}
 
-           <button className="bg-white dark:bg-dark-card border border-gray-200 dark:border-dark-border text-gray-500 dark:text-gray-400 pl-4 pr-12 py-2 rounded-lg font-medium hover:bg-gray-50 dark:hover:bg-dark-bg transition-colors flex items-center gap-2" shadow-sm>
+           <button
+              onClick={() => window.print()}
+              className="bg-white dark:bg-dark-card border border-gray-200 dark:border-dark-border text-gray-500 dark:text-gray-400 pl-4 pr-12 py-2 rounded-lg font-medium hover:bg-gray-50 dark:hover:bg-dark-bg transition-colors flex items-center gap-2" shadow-sm
+            >
                 <Printer size={18} />
                 Stampa
             </button>
-            <button className="bg-primary text-white px-6 py-2 rounded-lg font-medium hover:opacity-90 transition-all flex items-center gap-2 shadow-sm">
+            <button
+              onClick={handleExportPDF}
+              className="bg-primary text-white px-6 py-2 rounded-lg font-medium hover:opacity-90 transition-all flex items-center gap-2 shadow-sm"
+            >
                 <Download size={18} />
                 Esporta PDF
             </button>
@@ -514,6 +789,17 @@ export const FinancialStatement: React.FC = () => {
                 Annulla
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Overlay esportazione PDF */}
+      {isExporting && (
+        <div className="fixed inset-0 bg-white dark:bg-dark flex items-center justify-center z-[9999]">
+          <div className="bg-white dark:bg-dark-card rounded-lg p-8 flex flex-col items-center gap-4 shadow-xl border border-gray-200 dark:border-dark-border">
+            <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-primary"></div>
+            <p className="text-dark dark:text-white font-medium text-lg">Generazione PDF in corso...</p>
+            <p className="text-gray-500 dark:text-gray-400 text-sm">Attendere prego</p>
           </div>
         </div>
       )}

@@ -250,11 +250,11 @@ function parseTransactions(rows: any[][], startRow: number, columnMap: Record<st
   for (let i = startRow; i < rows.length; i++) {
     const row = rows[i];
 
-    // Stop if we hit 3 consecutive empty rows (likely end of transactions)
+    // Stop if we hit 10 consecutive empty rows (likely end of transactions)
     if (!row || !row.some(cell => cell !== null && cell !== undefined && cell !== '')) {
       consecutiveEmptyRows++;
-      if (consecutiveEmptyRows >= 3) {
-        console.log(`🛑 Stopped at row ${i}: 3 consecutive empty rows (end of transactions)`);
+      if (consecutiveEmptyRows >= 10) {
+        console.log(`🛑 Stopped at row ${i}: 10 consecutive empty rows (end of transactions)`);
         break;
       }
       continue;

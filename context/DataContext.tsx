@@ -429,26 +429,24 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const deleteInvoice = async (id: string): Promise<boolean> => {
+    // Check if there are cashflow records associated with this invoice
+    const associatedCashflows = cashflowRecords.filter(cf => cf.invoiceId === id);
+
+    if (associatedCashflows.length > 0) {
+      console.error('Cannot delete invoice with associated cashflow records');
+      const movimentiDettagli = associatedCashflows.map(cf =>
+        `- ID: ${cf.id}, Data Pagamento: ${cf.dataPagamento || 'N/D'}, Note: ${cf.note || 'Nessuna nota'}`
+      ).join('\n');
+      alert(`Non puoi eliminare questa fattura perché ha ${associatedCashflows.length} movimento/i di cassa associato/i:\n\n${movimentiDettagli}\n\nVai in Flusso di Cassa e elimina prima questi movimenti. Potrebbero essere nascosti dai filtri (controlla Anno/Mese/Tipo/Stato).`);
+      return false;
+    }
+
     if (!isSupabaseConfigured) {
-      // Delete associated cashflow records first
-      setCashflowRecords(prev => prev.filter(cf => cf.invoiceId !== id));
-      // Then delete the invoice
       setInvoices(prev => prev.filter(i => i.id !== id));
       return true;
     }
 
-    // Delete associated cashflow records first
-    const { error: cashflowError } = await supabase
-      .from('cashflow_records')
-      .delete()
-      .eq('invoice_id', id);
-
-    if (cashflowError) {
-      console.error('Error deleting associated cashflow records:', cashflowError);
-      return false;
-    }
-
-    // Then delete the invoice
+    // Delete the invoice
     const { error } = await supabase
       .from('invoices')
       .delete()
@@ -460,7 +458,6 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     // Update local state
-    setCashflowRecords(prev => prev.filter(cf => cf.invoiceId !== id));
     setInvoices(prev => prev.filter(i => i.id !== id));
     return true;
   };
@@ -605,17 +602,25 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return newRecord;
     }
 
+    const dataToInsert = camelToSnake(record);
+    console.log('🔵 Inserting cashflow record into Supabase:', dataToInsert);
+
     const { data, error } = await supabase
       .from('cashflow_records')
-      .insert(camelToSnake(record))
+      .insert(dataToInsert)
       .select()
       .single();
 
     if (error) {
-      console.error('Error adding cashflow record:', error);
+      console.error('❌ Error adding cashflow record:', error);
+      console.error('   Error code:', error.code);
+      console.error('   Error message:', error.message);
+      console.error('   Error details:', error.details);
+      console.error('   Data attempted:', dataToInsert);
       return null;
     }
 
+    console.log('✅ Cashflow record inserted successfully:', data);
     const newRecord = snakeToCamel(data) as CashflowRecord;
     setCashflowRecords(prev => [...prev, newRecord]);
     return newRecord;
