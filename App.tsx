@@ -7,11 +7,15 @@ import { Invoicing } from './components/Invoicing';
 import { Cashflow } from './components/Cashflow';
 import { FinancialStatement } from './components/FinancialStatement';
 import { Reconciliation } from './components/Reconciliation';
-import { Bell, User, Menu, X } from 'lucide-react';
+import { Bell, User, Menu, X, Sun, Moon, RefreshCw } from 'lucide-react';
+import { useTheme } from './context/ThemeContext';
+import { useData } from './context/DataContext';
 
 const App: React.FC = () => {
   const [currentView, setCurrentView] = useState('dashboard');
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const { theme, toggleTheme } = useTheme();
+  const { aiProcessing, stopAiProcessing } = useData();
 
   const renderContent = () => {
     switch (currentView) {
@@ -27,7 +31,7 @@ const App: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col lg:flex-row min-h-screen bg-[#EAECE6] font-sans text-dark overflow-hidden">
+    <div className="flex flex-col lg:flex-row min-h-screen bg-bg-light dark:bg-dark-bg font-sans text-dark dark:text-white overflow-hidden">
       {/* Mobile Sidebar Overlay */}
       {sidebarOpen && (
         <div
@@ -53,13 +57,13 @@ const App: React.FC = () => {
 
       <div className="flex-1 flex flex-col h-screen overflow-hidden">
         {/* Top Bar */}
-        <header className="h-24 flex items-center justify-between px-4 lg:px-8 bg-[#EAECE6] flex-shrink-0">
+        <header className="h-24 flex items-center justify-between px-4 lg:px-8 bg-bg-light dark:bg-dark-bg flex-shrink-0 border-b border-gray-200 dark:border-dark-border">
           {/* Mobile menu button */}
           <button
             onClick={() => setSidebarOpen(!sidebarOpen)}
-            className="lg:hidden w-10 h-10 flex items-center justify-center rounded-full hover:bg-gray-50 transition-colors"
+            className="lg:hidden w-10 h-10 flex items-center justify-center rounded-lg hover:bg-gray-50 dark:hover:bg-dark-card transition-colors"
           >
-            <Menu size={20} className="text-dark" />
+            <Menu size={20} className="text-dark dark:text-white" />
           </button>
 
           {/* Spacer */}
@@ -67,15 +71,60 @@ const App: React.FC = () => {
 
           {/* Right side buttons */}
           <div className="flex items-center gap-4">
-            <button className="relative w-10 h-10 bg-white rounded-full flex items-center justify-center shadow-sm hover:bg-gray-50 transition-colors">
-              <Bell size={20} className="text-dark" />
-              <span className="absolute top-2 right-2.5 w-2 h-2 bg-red-500 rounded-full border border-white"></span>
+            {/* Theme Toggle */}
+            <button
+              onClick={toggleTheme}
+              className="w-10 h-10 bg-white dark:bg-dark-card rounded-lg flex items-center justify-center shadow-sm hover:bg-gray-50 dark:hover:bg-dark-border transition-colors"
+              aria-label="Toggle theme"
+            >
+              {theme === 'light' ? (
+                <Moon size={20} className="text-dark dark:text-white" />
+              ) : (
+                <Sun size={20} className="text-white" />
+              )}
             </button>
-            <button className="w-10 h-10 bg-primary rounded-full flex items-center justify-center shadow-sm overflow-hidden">
+
+            {/* Notifications */}
+            <button className="relative w-10 h-10 bg-white dark:bg-dark-card rounded-lg flex items-center justify-center shadow-sm hover:bg-gray-50 dark:hover:bg-dark-border transition-colors">
+              <Bell size={20} className="text-dark dark:text-white" />
+              <span className="absolute top-2 right-2.5 w-2 h-2 bg-red-500 rounded-full border border-white dark:border-dark-card"></span>
+            </button>
+
+            {/* Profile */}
+            <button className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center shadow-sm overflow-hidden hover:opacity-90 transition-opacity">
                <img src="https://picsum.photos/100/100?random=user" alt="Profile" className="w-full h-full object-cover" />
             </button>
           </div>
         </header>
+
+        {/* Global AI Processing Banner */}
+        {aiProcessing.isProcessing && aiProcessing.total > 0 && (
+          <div className="px-4 lg:px-8 pt-4">
+            <div className="p-3 bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-xl flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <RefreshCw size={18} className="text-purple-600 dark:text-purple-400 animate-spin" />
+                <div className="text-sm">
+                  <span className="font-medium text-purple-900 dark:text-purple-300">
+                    Analisi AI in corso: {aiProcessing.current} / {aiProcessing.total}
+                  </span>
+                  <span className="text-purple-600 dark:text-purple-400 ml-2">
+                    ({Math.round((aiProcessing.current / aiProcessing.total) * 100)}%)
+                  </span>
+                </div>
+              </div>
+              <button
+                onClick={() => {
+                  console.log('🛑 Global stop button clicked');
+                  stopAiProcessing();
+                }}
+                className="px-3 py-1.5 text-sm bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors flex items-center gap-2"
+              >
+                <X size={14} />
+                Ferma
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Main Content Area */}
         <main className="flex-1 overflow-y-auto px-4 lg:px-8 py-4 lg:py-6">

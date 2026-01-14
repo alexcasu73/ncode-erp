@@ -22,6 +22,10 @@ const formatDate = (date: Date | string): string => {
 // Helper per formattare ID fattura: "Fattura_xyz" -> "xyz/anno"
 const formatInvoiceId = (id: string, anno: number): string => {
   const numero = id.replace('Fattura_', '');
+  // Se il numero contiene già l'anno (es. "180/2026"), non duplicarlo
+  if (numero.includes('/')) {
+    return numero;
+  }
   return `${numero}/${anno}`;
 };
 
@@ -261,14 +265,14 @@ export const Invoicing: React.FC = () => {
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h1 className="text-page-title text-dark">Fatturazione</h1>
+          <h1 className="text-page-title text-dark dark:text-white">Fatturazione</h1>
           <p className="text-page-subtitle mt-1">Gestione entrate e uscite</p>
         </div>
         <button
           onClick={() => { setEditingInvoice(null); setShowModal(true); }}
-          className="bg-dark text-white px-6 py-2 rounded-full text-body font-medium hover:bg-black transition-colors flex items-center gap-2"
+          className="bg-primary text-white px-6 py-2 rounded-lg font-medium hover:opacity-90 transition-all flex items-center gap-2 shadow-sm"
         >
-          <Plus size={18} className="text-primary"/>
+          <Plus size={18} />
           Nuova Voce
         </button>
       </div>
@@ -276,12 +280,12 @@ export const Invoicing: React.FC = () => {
       {/* Selettore Anno e Toggle Vista Stato */}
       <div className="flex flex-wrap gap-4 items-center">
         {/* Selettore Anno */}
-        <div className="bg-white rounded-2xl p-2 flex items-center" shadow-sm>
-          <Calendar size={16} className="text-gray-500 ml-2" />
+        <div className="bg-white dark:bg-dark-card rounded-lg p-2 flex items-center shadow-sm border border-gray-200 dark:border-dark-border">
+          <Calendar size={16} className="text-gray-500 dark:text-gray-400 ml-2" />
           <select
             value={filterAnno === 'tutti' ? 'tutti' : filterAnno}
             onChange={(e) => setFilterAnno(e.target.value === 'tutti' ? 'tutti' : parseInt(e.target.value))}
-            className="px-3 py-2 bg-transparent border-none font-medium text-dark text-sm focus:ring-0 focus:outline-none cursor-pointer"
+            className="px-3 py-2 bg-transparent border-none font-medium text-dark dark:text-white text-sm focus:ring-0 focus:outline-none cursor-pointer"
           >
             <option value="tutti">Tutti gli anni</option>
             {anniDisponibili.map(anno => (
@@ -291,12 +295,12 @@ export const Invoicing: React.FC = () => {
         </div>
 
         {/* Selettore Mese */}
-        <div className="bg-white rounded-2xl p-2 flex items-center" shadow-sm>
-          <Calendar size={16} className="text-gray-500 ml-2" />
+        <div className="bg-white dark:bg-dark-card rounded-lg p-2 flex items-center shadow-sm border border-gray-200 dark:border-dark-border">
+          <Calendar size={16} className="text-gray-500 dark:text-gray-400 ml-2" />
           <select
             value={filterMese}
             onChange={(e) => setFilterMese(e.target.value)}
-            className="px-3 py-2 bg-transparent border-none font-medium text-dark text-sm focus:ring-0 focus:outline-none cursor-pointer"
+            className="px-3 py-2 bg-transparent border-none font-medium text-dark dark:text-white text-sm focus:ring-0 focus:outline-none cursor-pointer"
           >
             <option value="tutti">Tutti i mesi</option>
             {MESI.map(mese => (
@@ -306,33 +310,33 @@ export const Invoicing: React.FC = () => {
         </div>
 
         {/* Toggle Vista Stato */}
-        <div className="bg-white rounded-2xl p-2 inline-flex gap-1" shadow-sm>
+        <div className="bg-white dark:bg-dark-card rounded-lg p-2 inline-flex gap-1 shadow-sm border border-gray-200 dark:border-dark-border">
           <button
             onClick={() => setVistaStato('tutti')}
-            className={`px-4 py-2 rounded-xl font-medium text-sm transition-colors ${
+            className={`px-4 py-2 rounded-lg font-medium text-sm transition-colors ${
               vistaStato === 'tutti'
-                ? 'bg-dark text-white'
-                : 'text-gray-500 hover:bg-gray-50'
+                ? 'bg-dark dark:bg-white text-white dark:text-dark'
+                : 'text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-dark-border'
             }`}
           >
             Tutti ({totals.countEffettive + totals.countStimate})
           </button>
           <button
             onClick={() => setVistaStato('effettivo')}
-            className={`px-4 py-2 rounded-xl font-medium text-sm transition-colors ${
+            className={`px-4 py-2 rounded-lg font-medium text-sm transition-colors ${
               vistaStato === 'effettivo'
-                ? 'bg-green-600 text-white'
-                : 'text-gray-500 hover:bg-gray-50'
+                ? 'bg-green-600 dark:bg-green-500 text-white'
+                : 'text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-dark-border'
             }`}
           >
             Effettivo ({totals.countEffettive})
           </button>
           <button
             onClick={() => setVistaStato('stimato')}
-            className={`px-4 py-2 rounded-xl font-medium text-sm transition-colors ${
+            className={`px-4 py-2 rounded-lg font-medium text-sm transition-colors ${
               vistaStato === 'stimato'
-                ? 'bg-blue-600 text-white'
-                : 'text-gray-500 hover:bg-gray-50'
+                ? 'bg-primary text-white'
+                : 'text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-dark-border'
             }`}
           >
             Stimato ({totals.countStimate})
@@ -342,55 +346,55 @@ export const Invoicing: React.FC = () => {
         {/* Reset filtri */}
         <button
           onClick={resetAllFilters}
-          className="bg-white rounded-2xl p-2 hover:bg-gray-50 transition-colors flex items-center gap-2" shadow-sm
+          className="bg-white dark:bg-dark-card rounded-lg p-2 hover:bg-gray-50 dark:hover:bg-dark-border transition-colors flex items-center gap-2 shadow-sm border border-gray-200 dark:border-dark-border"
           title="Reset tutti i filtri"
         >
-          <RotateCcw size={16} className="text-gray-500 ml-2" />
-          <span className="px-3 py-2 font-medium text-dark text-sm">Reset</span>
+          <RotateCcw size={16} className="text-gray-500 dark:text-gray-400 ml-2" />
+          <span className="px-3 py-2 font-medium text-dark dark:text-white text-sm">Reset</span>
         </button>
       </div>
 
       {/* KPI Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="bg-white p-5 rounded-2xl border-l-4 border-green-500" shadow-sm>
+        <div className="bg-white dark:bg-dark-card p-5 rounded-xl border-l-4 border-secondary shadow-sm">
           <div className="flex items-center gap-2 mb-1">
-            <ArrowUpCircle size={16} className="text-green-500" />
+            <ArrowUpCircle size={16} className="text-secondary" />
             <h3 className="text-card-title">
               Entrate {vistaStato !== 'tutti' && `(${vistaStato === 'effettivo' ? 'Effettive' : 'Stimate'})`}
             </h3>
           </div>
-          <p className="text-kpi-value text-dark">{formatCurrency(activeData.entrate)}</p>
+          <p className="text-kpi-value text-dark dark:text-white">{formatCurrency(activeData.entrate)}</p>
           <p className="text-small mt-1">{activeData.countEntrate} voci</p>
         </div>
-        <div className="bg-white p-5 rounded-2xl border-l-4 border-orange-500" shadow-sm>
+        <div className="bg-white dark:bg-dark-card p-5 rounded-xl border-l-4 border-red-600 shadow-sm">
           <div className="flex items-center gap-2 mb-1">
-            <ArrowDownCircle size={16} className="text-orange-500" />
+            <ArrowDownCircle size={16} className="text-red-600" />
             <h3 className="text-card-title">
               Uscite {vistaStato !== 'tutti' && `(${vistaStato === 'effettivo' ? 'Effettive' : 'Stimate'})`}
             </h3>
           </div>
-          <p className="text-kpi-value text-dark">{formatCurrency(activeData.uscite)}</p>
+          <p className="text-kpi-value text-dark dark:text-white">{formatCurrency(activeData.uscite)}</p>
           <p className="text-small mt-1">{activeData.countUscite} voci</p>
         </div>
-        <div className="bg-white p-5 rounded-2xl border-l-4 border-primary" shadow-sm>
+        <div className="bg-white dark:bg-dark-card p-5 rounded-xl border-l-4 border-primary shadow-sm">
           <h3 className="text-card-title mb-1">
             Margine {vistaStato !== 'tutti' && `(${vistaStato === 'effettivo' ? 'Effettivo' : 'Stimato'})`}
           </h3>
-          <p className={`text-kpi-value ${activeData.margine >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+          <p className={`text-kpi-value ${activeData.margine >= 0 ? 'text-secondary' : 'text-red-600'}`}>
             {formatCurrency(activeData.margine)}
           </p>
           <p className="text-small mt-1">IVA: {formatCurrency(activeData.ivaBalance)}</p>
         </div>
-        <div className="bg-white p-5 rounded-2xl border-l-4 border-blue-500" shadow-sm>
+        <div className="bg-white dark:bg-dark-card p-5 rounded-xl border-l-4 border-gray-400 dark:border-gray-500 shadow-sm">
           <h3 className="text-card-title mb-3">Riepilogo per Stato</h3>
           <div className="flex justify-around">
             <div className="text-center px-4">
-              <p className="text-kpi-small text-green-600">{totals.countEffettive}</p>
+              <p className="text-kpi-small text-secondary">{totals.countEffettive}</p>
               <p className="text-small">Effettive</p>
             </div>
-            <div className="w-px bg-gray-50 self-stretch"></div>
+            <div className="w-px bg-gray-200 dark:bg-dark-border self-stretch"></div>
             <div className="text-center px-4">
-              <p className="text-kpi-small text-blue-600">{totals.countStimate}</p>
+              <p className="text-kpi-small text-primary">{totals.countStimate}</p>
               <p className="text-small">Stimate</p>
             </div>
           </div>
@@ -399,71 +403,71 @@ export const Invoicing: React.FC = () => {
 
       {/* Confronto Effettivo vs Stimato */}
       {vistaStato === 'tutti' && (
-        <div className="bg-white rounded-2xl p-6" shadow-sm>
-          <h3 className="text-section-title text-dark mb-4">Confronto Bilancio: Effettivo vs Stimato</h3>
+        <div className="bg-white dark:bg-dark-card rounded-lg p-6 shadow-sm border border-gray-200 dark:border-dark-border">
+          <h3 className="text-section-title text-dark dark:text-white mb-4">Confronto Bilancio: Effettivo vs Stimato</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Colonna Effettivo */}
-            <div className="border border-green-200 rounded-xl p-4 bg-green-50/30">
+            <div className="border border-green-200 dark:border-green-800 rounded-lg p-4 bg-green-50/30 dark:bg-green-900/10">
               <div className="flex items-center gap-2 mb-3">
-                <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                <h4 className="font-bold text-green-700">Effettivo (Confermato)</h4>
+                <div className="w-3 h-3 bg-green-500 dark:bg-green-400 rounded-full"></div>
+                <h4 className="font-bold text-green-700 dark:text-green-400">Effettivo (Confermato)</h4>
               </div>
               <div className="space-y-2">
                 <div className="flex justify-between">
-                  <span className="text-gray-500">Entrate:</span>
-                  <span className="font-semibold text-green-600">{formatCurrency(totals.effettivo.entrate)}</span>
+                  <span className="text-gray-500 dark:text-gray-400">Entrate:</span>
+                  <span className="font-semibold text-green-600 dark:text-green-400">{formatCurrency(totals.effettivo.entrate)}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-500">Uscite:</span>
-                  <span className="font-semibold text-orange-600">-{formatCurrency(totals.effettivo.uscite)}</span>
+                  <span className="text-gray-500 dark:text-gray-400">Uscite:</span>
+                  <span className="font-semibold text-orange-600 dark:text-orange-400">-{formatCurrency(totals.effettivo.uscite)}</span>
                 </div>
-                <div className="border-t pt-2 flex justify-between">
-                  <span className="font-bold text-gray-500">Margine:</span>
-                  <span className={`font-bold ${totals.effettivo.margine >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                <div className="border-t border-gray-200 dark:border-dark-border pt-2 flex justify-between">
+                  <span className="font-bold text-gray-500 dark:text-gray-400">Margine:</span>
+                  <span className={`font-bold ${totals.effettivo.margine >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
                     {formatCurrency(totals.effettivo.margine)}
                   </span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-gray-500">Saldo IVA:</span>
-                  <span className="text-gray-500">{formatCurrency(totals.effettivo.ivaBalance)}</span>
+                  <span className="text-gray-500 dark:text-gray-400">Saldo IVA:</span>
+                  <span className="text-gray-500 dark:text-gray-400">{formatCurrency(totals.effettivo.ivaBalance)}</span>
                 </div>
               </div>
             </div>
 
             {/* Colonna Stimato */}
-            <div className="border border-blue-200 rounded-xl p-4 bg-blue-50/30">
+            <div className="border border-gray-200 dark:border-dark-border rounded-lg p-4 bg-gray-50/30 dark:bg-gray-800/10">
               <div className="flex items-center gap-2 mb-3">
-                <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
-                <h4 className="font-bold text-blue-700">Stimato (Previsto)</h4>
+                <div className="w-3 h-3 bg-primary rounded-full"></div>
+                <h4 className="font-bold text-dark dark:text-white">Stimato (Previsto)</h4>
               </div>
               <div className="space-y-2">
                 <div className="flex justify-between">
-                  <span className="text-gray-500">Entrate:</span>
-                  <span className="font-semibold text-green-600">{formatCurrency(totals.stimato.entrate)}</span>
+                  <span className="text-gray-500 dark:text-gray-400">Entrate:</span>
+                  <span className="font-semibold text-green-600 dark:text-green-400">{formatCurrency(totals.stimato.entrate)}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-500">Uscite:</span>
-                  <span className="font-semibold text-orange-600">-{formatCurrency(totals.stimato.uscite)}</span>
+                  <span className="text-gray-500 dark:text-gray-400">Uscite:</span>
+                  <span className="font-semibold text-orange-600 dark:text-orange-400">-{formatCurrency(totals.stimato.uscite)}</span>
                 </div>
-                <div className="border-t pt-2 flex justify-between">
-                  <span className="font-bold text-gray-500">Margine:</span>
-                  <span className={`font-bold ${totals.stimato.margine >= 0 ? 'text-blue-600' : 'text-red-600'}`}>
+                <div className="border-t border-gray-200 dark:border-dark-border pt-2 flex justify-between">
+                  <span className="font-bold text-gray-500 dark:text-gray-400">Margine:</span>
+                  <span className={`font-bold ${totals.stimato.margine >= 0 ? 'text-blue-600 dark:text-blue-400' : 'text-red-600 dark:text-red-400'}`}>
                     {formatCurrency(totals.stimato.margine)}
                   </span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-gray-500">Saldo IVA:</span>
-                  <span className="text-gray-500">{formatCurrency(totals.stimato.ivaBalance)}</span>
+                  <span className="text-gray-500 dark:text-gray-400">Saldo IVA:</span>
+                  <span className="text-gray-500 dark:text-gray-400">{formatCurrency(totals.stimato.ivaBalance)}</span>
                 </div>
               </div>
             </div>
           </div>
 
           {/* Totale Combinato */}
-          <div className="mt-4 pt-4 border-t border-gray-200">
+          <div className="mt-4 pt-4 border-t border-gray-200 dark:border-dark-border">
             <div className="flex flex-wrap justify-between items-center gap-4">
               <div>
-                <span className="text-body text-gray-500">Bilancio Totale (Effettivo + Stimato):</span>
+                <span className="text-body text-gray-500 dark:text-gray-400">Bilancio Totale (Effettivo + Stimato):</span>
               </div>
               <div className="flex gap-6">
                 <div className="text-center">
@@ -476,7 +480,7 @@ export const Invoicing: React.FC = () => {
                 </div>
                 <div className="text-center">
                   <p className="text-small">Margine</p>
-                  <p className={`text-body font-bold ${totals.tutti.margine >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                  <p className={`text-body font-bold ${totals.tutti.margine >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
                     {formatCurrency(totals.tutti.margine)}
                   </p>
                 </div>
@@ -487,22 +491,22 @@ export const Invoicing: React.FC = () => {
       )}
 
       {/* Filters */}
-      <div className="bg-white rounded-2xl p-4" shadow-sm>
+      <div className="bg-white dark:bg-dark-card rounded-lg p-4 shadow-sm border border-gray-200 dark:border-dark-border">
         <div className="flex flex-wrap gap-4 items-center">
           <div className="relative flex-1 min-w-[200px]">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500" size={18} />
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 dark:text-gray-400" size={18} />
             <input
               type="text"
               placeholder="Cerca per progetto, nota, categoria..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 bg-gray-50 border-none rounded-xl focus:ring-2 focus:ring-primary focus:outline-none"
+              className="w-full pl-10 pr-4 py-2 bg-gray-50 dark:bg-gray-800/30 border-none rounded-lg focus:ring-2 focus:ring-primary focus:outline-none text-dark dark:text-white"
             />
           </div>
           <select
             value={filterTipo}
             onChange={(e) => setFilterTipo(e.target.value as any)}
-            className="px-4 py-2 bg-gray-50 border-none rounded-xl focus:ring-2 focus:ring-primary focus:outline-none"
+            className="pl-4 pr-12 py-2 bg-gray-50 dark:bg-gray-800/30 border-none rounded-lg focus:ring-2 focus:ring-primary focus:outline-none text-dark dark:text-white"
           >
             <option value="tutti">Tutti i tipi</option>
             <option value="Entrata">Entrate</option>
@@ -511,7 +515,7 @@ export const Invoicing: React.FC = () => {
           <select
             value={filterStato}
             onChange={(e) => setFilterStato(e.target.value as any)}
-            className="px-4 py-2 bg-gray-50 border-none rounded-xl focus:ring-2 focus:ring-primary focus:outline-none"
+            className="pl-4 pr-12 py-2 bg-gray-50 dark:bg-gray-800/30 border-none rounded-lg focus:ring-2 focus:ring-primary focus:outline-none text-dark dark:text-white"
           >
             <option value="tutti">Tutti gli stati</option>
             <option value="Stimato">Stimato</option>
@@ -521,7 +525,7 @@ export const Invoicing: React.FC = () => {
           <select
             value={filterMeseTabella}
             onChange={(e) => setFilterMeseTabella(e.target.value)}
-            className="px-4 py-2 bg-gray-50 border-none rounded-xl focus:ring-2 focus:ring-primary focus:outline-none"
+            className="pl-4 pr-12 py-2 bg-gray-50 dark:bg-gray-800/30 border-none rounded-lg focus:ring-2 focus:ring-primary focus:outline-none text-dark dark:text-white"
           >
             <option value="tutti">Tutti i mesi</option>
             {MESI.map(mese => (
@@ -532,147 +536,147 @@ export const Invoicing: React.FC = () => {
       </div>
 
       {/* Table */}
-      <div className="bg-white rounded-2xl overflow-hidden" shadow-sm>
+      <div className="bg-white dark:bg-dark-card rounded-lg overflow-hidden shadow-sm border border-gray-200 dark:border-dark-border">
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead className="bg-gray-50">
-              <tr className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+            <thead className="bg-gray-50 dark:bg-dark-bg">
+              <tr className="text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                 <th
-                  className="px-4 py-3 cursor-pointer hover:bg-gray-50 transition-colors"
+                  className="px-6 py-4 whitespace-nowrap cursor-pointer hover:bg-gray-50 transition-colors"
                   onClick={() => handleSort('id')}
                 >
                   <div className="flex items-center gap-1">
                     Id Fattura
                     {sortColumn === 'id' ? (
                       sortDirection === 'asc' ? <ChevronUp size={14} /> : <ChevronDown size={14} />
-                    ) : <ChevronsUpDown size={14} className="text-gray-300" />}
+                    ) : <ChevronsUpDown size={14} className="text-gray-300 dark:text-gray-600" />}
                   </div>
                 </th>
                 <th
-                  className="px-4 py-3 cursor-pointer hover:bg-gray-50 transition-colors"
+                  className="px-6 py-4 cursor-pointer hover:bg-gray-50 transition-colors"
                   onClick={() => handleSort('tipo')}
                 >
                   <div className="flex items-center gap-1">
                     Tipo
                     {sortColumn === 'tipo' ? (
                       sortDirection === 'asc' ? <ChevronUp size={14} /> : <ChevronDown size={14} />
-                    ) : <ChevronsUpDown size={14} className="text-gray-300" />}
+                    ) : <ChevronsUpDown size={14} className="text-gray-300 dark:text-gray-600" />}
                   </div>
                 </th>
                 <th
-                  className="px-4 py-3 cursor-pointer hover:bg-gray-50 transition-colors"
+                  className="px-6 py-4 cursor-pointer hover:bg-gray-50 transition-colors"
                   onClick={() => handleSort('data')}
                 >
                   <div className="flex items-center gap-1">
                     Data
                     {sortColumn === 'data' ? (
                       sortDirection === 'asc' ? <ChevronUp size={14} /> : <ChevronDown size={14} />
-                    ) : <ChevronsUpDown size={14} className="text-gray-300" />}
+                    ) : <ChevronsUpDown size={14} className="text-gray-300 dark:text-gray-600" />}
                   </div>
                 </th>
                 <th
-                  className="px-4 py-3 cursor-pointer hover:bg-gray-50 transition-colors"
+                  className="px-6 py-4 cursor-pointer hover:bg-gray-50 transition-colors"
                   onClick={() => handleSort('progetto')}
                 >
                   <div className="flex items-center gap-1">
                     Progetto / Categoria
                     {sortColumn === 'progetto' ? (
                       sortDirection === 'asc' ? <ChevronUp size={14} /> : <ChevronDown size={14} />
-                    ) : <ChevronsUpDown size={14} className="text-gray-300" />}
+                    ) : <ChevronsUpDown size={14} className="text-gray-300 dark:text-gray-600" />}
                   </div>
                 </th>
-                <th className="px-4 py-3">Descrizione</th>
+                <th className="px-6 py-4 whitespace-nowrap">Descrizione</th>
                 <th
-                  className="px-4 py-3 cursor-pointer hover:bg-gray-50 transition-colors"
+                  className="px-6 py-4 cursor-pointer hover:bg-gray-50 transition-colors"
                   onClick={() => handleSort('stato')}
                 >
                   <div className="flex items-center gap-1">
                     Stato
                     {sortColumn === 'stato' ? (
                       sortDirection === 'asc' ? <ChevronUp size={14} /> : <ChevronDown size={14} />
-                    ) : <ChevronsUpDown size={14} className="text-gray-300" />}
+                    ) : <ChevronsUpDown size={14} className="text-gray-300 dark:text-gray-600" />}
                   </div>
                 </th>
                 <th
-                  className="px-4 py-3 text-right cursor-pointer hover:bg-gray-50 transition-colors"
+                  className="px-6 py-4 text-right cursor-pointer hover:bg-gray-50 transition-colors"
                   onClick={() => handleSort('flusso')}
                 >
                   <div className="flex items-center justify-end gap-1">
                     Flusso
                     {sortColumn === 'flusso' ? (
                       sortDirection === 'asc' ? <ChevronUp size={14} /> : <ChevronDown size={14} />
-                    ) : <ChevronsUpDown size={14} className="text-gray-300" />}
+                    ) : <ChevronsUpDown size={14} className="text-gray-300 dark:text-gray-600" />}
                   </div>
                 </th>
-                <th className="px-4 py-3 text-right">IVA</th>
+                <th className="px-6 py-4 whitespace-nowrap text-right">IVA</th>
                 <th
-                  className="px-4 py-3 text-right cursor-pointer hover:bg-gray-50 transition-colors"
+                  className="px-6 py-4 text-right cursor-pointer hover:bg-gray-50 transition-colors"
                   onClick={() => handleSort('totale')}
                 >
                   <div className="flex items-center justify-end gap-1">
                     Totale
                     {sortColumn === 'totale' ? (
                       sortDirection === 'asc' ? <ChevronUp size={14} /> : <ChevronDown size={14} />
-                    ) : <ChevronsUpDown size={14} className="text-gray-300" />}
+                    ) : <ChevronsUpDown size={14} className="text-gray-300 dark:text-gray-600" />}
                   </div>
                 </th>
-                <th className="px-4 py-3 text-center">Azioni</th>
+                <th className="px-6 py-4 whitespace-nowrap text-center">Azioni</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
+            <tbody className="divide-y divide-gray-200 dark:divide-dark-border">
               {sortedInvoices.map((inv) => (
-                <tr key={inv.id} className={`hover:bg-gray-50 transition-colors ${inv.tipo === 'Uscita' ? 'bg-orange-50/30' : ''}`}>
-                  <td className="px-4 py-3 text-sm text-dark font-semibold">
+                <tr key={inv.id} className={`hover:bg-gray-50 dark:hover:bg-dark-bg transition-colors ${inv.tipo === 'Uscita' ? 'bg-orange-50/30 dark:bg-orange-900/10' : ''}`}>
+                  <td className="px-6 py-4 text-sm text-dark dark:text-white font-semibold">
                     {formatInvoiceId(inv.id, inv.anno)}
                   </td>
-                  <td className="px-4 py-3">
+                  <td className="px-6 py-4 whitespace-nowrap">
                     {inv.tipo === 'Entrata' ? (
                       <ArrowUpCircle size={20} className="text-green-500" />
                     ) : (
                       <ArrowDownCircle size={20} className="text-orange-500" />
                     )}
                   </td>
-                  <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                     {formatDate(inv.data)}
                   </td>
-                  <td className="px-4 py-3 text-sm">
+                  <td className="px-6 py-4 text-sm">
                     {inv.tipo === 'Entrata' ? (
-                      <span className="font-medium text-dark">{inv.nomeProgetto || '-'}</span>
+                      <span className="font-medium text-dark dark:text-white">{inv.nomeProgetto || '-'}</span>
                     ) : (
-                      <div>
-                        <span className="font-medium text-dark">{inv.spesa || '-'}</span>
+                      <div className="flex flex-col gap-1 items-start">
+                        <span className="font-medium text-dark dark:text-white">{inv.spesa || '-'}</span>
                         {inv.tipoSpesa && (
-                          <span className="ml-2 px-2 py-0.5 bg-gray-50 text-gray-500 text-xs rounded-full">
+                          <span className="px-2 py-0.5 bg-gray-100 dark:bg-dark-border text-gray-600 dark:text-gray-400 text-xs rounded">
                             {inv.tipoSpesa}
                           </span>
                         )}
                       </div>
                     )}
                   </td>
-                  <td className="px-4 py-3 text-sm text-gray-500 max-w-[200px] truncate">
+                  <td className="px-6 py-4 text-sm text-gray-500 max-w-[200px] truncate">
                     {inv.note || '-'}
                   </td>
-                  <td className="px-4 py-3">
-                    <span className={`px-2 py-1 text-xs font-semibold rounded-full ${
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span className={`px-2 py-1 text-xs font-medium rounded-md text-white ${
                       inv.statoFatturazione === 'Effettivo'
-                        ? 'bg-green-100 text-green-700'
+                        ? 'bg-secondary'
                         : inv.statoFatturazione === 'Stimato'
-                        ? 'bg-blue-100 text-blue-700'
-                        : 'bg-gray-50 text-gray-500'
+                        ? 'bg-primary'
+                        : 'bg-gray-500'
                     }`}>
                       {inv.statoFatturazione || 'Nessuno'}
                     </span>
                   </td>
-                  <td className={`px-4 py-3 text-sm font-medium text-right ${inv.tipo === 'Uscita' ? 'text-orange-600' : 'text-dark'}`}>
+                  <td className={`px-6 py-4 whitespace-nowrap text-sm font-medium text-right ${inv.tipo === 'Uscita' ? 'text-orange-600 dark:text-orange-400' : 'text-dark dark:text-white'}`}>
                     {inv.tipo === 'Uscita' ? '-' : ''}{formatCurrency(inv.flusso || 0)}
                   </td>
-                  <td className="px-4 py-3 text-sm text-gray-500 text-right">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-right">
                     {formatCurrency(inv.iva || 0)}
                   </td>
-                  <td className={`px-4 py-3 text-sm font-bold text-right ${inv.tipo === 'Uscita' ? 'text-orange-600' : 'text-green-600'}`}>
+                  <td className={`px-6 py-4 whitespace-nowrap text-sm font-bold text-right ${inv.tipo === 'Uscita' ? 'text-orange-600 dark:text-orange-400' : 'text-green-600 dark:text-green-400'}`}>
                     {inv.tipo === 'Uscita' ? '-' : ''}{formatCurrency((inv.flusso || 0) + (inv.iva || 0))}
                   </td>
-                  <td className="px-4 py-3">
+                  <td className="px-6 py-4">
                     <div className="flex justify-center gap-2">
                       <button
                         onClick={() => { setEditingInvoice(inv); setShowModal(true); }}
@@ -693,7 +697,7 @@ export const Invoicing: React.FC = () => {
             </tbody>
           </table>
           {sortedInvoices.length === 0 && (
-            <div className="text-center py-12 text-gray-500">
+            <div className="text-center py-12 text-gray-500 dark:text-gray-400">
               Nessuna voce trovata
             </div>
           )}
@@ -789,13 +793,13 @@ const InvoiceModal: React.FC<InvoiceModalProps> = ({ invoice, deals, onClose, on
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto" shadow-sm>
-        <div className="p-6 border-b border-gray-200 flex justify-between items-center">
-          <h2 className="text-xl font-bold text-dark">
+    <div className="fixed inset-0 bg-black/50 dark:bg-black/70 flex items-center justify-center z-50 p-4">
+      <div className="bg-white dark:bg-dark-card rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+        <div className="p-6 border-b border-gray-200 dark:border-dark-border flex justify-between items-center">
+          <h2 className="text-xl font-bold text-dark dark:text-white">
             {invoice ? 'Modifica Voce' : 'Nuova Voce'}
           </h2>
-          <button onClick={onClose} className="text-gray-500 hover:text-dark">
+          <button onClick={onClose} className="text-gray-500 dark:text-gray-400 hover:text-dark dark:hover:text-white">
             <X size={24} />
           </button>
         </div>
@@ -806,10 +810,10 @@ const InvoiceModal: React.FC<InvoiceModalProps> = ({ invoice, deals, onClose, on
             <button
               type="button"
               onClick={() => updateField('tipo', 'Entrata')}
-              className={`flex-1 py-3 rounded-xl font-medium flex items-center justify-center gap-2 transition-colors ${
+              className={`flex-1 py-3 rounded-lg font-medium flex items-center justify-center gap-2 transition-colors ${
                 formData.tipo === 'Entrata'
-                  ? 'bg-green-100 text-green-700 border-2 border-green-500'
-                  : 'bg-gray-50 text-gray-500 border-2 border-transparent'
+                  ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 border-2 border-green-500 dark:border-green-600'
+                  : 'bg-gray-50 dark:bg-gray-800/30 text-gray-500 dark:text-gray-400 border-2 border-transparent dark:border-dark-border'
               }`}
             >
               <ArrowUpCircle size={20} />
@@ -818,10 +822,10 @@ const InvoiceModal: React.FC<InvoiceModalProps> = ({ invoice, deals, onClose, on
             <button
               type="button"
               onClick={() => updateField('tipo', 'Uscita')}
-              className={`flex-1 py-3 rounded-xl font-medium flex items-center justify-center gap-2 transition-colors ${
+              className={`flex-1 py-3 rounded-lg font-medium flex items-center justify-center gap-2 transition-colors ${
                 formData.tipo === 'Uscita'
-                  ? 'bg-orange-100 text-orange-700 border-2 border-orange-500'
-                  : 'bg-gray-50 text-gray-500 border-2 border-transparent'
+                  ? 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400 border-2 border-orange-500 dark:border-orange-600'
+                  : 'bg-gray-50 dark:bg-gray-800/30 text-gray-500 dark:text-gray-400 border-2 border-transparent dark:border-dark-border'
               }`}
             >
               <ArrowDownCircle size={20} />
@@ -832,21 +836,21 @@ const InvoiceModal: React.FC<InvoiceModalProps> = ({ invoice, deals, onClose, on
           {/* Data e Stato */}
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-500 mb-1">Data</label>
+              <label className="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Data</label>
               <input
                 type="date"
                 value={formData.data ? new Date(formData.data).toISOString().split('T')[0] : ''}
                 onChange={(e) => updateField('data', e.target.value)}
-                className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:outline-none"
+                className="w-full pl-4 pr-12 py-2 border border-gray-200 dark:border-dark-border rounded-lg focus:ring-2 focus:ring-primary focus:outline-none bg-white dark:bg-gray-800/30 text-dark dark:text-white"
                 required
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-500 mb-1">Stato Fatturazione</label>
+              <label className="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Stato Fatturazione</label>
               <select
                 value={formData.statoFatturazione || 'Nessuno'}
                 onChange={(e) => updateField('statoFatturazione', e.target.value)}
-                className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:outline-none"
+                className="w-full pl-4 pr-12 py-2 border border-gray-200 dark:border-dark-border rounded-lg focus:ring-2 focus:ring-primary focus:outline-none bg-white dark:bg-gray-800/30 text-dark dark:text-white"
               >
                 <option value="Stimato">Stimato</option>
                 <option value="Effettivo">Effettivo</option>
@@ -858,11 +862,11 @@ const InvoiceModal: React.FC<InvoiceModalProps> = ({ invoice, deals, onClose, on
           {/* Progetto (per Entrate) o Categoria (per Uscite) */}
           {formData.tipo === 'Entrata' ? (
             <div>
-              <label className="block text-sm font-medium text-gray-500 mb-1">Progetto (Opportunità)</label>
+              <label className="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Progetto (Opportunità)</label>
               <select
                 value={formData.nomeProgetto || ''}
                 onChange={(e) => updateField('nomeProgetto', e.target.value)}
-                className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:outline-none"
+                className="w-full pl-4 pr-12 py-2 border border-gray-200 dark:border-dark-border rounded-lg focus:ring-2 focus:ring-primary focus:outline-none bg-white dark:bg-gray-800/30 text-dark dark:text-white"
               >
                 <option value="">Seleziona progetto...</option>
                 {availableProjects.map(deal => (
@@ -872,7 +876,7 @@ const InvoiceModal: React.FC<InvoiceModalProps> = ({ invoice, deals, onClose, on
                 ))}
               </select>
               {availableProjects.length === 0 && (
-                <p className="text-xs text-orange-500 mt-1">
+                <p className="text-xs text-orange-500 dark:text-orange-400 mt-1">
                   Nessuna opportunità in Proposta, Negoziazione o Vinto. Crea prima un'opportunità.
                 </p>
               )}
@@ -880,11 +884,11 @@ const InvoiceModal: React.FC<InvoiceModalProps> = ({ invoice, deals, onClose, on
           ) : (
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-500 mb-1">Categoria Spesa</label>
+                <label className="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Categoria Spesa</label>
                 <select
                   value={formData.spesa || ''}
                   onChange={(e) => updateField('spesa', e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:outline-none"
+                  className="w-full pl-4 pr-12 py-2 border border-gray-200 dark:border-dark-border rounded-lg focus:ring-2 focus:ring-primary focus:outline-none bg-white dark:bg-gray-800/30 text-dark dark:text-white"
                 >
                   <option value="">Seleziona...</option>
                   {CATEGORIE_SPESA.map(c => (
@@ -893,11 +897,11 @@ const InvoiceModal: React.FC<InvoiceModalProps> = ({ invoice, deals, onClose, on
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-500 mb-1">Tipo Spesa</label>
+                <label className="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Tipo Spesa</label>
                 <select
                   value={formData.tipoSpesa || ''}
                   onChange={(e) => updateField('tipoSpesa', e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:outline-none"
+                  className="w-full pl-4 pr-12 py-2 border border-gray-200 dark:border-dark-border rounded-lg focus:ring-2 focus:ring-primary focus:outline-none bg-white dark:bg-gray-800/30 text-dark dark:text-white"
                 >
                   <option value="">Seleziona...</option>
                   {TIPI_SPESA.map(t => (
@@ -910,35 +914,35 @@ const InvoiceModal: React.FC<InvoiceModalProps> = ({ invoice, deals, onClose, on
 
           {/* Note */}
           <div>
-            <label className="block text-sm font-medium text-gray-500 mb-1">Note / Descrizione</label>
+            <label className="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Note / Descrizione</label>
             <input
               type="text"
               value={formData.note || ''}
               onChange={(e) => updateField('note', e.target.value)}
               placeholder="Es: Claude, ChatGPT, Abbonamento mensile..."
-              className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:outline-none"
+              className="w-full pl-4 pr-12 py-2 border border-gray-200 dark:border-dark-border rounded-lg focus:ring-2 focus:ring-primary focus:outline-none bg-white dark:bg-gray-800/30 text-dark dark:text-white"
             />
           </div>
 
           {/* Importi */}
           <div className="grid grid-cols-3 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-500 mb-1">Flusso (Netto)</label>
+              <label className="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Flusso (Netto)</label>
               <input
                 type="number"
                 step="0.01"
                 value={formData.flusso || 0}
                 onChange={(e) => updateField('flusso', parseFloat(e.target.value) || 0)}
-                className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:outline-none"
+                className="w-full pl-4 pr-12 py-2 border border-gray-200 dark:border-dark-border rounded-lg focus:ring-2 focus:ring-primary focus:outline-none bg-white dark:bg-gray-800/30 text-dark dark:text-white"
                 required
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-500 mb-1">% IVA</label>
+              <label className="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">% IVA</label>
               <select
                 value={formData.percentualeIva || 0}
                 onChange={(e) => updateField('percentualeIva', parseInt(e.target.value))}
-                className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:outline-none"
+                className="w-full pl-4 pr-12 py-2 border border-gray-200 dark:border-dark-border rounded-lg focus:ring-2 focus:ring-primary focus:outline-none bg-white dark:bg-gray-800/30 text-dark dark:text-white"
               >
                 <option value={0}>0%</option>
                 <option value={4}>4%</option>
@@ -947,23 +951,23 @@ const InvoiceModal: React.FC<InvoiceModalProps> = ({ invoice, deals, onClose, on
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-500 mb-1">IVA</label>
+              <label className="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">IVA</label>
               <input
                 type="number"
                 step="0.01"
                 value={formData.iva || 0}
                 onChange={(e) => updateField('iva', parseFloat(e.target.value) || 0)}
-                className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:outline-none bg-gray-50"
+                className="w-full pl-4 pr-12 py-2 border border-gray-200 dark:border-dark-border rounded-lg focus:ring-2 focus:ring-primary focus:outline-none bg-gray-50 dark:bg-gray-800/30 text-dark dark:text-white"
                 readOnly
               />
             </div>
           </div>
 
           {/* Totale */}
-          <div className="bg-gray-50 p-4 rounded-xl">
+          <div className="bg-gray-50 dark:bg-dark-bg p-4 rounded-lg">
             <div className="flex justify-between items-center">
-              <span className="text-gray-500">Totale (Flusso + IVA)</span>
-              <span className={`text-2xl font-bold ${formData.tipo === 'Uscita' ? 'text-orange-600' : 'text-green-600'}`}>
+              <span className="text-gray-500 dark:text-gray-400">Totale (Flusso + IVA)</span>
+              <span className={`text-2xl font-bold ${formData.tipo === 'Uscita' ? 'text-orange-600 dark:text-orange-400' : 'text-green-600 dark:text-green-400'}`}>
                 {formData.tipo === 'Uscita' ? '- ' : ''}{formatCurrency((formData.flusso || 0) + (formData.iva || 0))}
               </span>
             </div>
@@ -974,13 +978,13 @@ const InvoiceModal: React.FC<InvoiceModalProps> = ({ invoice, deals, onClose, on
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 px-6 py-3 border border-gray-200 rounded-xl font-medium text-gray-500 hover:bg-gray-50 transition-colors"
+              className="flex-1 px-6 py-3 bg-gray-50 dark:bg-dark-bg border border-gray-200 dark:border-dark-border rounded-lg font-medium text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
             >
               Annulla
             </button>
             <button
               type="submit"
-              className="flex-1 px-6 py-3 bg-dark text-white rounded-xl font-medium hover:bg-black transition-colors flex items-center justify-center gap-2"
+              className="flex-1 px-6 py-3 bg-primary text-white rounded-lg font-medium hover:opacity-90 transition-all flex items-center justify-center gap-2"
             >
               <Check size={18} />
               {invoice ? 'Salva Modifiche' : 'Aggiungi'}

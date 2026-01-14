@@ -10,16 +10,26 @@
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script>
       tailwind.config = {
+        darkMode: 'class',
         theme: {
           extend: {
             fontFamily: {
               sans: ['"Plus Jakarta Sans"', 'sans-serif'],
             },
             colors: {
-              primary: '#D1F366', // Zentry green
-              secondary: '#f3f4f6',
+              // Professional Palette
+              primary: '#F97316', // Orange
+              secondary: '#10B981', // Emerald green
+              accent: '#8B5CF6', // Purple
               dark: '#111827',
               muted: '#9CA3AF',
+              // Background colors
+              'bg-light': '#F8FAFC',
+              'bg-card': '#FFFFFF',
+              // Dark mode colors
+              'dark-bg': '#0F172A',
+              'dark-card': '#1E293B',
+              'dark-border': '#334155',
             }
           }
         }
@@ -27,21 +37,30 @@
     </script>
     <style>
       body {
-        background-color: #EAECE6;
+        background-color: #F8FAFC;
         font-size: 14px;
         line-height: 1.5;
+        transition: background-color 0.3s ease;
+      }
+
+      .dark body {
+        background-color: #0F172A;
       }
 
       /* Typography Scale - Sistema Uniforme */
       .text-page-title { font-size: 1.5rem; font-weight: 700; line-height: 1.2; } /* 24px */
       .text-page-subtitle { font-size: 0.875rem; color: #6B7280; } /* 14px gray-500 */
+      .dark .text-page-subtitle { color: #94A3B8; }
       .text-section-title { font-size: 1rem; font-weight: 600; line-height: 1.4; } /* 16px */
       .text-card-title { font-size: 0.875rem; font-weight: 500; color: #6B7280; } /* 14px */
+      .dark .text-card-title { color: #94A3B8; }
       .text-kpi-value { font-size: 1.5rem; font-weight: 700; line-height: 1.2; } /* 24px */
       .text-kpi-small { font-size: 1.125rem; font-weight: 700; } /* 18px */
       .text-body { font-size: 0.875rem; line-height: 1.5; } /* 14px */
       .text-small { font-size: 0.75rem; color: #9CA3AF; } /* 12px gray-400 */
+      .dark .text-small { color: #64748B; }
       .text-table-header { font-size: 0.75rem; font-weight: 500; text-transform: uppercase; letter-spacing: 0.05em; color: #6B7280; }
+      .dark .text-table-header { color: #94A3B8; }
 
       /* Custom scrollbar for cleaner look */
       ::-webkit-scrollbar {
@@ -55,8 +74,46 @@
         background: #cbd5e1;
         border-radius: 4px;
       }
+      .dark ::-webkit-scrollbar-thumb {
+        background: #475569;
+      }
       ::-webkit-scrollbar-thumb:hover {
         background: #94a3b8;
+      }
+      .dark ::-webkit-scrollbar-thumb:hover {
+        background: #64748b;
+      }
+
+      /* Smooth transitions for theme changes */
+      * {
+        transition-property: background-color, border-color, color;
+        transition-duration: 0.2s;
+        transition-timing-function: ease-in-out;
+      }
+
+      /* Hide number input spinners */
+      input[type="number"]::-webkit-inner-spin-button,
+      input[type="number"]::-webkit-outer-spin-button {
+        -webkit-appearance: none;
+        margin: 0;
+      }
+      input[type="number"] {
+        -moz-appearance: textfield;
+        appearance: textfield;
+      }
+
+      /* Custom select dropdown arrow */
+      select {
+        appearance: none;
+        -webkit-appearance: none;
+        -moz-appearance: none;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%236B7280' d='M10.293 3.293L6 7.586 1.707 3.293A1 1 0 00.293 4.707l5 5a1 1 0 001.414 0l5-5a1 1 0 10-1.414-1.414z'/%3E%3C/svg%3E");
+        background-repeat: no-repeat;
+        background-position: right 0.75rem center;
+        background-size: 1em;
+      }
+      .dark select {
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%239CA3AF' d='M10.293 3.293L6 7.586 1.707 3.293A1 1 0 00.293 4.707l5 5a1 1 0 001.414 0l5-5a1 1 0 10-1.414-1.414z'/%3E%3C/svg%3E");
       }
     </style>
   <script type="importmap">
@@ -74,5 +131,13 @@
   <body>
     <div id="root"></div>
     <script type="module" src="/index.tsx"></script>
+    <script>
+      // Auto-select content on focus for number inputs
+      document.addEventListener('focusin', function(e) {
+        if (e.target.type === 'number') {
+          e.target.select();
+        }
+      });
+    </script>
   </body>
 </html>

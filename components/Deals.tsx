@@ -30,25 +30,25 @@ export const Deals: React.FC = () => {
 
   const getStageColor = (stage: DealStage) => {
     switch (stage) {
-      case DealStage.LEAD: return 'border-t-4 border-indigo-500';
-      case DealStage.QUALIFICATION: return 'border-t-4 border-orange-500';
-      case DealStage.PROPOSAL: return 'border-t-4 border-fuchsia-500';
-      case DealStage.NEGOTIATION: return 'border-t-4 border-cyan-500';
-      case DealStage.WON: return 'border-t-4 border-emerald-500';
-      case DealStage.LOST: return 'border-t-4 border-rose-500';
+      case DealStage.LEAD: return 'border-t-4 border-primary';
+      case DealStage.QUALIFICATION: return 'border-t-4 border-accent';
+      case DealStage.PROPOSAL: return 'border-t-4 border-blue-600';
+      case DealStage.NEGOTIATION: return 'border-t-4 border-amber-500';
+      case DealStage.WON: return 'border-t-4 border-secondary';
+      case DealStage.LOST: return 'border-t-4 border-red-600';
       default: return 'border-t-4 border-gray-200';
     }
   };
 
   const getStageHeaderColor = (stage: DealStage) => {
     switch (stage) {
-      case DealStage.LEAD: return 'bg-indigo-100 text-indigo-700';
-      case DealStage.QUALIFICATION: return 'bg-orange-100 text-orange-700';
-      case DealStage.PROPOSAL: return 'bg-fuchsia-100 text-fuchsia-700';
-      case DealStage.NEGOTIATION: return 'bg-cyan-100 text-cyan-700';
-      case DealStage.WON: return 'bg-emerald-100 text-emerald-700';
-      case DealStage.LOST: return 'bg-rose-100 text-rose-700';
-      default: return 'bg-gray-50 text-gray-500';
+      case DealStage.LEAD: return 'bg-primary/10 text-primary dark:bg-primary/20';
+      case DealStage.QUALIFICATION: return 'bg-accent/10 text-accent dark:bg-accent/20';
+      case DealStage.PROPOSAL: return 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400';
+      case DealStage.NEGOTIATION: return 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400';
+      case DealStage.WON: return 'bg-secondary/10 text-secondary dark:bg-secondary/20';
+      case DealStage.LOST: return 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400';
+      default: return 'bg-gray-50 text-gray-500 dark:bg-gray-800 dark:text-gray-400';
     }
   };
 
@@ -127,22 +127,22 @@ export const Deals: React.FC = () => {
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
         <div>
-          <h1 className="text-page-title text-dark">Opportunità</h1>
+          <h1 className="text-page-title text-dark dark:text-white">Opportunità</h1>
           <p className="text-page-subtitle mt-1">Trascina le card per cambiare lo stato</p>
         </div>
         <div className="flex flex-wrap gap-3">
-          <div className="bg-white px-4 py-2 rounded-full text-body font-medium text-dark flex items-center gap-2" shadow-sm>
+          <div className="bg-white dark:bg-dark-card px-4 py-2 rounded-lg text-body font-medium text-dark dark:text-white flex items-center gap-2 shadow-sm border border-gray-200 dark:border-dark-border">
             <TrendingUp size={16} className="text-primary" />
             Pipeline: <span className="font-bold text-primary">{formatCurrency(pipelineTotals.totalValue)}</span>
           </div>
-          <div className="bg-green-50 px-4 py-2 rounded-full text-body font-medium text-green-700">
+          <div className="bg-secondary px-4 py-2 rounded-lg text-body font-medium text-white">
             Vinto: <span className="font-bold">{formatCurrency(pipelineTotals.wonValue)}</span>
           </div>
           <button
             onClick={() => openNewDealModal()}
-            className="bg-dark text-white px-6 py-2 rounded-full text-body font-medium hover:bg-black transition-colors flex items-center gap-2"
+            className="bg-primary text-white px-6 py-2 rounded-lg font-medium hover:opacity-90 transition-all flex items-center gap-2 shadow-sm"
           >
-            <Plus size={18} className="text-primary"/>
+            <Plus size={18} />
             Nuova Opportunità
           </button>
         </div>
@@ -162,10 +162,10 @@ export const Deals: React.FC = () => {
                 className="w-72 flex-shrink-0 flex flex-col h-full"
               >
                 {/* Stage Header */}
-                <div className={`flex justify-between items-center mb-3 px-3 py-2 rounded-xl ${getStageHeaderColor(stage)}`}>
+                <div className={`flex justify-between items-center mb-3 px-3 py-2 rounded-lg ${getStageHeaderColor(stage)}`}>
                   <div className="flex items-center gap-2">
                     <h3 className="font-bold text-sm">{stage}</h3>
-                    <span className="bg-white/50 text-xs px-2 py-0.5 rounded-full font-semibold" shadow-sm>
+                    <span className="bg-white/60 dark:bg-black/30 text-xs px-2 py-0.5 rounded-md font-semibold shadow-sm">
                       {stageDeals.length}
                     </span>
                   </div>
@@ -174,10 +174,10 @@ export const Deals: React.FC = () => {
 
                 {/* Drop Zone */}
                 <div
-                  className={`flex-1 rounded-2xl p-2 space-y-2 overflow-y-auto min-h-[400px] transition-all duration-200 ${
+                  className={`flex-1 rounded-lg p-2 space-y-2 overflow-y-auto min-h-[400px] transition-all duration-200 ${
                     isDropTarget
-                      ? 'bg-primary/10 border-2 border-dashed border-primary'
-                      : 'bg-gray-50/50 border-2 border-transparent'
+                      ? 'bg-primary/10 dark:bg-primary/20 border border-dashed border-primary'
+                      : 'bg-gray-50/50 dark:bg-dark-bg/50 border border-transparent'
                   }`}
                   onDragOver={(e) => handleDragOver(e, stage)}
                   onDragLeave={handleDragLeave}
@@ -189,15 +189,15 @@ export const Deals: React.FC = () => {
                       draggable
                       onDragStart={(e) => handleDragStart(e, deal)}
                       onDragEnd={handleDragEnd}
-                      className={`bg-white p-4 rounded-xl hover:shadow-md transition-all cursor-grab active:cursor-grabbing ${getStageColor(stage)} ${
+                      className={`bg-white dark:bg-dark-card p-4 rounded-lg hover:shadow-md transition-all cursor-grab active:cursor-grabbing ${getStageColor(stage)} ${
                         draggedDeal?.id === deal.id ? 'opacity-50' : ''
                       }`}
                     >
                       {/* Drag Handle & Actions */}
                       <div className="flex justify-between items-start mb-2">
                         <div className="flex items-center gap-1">
-                          <GripVertical size={14} className="text-gray-300" />
-                          <span className="text-xs font-bold text-gray-500 uppercase tracking-wide">
+                          <GripVertical size={14} className="text-gray-300 dark:text-gray-600 dark:text-gray-400" />
+                          <span className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
                             {deal.customerName}
                           </span>
                         </div>
@@ -209,7 +209,7 @@ export const Deals: React.FC = () => {
                               setPreselectedStage(null);
                               setShowModal(true);
                             }}
-                            className="text-gray-300 hover:text-blue-500 p-1"
+                            className="text-gray-300 dark:text-gray-600 hover:text-primary dark:hover:text-primary p-1"
                           >
                             <Edit2 size={14} />
                           </button>
@@ -218,7 +218,7 @@ export const Deals: React.FC = () => {
                               e.stopPropagation();
                               handleDelete(deal.id);
                             }}
-                            className="text-gray-300 hover:text-red-500 p-1"
+                            className="text-gray-300 dark:text-gray-600 hover:text-red-500 p-1"
                           >
                             <Trash2 size={14} />
                           </button>
@@ -226,15 +226,15 @@ export const Deals: React.FC = () => {
                       </div>
 
                       {/* Deal Title */}
-                      <h4 className="font-bold text-dark text-base mb-3 leading-snug">{deal.title}</h4>
+                      <h4 className="font-bold text-dark dark:text-white text-base mb-3 leading-snug">{deal.title}</h4>
 
                       {/* Deal Info */}
-                      <div className="flex items-center justify-between mt-3 pt-2 border-t border-gray-200">
-                        <div className="flex items-center gap-1 text-gray-500 text-sm font-bold">
+                      <div className="flex items-center justify-between mt-3 pt-2 border-t border-gray-200 dark:border-dark-border">
+                        <div className="flex items-center gap-1 text-gray-500 dark:text-gray-400 text-sm font-bold">
                           <DollarSign size={14} className="text-primary" />
                           {formatCurrency(deal.value || 0)}
                         </div>
-                        <div className="flex items-center gap-1 text-gray-500 text-xs">
+                        <div className="flex items-center gap-1 text-gray-500 dark:text-gray-400 text-xs">
                           <Calendar size={12} />
                           {deal.expectedClose ? new Date(deal.expectedClose).toLocaleDateString('it-IT', {
                             month: 'short',
@@ -246,16 +246,16 @@ export const Deals: React.FC = () => {
                       {/* Probability Bar */}
                       {deal.probability !== undefined && (
                         <div className="mt-3">
-                          <div className="flex justify-between text-xs text-gray-500 mb-1">
+                          <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400 mb-1">
                             <span>Probabilità</span>
                             <span className="font-semibold">{deal.probability}%</span>
                           </div>
-                          <div className="w-full bg-gray-50 rounded-full h-1.5">
+                          <div className="w-full bg-gray-100 dark:bg-gray-700 rounded-full h-1.5">
                             <div
                               className={`h-1.5 rounded-full transition-all ${
-                                deal.probability >= 75 ? 'bg-green-500' :
-                                deal.probability >= 50 ? 'bg-blue-500' :
-                                deal.probability >= 25 ? 'bg-yellow-500' : 'bg-gray-400'
+                                deal.probability >= 75 ? 'bg-secondary' :
+                                deal.probability >= 50 ? 'bg-primary' :
+                                deal.probability >= 25 ? 'bg-amber-500' : 'bg-gray-400'
                               }`}
                               style={{ width: `${deal.probability}%` }}
                             />
@@ -268,7 +268,7 @@ export const Deals: React.FC = () => {
                   {/* Add Deal Button */}
                   <button
                     onClick={() => openNewDealModal(stage)}
-                    className="w-full py-3 border-2 border-dashed border-gray-200 rounded-xl text-gray-500 hover:border-primary hover:text-primary transition-colors flex items-center justify-center gap-2 text-sm font-medium"
+                    className="w-full py-3 border border-dashed border-gray-200 dark:border-dark-border text-gray-500 dark:text-gray-400 hover:border-primary hover:text-primary transition-colors rounded-lg flex items-center justify-center gap-2 text-sm font-medium"
                   >
                     <Plus size={16} /> Aggiungi
                   </button>
@@ -355,13 +355,13 @@ const DealModal: React.FC<DealModalProps> = ({ deal, preselectedStage, customers
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto" shadow-sm>
-        <div className="p-6 border-b border-gray-200 flex justify-between items-center">
-          <h2 className="text-xl font-bold text-dark">
+    <div className="fixed inset-0 bg-black/50 dark:bg-black/70 flex items-center justify-center z-50 p-4">
+      <div className="bg-white dark:bg-dark-card rounded-lg shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+        <div className="p-6 border-b border-gray-200 dark:border-dark-border flex justify-between items-center">
+          <h2 className="text-xl font-bold text-dark dark:text-white">
             {deal ? 'Modifica Opportunità' : 'Nuova Opportunità'}
           </h2>
-          <button onClick={onClose} className="text-gray-500 hover:text-dark">
+          <button onClick={onClose} className="text-gray-500 dark:text-gray-400 hover:text-dark dark:hover:text-white">
             <X size={24} />
           </button>
         </div>
@@ -369,24 +369,24 @@ const DealModal: React.FC<DealModalProps> = ({ deal, preselectedStage, customers
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           {/* Titolo */}
           <div>
-            <label className="block text-sm font-medium text-gray-500 mb-1">Titolo Opportunità *</label>
+            <label className="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Titolo Opportunità *</label>
             <input
               type="text"
               value={formData.title || ''}
               onChange={(e) => updateField('title', e.target.value)}
               placeholder="Es: Licenza Enterprise, Consulenza Q1..."
-              className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:outline-none"
+              className="w-full pl-4 pr-12 py-2 bg-gray-50 dark:bg-gray-800/30 border border-gray-200 dark:border-dark-border rounded-lg focus:ring-2 focus:ring-primary focus:outline-none text-dark dark:text-white"
               required
             />
           </div>
 
           {/* Cliente */}
           <div>
-            <label className="block text-sm font-medium text-gray-500 mb-1">Cliente *</label>
+            <label className="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Cliente *</label>
             <select
               value={formData.customerName || ''}
               onChange={(e) => updateField('customerName', e.target.value)}
-              className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:outline-none"
+              className="w-full pl-4 pr-12 py-2 bg-gray-50 dark:bg-gray-800/30 border border-gray-200 dark:border-dark-border rounded-lg focus:ring-2 focus:ring-primary focus:outline-none text-dark dark:text-white"
               required
             >
               <option value="">Seleziona cliente...</option>
@@ -402,7 +402,7 @@ const DealModal: React.FC<DealModalProps> = ({ deal, preselectedStage, customers
                 type="text"
                 onChange={(e) => updateField('customerName', e.target.value)}
                 placeholder="Nome cliente..."
-                className="w-full mt-2 px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:outline-none"
+                className="w-full mt-2 pl-4 pr-12 py-2 bg-white dark:bg-gray-800/30 border border-gray-200 dark:border-dark-border rounded-lg focus:ring-2 focus:ring-primary focus:outline-none text-dark dark:text-white"
                 required
               />
             )}
@@ -411,23 +411,23 @@ const DealModal: React.FC<DealModalProps> = ({ deal, preselectedStage, customers
           {/* Valore e Data Chiusura */}
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-500 mb-1">Valore (€) *</label>
+              <label className="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Valore (€) *</label>
               <input
                 type="number"
                 step="0.01"
                 value={formData.value || 0}
                 onChange={(e) => updateField('value', parseFloat(e.target.value) || 0)}
-                className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:outline-none"
+                className="w-full pl-4 pr-12 py-2 bg-gray-50 dark:bg-gray-800/30 border border-gray-200 dark:border-dark-border rounded-lg focus:ring-2 focus:ring-primary focus:outline-none text-dark dark:text-white"
                 required
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-500 mb-1">Data Chiusura Prevista</label>
+              <label className="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Data Chiusura Prevista</label>
               <input
                 type="date"
                 value={formData.expectedClose ? formData.expectedClose.split('T')[0] : ''}
                 onChange={(e) => updateField('expectedClose', e.target.value)}
-                className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:outline-none"
+                className="w-full pl-4 pr-12 py-2 bg-gray-50 dark:bg-gray-800/30 border border-gray-200 dark:border-dark-border rounded-lg focus:ring-2 focus:ring-primary focus:outline-none text-dark dark:text-white"
               />
             </div>
           </div>
@@ -435,11 +435,11 @@ const DealModal: React.FC<DealModalProps> = ({ deal, preselectedStage, customers
           {/* Stato e Probabilità */}
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-500 mb-1">Stato</label>
+              <label className="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Stato</label>
               <select
                 value={formData.stage || DealStage.LEAD}
                 onChange={(e) => updateField('stage', e.target.value as DealStage)}
-                className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:outline-none"
+                className="w-full pl-4 pr-12 py-2 bg-gray-50 dark:bg-gray-800/30 border border-gray-200 dark:border-dark-border rounded-lg focus:ring-2 focus:ring-primary focus:outline-none text-dark dark:text-white"
               >
                 {Object.values(DealStage).map(s => (
                   <option key={s} value={s}>{s}</option>
@@ -447,27 +447,27 @@ const DealModal: React.FC<DealModalProps> = ({ deal, preselectedStage, customers
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-500 mb-1">Probabilità (%)</label>
+              <label className="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Probabilità (%)</label>
               <input
                 type="number"
                 min="0"
                 max="100"
                 value={formData.probability || 0}
                 onChange={(e) => updateField('probability', parseInt(e.target.value) || 0)}
-                className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:outline-none"
+                className="w-full pl-4 pr-12 py-2 bg-gray-50 dark:bg-gray-800/30 border border-gray-200 dark:border-dark-border rounded-lg focus:ring-2 focus:ring-primary focus:outline-none text-dark dark:text-white"
               />
             </div>
           </div>
 
           {/* Valore Ponderato */}
-          <div className="bg-gray-50 p-4 rounded-xl">
+          <div className="bg-gray-50 dark:bg-gray-800/30 p-4 rounded-lg border border-gray-200 dark:border-dark-border">
             <div className="flex justify-between items-center">
-              <span className="text-gray-500">Valore Ponderato</span>
+              <span className="text-gray-500 dark:text-gray-400">Valore Ponderato</span>
               <span className="text-xl font-bold text-primary">
                 {formatCurrency(((formData.value || 0) * (formData.probability || 0)) / 100)}
               </span>
             </div>
-            <p className="text-xs text-gray-500 mt-1">
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
               Valore × Probabilità = contributo alla pipeline
             </p>
           </div>
@@ -477,13 +477,13 @@ const DealModal: React.FC<DealModalProps> = ({ deal, preselectedStage, customers
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 px-6 py-3 border border-gray-200 rounded-xl font-medium text-gray-500 hover:bg-gray-50 transition-colors"
+              className="flex-1 px-6 py-3 bg-gray-50 dark:bg-dark-bg border border-gray-200 dark:border-dark-border rounded-lg font-medium text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
             >
               Annulla
             </button>
             <button
               type="submit"
-              className="flex-1 px-6 py-3 bg-dark text-white rounded-xl font-medium hover:bg-black transition-colors flex items-center justify-center gap-2"
+              className="flex-1 px-6 py-3 bg-primary text-white rounded-lg font-medium hover:opacity-90 transition-all flex items-center justify-center gap-2"
             >
               <Check size={18} />
               {deal ? 'Salva Modifiche' : 'Crea Opportunità'}

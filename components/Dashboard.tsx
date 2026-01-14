@@ -183,14 +183,14 @@ export const Dashboard: React.FC = () => {
       {/* Header Section for Dashboard */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h1 className="text-page-title text-dark">Panoramica</h1>
-          <p className="text-page-subtitle mt-1">Informazioni dettagliate sulla tua attività</p>
+          <h1 className="text-page-title text-dark dark:text-white">Panoramica</h1>
+          <p className="text-page-subtitle text-gray-500 dark:text-gray-400 mt-1">Informazioni dettagliate sulla tua attività</p>
         </div>
         <div className="flex items-center gap-3">
-            <div className="bg-white rounded-full px-4 py-2 flex items-center gap-2 border border-gray-200 shadow-sm">
-                <span className="text-sm font-medium text-dark">Anno {new Date().getFullYear()}</span>
+            <div className="bg-white dark:bg-dark-card rounded-lg px-4 py-2 flex items-center gap-2 border border-gray-200 dark:border-dark-border shadow-sm">
+                <span className="text-sm font-medium text-dark dark:text-white">Anno {new Date().getFullYear()}</span>
             </div>
-            <button className="bg-primary text-white px-6 py-2 rounded-full font-medium hover:bg-orange-600 transition-colors flex items-center gap-2 shadow-sm">
+            <button className="bg-primary text-white px-6 py-2 rounded-lg font-medium hover:opacity-90 transition-all flex items-center gap-2 shadow-sm">
                 <ArrowUpRight size={18} />
                 Esporta
             </button>
@@ -200,103 +200,103 @@ export const Dashboard: React.FC = () => {
       {/* KPI Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
         {/* Revenue Card */}
-        <div className="bg-white p-6 rounded-[2rem] flex flex-col justify-between min-h-[180px] shadow-sm">
+        <div className="bg-white dark:bg-dark-card p-6 rounded-xl flex flex-col justify-between min-h-[180px] shadow-sm border border-gray-100 dark:border-dark-border">
           <div>
-            <h3 className="text-card-title">Fatturato Totale</h3>
+            <h3 className="text-card-title text-gray-500 dark:text-gray-400">Fatturato Totale</h3>
             <div className="flex items-center gap-3 mt-2">
-              <span className="text-kpi-value text-dark">
+              <span className="text-kpi-value text-dark dark:text-white">
                 {formatCurrencyNoDecimals(dashboardData.currentRevenue)}
               </span>
-              <span className={`text-white text-xs px-2 py-1 rounded-full ${dashboardData.revenueChange >= 0 ? 'bg-secondary' : 'bg-red-600'}`}>
+              <span className={`text-white text-xs px-2 py-1 rounded-md font-medium ${dashboardData.revenueChange >= 0 ? 'bg-secondary' : 'bg-red-600'}`}>
                 {dashboardData.revenueChange >= 0 ? '+' : ''}{dashboardData.revenueChange.toFixed(1)}%
               </span>
             </div>
-            <p className="text-small mt-1">
+            <p className="text-small text-gray-500 dark:text-gray-400 mt-1">
               {formatCurrencyNoDecimals(dashboardData.lastRevenue)} anno scorso
             </p>
           </div>
           <div className="h-16 w-full mt-4">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={dashboardData.revenueChartData}>
-                 <Bar dataKey="value" fill="#D1F366" radius={[4, 4, 4, 4]} barSize={12} />
+                 <Bar dataKey="value" fill="#0EA5E9" radius={[4, 4, 4, 4]} barSize={12} />
               </BarChart>
             </ResponsiveContainer>
           </div>
         </div>
 
         {/* Cash Balance Card */}
-        <div className="bg-white p-6 rounded-[2rem] flex flex-col justify-between min-h-[180px] shadow-sm">
+        <div className="bg-white dark:bg-dark-card p-6 rounded-xl flex flex-col justify-between min-h-[180px] shadow-sm border border-gray-100 dark:border-dark-border">
           <div>
             <div className="flex items-center gap-2 mb-2">
               <Wallet size={18} className="text-primary" />
-              <h3 className="text-card-title">Saldo Cassa</h3>
+              <h3 className="text-card-title text-gray-500 dark:text-gray-400">Saldo Cassa</h3>
             </div>
             <div className="flex items-center gap-3 mt-2">
               <span className={`text-kpi-value ${dashboardData.currentCashBalance >= 0 ? 'text-secondary' : 'text-red-600'}`}>
                 {formatCurrencyNoDecimals(dashboardData.currentCashBalance)}
               </span>
-              <span className={`text-white text-xs px-2 py-1 rounded-full ${dashboardData.cashBalanceChange >= 0 ? 'bg-secondary' : 'bg-red-600'}`}>
+              <span className={`text-white text-xs px-2 py-1 rounded-md font-medium ${dashboardData.cashBalanceChange >= 0 ? 'bg-secondary' : 'bg-red-600'}`}>
                 {dashboardData.cashBalanceChange >= 0 ? '+' : ''}{dashboardData.cashBalanceChange.toFixed(1)}%
               </span>
             </div>
             <div className="flex items-center gap-3 mt-2">
               <div className="flex items-center gap-1">
                 <TrendingUp size={14} className="text-secondary" />
-                <span className="text-xs text-gray-500">{formatCurrencyNoDecimals(dashboardData.currentCashflowIn)}</span>
+                <span className="text-xs text-gray-500 dark:text-gray-400">{formatCurrencyNoDecimals(dashboardData.currentCashflowIn)}</span>
               </div>
               <div className="flex items-center gap-1">
                 <TrendingDown size={14} className="text-red-500" />
-                <span className="text-xs text-gray-500">{formatCurrencyNoDecimals(dashboardData.currentCashflowOut)}</span>
+                <span className="text-xs text-gray-500 dark:text-gray-400">{formatCurrencyNoDecimals(dashboardData.currentCashflowOut)}</span>
               </div>
             </div>
           </div>
         </div>
 
         {/* Customers Card */}
-        <div className="bg-white p-6 rounded-[2rem] flex flex-col justify-between min-h-[180px] shadow-sm">
+        <div className="bg-white dark:bg-dark-card p-6 rounded-xl flex flex-col justify-between min-h-[180px] shadow-sm border border-gray-100 dark:border-dark-border">
           <div>
             <div className="flex items-center gap-2 mb-2">
               <Users size={18} className="text-primary" />
-              <h3 className="text-card-title">Clienti</h3>
+              <h3 className="text-card-title text-gray-500 dark:text-gray-400">Clienti</h3>
             </div>
             <div className="flex items-center gap-3 mt-2">
-              <span className="text-kpi-value text-dark">{dashboardData.totalCustomers}</span>
+              <span className="text-kpi-value text-dark dark:text-white">{dashboardData.totalCustomers}</span>
             </div>
-            <p className="text-small mt-1">{dashboardData.activeCustomers} attivi</p>
-            <p className="text-small">{dashboardData.customersWithInvoices} con fatture quest'anno</p>
+            <p className="text-small text-gray-500 dark:text-gray-400 mt-1">{dashboardData.activeCustomers} attivi</p>
+            <p className="text-small text-gray-500 dark:text-gray-400">{dashboardData.customersWithInvoices} con fatture quest'anno</p>
           </div>
         </div>
 
         {/* Projects Card */}
-        <div className="bg-white p-6 rounded-[2rem] flex flex-col justify-between min-h-[180px] shadow-sm">
+        <div className="bg-white dark:bg-dark-card p-6 rounded-xl flex flex-col justify-between min-h-[180px] shadow-sm border border-gray-100 dark:border-dark-border">
           <div>
-             <h3 className="text-card-title">Progetti Attivi</h3>
+             <h3 className="text-card-title text-gray-500 dark:text-gray-400">Progetti Attivi</h3>
              <div className="flex items-center gap-3 mt-2">
-                 <span className="text-kpi-value text-dark">{dashboardData.currentProjects}</span>
-                 <span className={`text-white text-xs px-2 py-1 rounded-full ${dashboardData.projectsChange >= 0 ? 'bg-secondary' : 'bg-red-600'}`}>
+                 <span className="text-kpi-value text-dark dark:text-white">{dashboardData.currentProjects}</span>
+                 <span className={`text-white text-xs px-2 py-1 rounded-md font-medium ${dashboardData.projectsChange >= 0 ? 'bg-secondary' : 'bg-red-600'}`}>
                    {dashboardData.projectsChange >= 0 ? '+' : ''}{dashboardData.projectsChange.toFixed(1)}%
                  </span>
              </div>
-             <p className="text-small mt-1">{dashboardData.lastProjects} progetti anno scorso</p>
+             <p className="text-small text-gray-500 dark:text-gray-400 mt-1">{dashboardData.lastProjects} progetti anno scorso</p>
           </div>
         </div>
 
         {/* Invoices Card */}
-        <div className="bg-white p-6 rounded-[2rem] flex flex-col justify-between min-h-[180px] shadow-sm">
+        <div className="bg-white dark:bg-dark-card p-6 rounded-xl flex flex-col justify-between min-h-[180px] shadow-sm border border-gray-100 dark:border-dark-border">
             <div>
-                <h3 className="text-card-title">Fatture Totali</h3>
+                <h3 className="text-card-title text-gray-500 dark:text-gray-400">Fatture Totali</h3>
                 <div className="flex items-center gap-3 mt-2">
-                    <span className="text-kpi-value text-dark">{dashboardData.currentTransactions}</span>
-                    <span className={`text-white text-xs px-2 py-1 rounded-full ${dashboardData.transactionsChange >= 0 ? 'bg-secondary' : 'bg-red-600'}`}>
+                    <span className="text-kpi-value text-dark dark:text-white">{dashboardData.currentTransactions}</span>
+                    <span className={`text-white text-xs px-2 py-1 rounded-md font-medium ${dashboardData.transactionsChange >= 0 ? 'bg-secondary' : 'bg-red-600'}`}>
                       {dashboardData.transactionsChange >= 0 ? '+' : ''}{dashboardData.transactionsChange.toFixed(1)}%
                     </span>
                 </div>
-                <p className="text-small mt-1">{dashboardData.lastTransactions} fatture anno scorso</p>
+                <p className="text-small text-gray-500 dark:text-gray-400 mt-1">{dashboardData.lastTransactions} fatture anno scorso</p>
             </div>
             <div className="h-16 w-full mt-2">
                 <ResponsiveContainer width="100%" height="100%">
                     <LineChart data={dashboardData.transactionsChartData}>
-                        <Line type="monotone" dataKey="sales" stroke="#D1F366" strokeWidth={3} dot={false} />
+                        <Line type="monotone" dataKey="sales" stroke="#10B981" strokeWidth={3} dot={false} />
                     </LineChart>
                 </ResponsiveContainer>
             </div>
@@ -304,10 +304,10 @@ export const Dashboard: React.FC = () => {
       </div>
 
       {/* Andamento Mensile Fatturato */}
-      <div className="bg-white p-8 rounded-[2rem] shadow-sm">
+      <div className="bg-white dark:bg-dark-card p-8 rounded-xl shadow-sm border border-gray-100 dark:border-dark-border">
         <div className="flex justify-between items-center mb-8">
-          <h3 className="text-section-title text-dark">Andamento Mensile Fatturato</h3>
-          <div className="text-sm text-gray-500">
+          <h3 className="text-section-title text-dark dark:text-white">Andamento Mensile Fatturato</h3>
+          <div className="text-sm text-gray-500 dark:text-gray-400">
             Anno {new Date().getFullYear()}
           </div>
         </div>
@@ -322,9 +322,9 @@ export const Dashboard: React.FC = () => {
                 dy={10}
               />
               <Tooltip
-                cursor={{ fill: 'rgba(209, 243, 102, 0.1)' }}
+                cursor={{ fill: 'rgba(14, 165, 233, 0.1)' }}
                 contentStyle={{
-                  backgroundColor: '#111827',
+                  backgroundColor: '#1E293B',
                   borderRadius: '12px',
                   border: 'none',
                   color: '#fff',
@@ -332,9 +332,9 @@ export const Dashboard: React.FC = () => {
                 }}
                 itemStyle={{ color: '#fff' }}
                 formatter={(value) => formatCurrency(Number(value))}
-                labelStyle={{ color: '#D1F366', fontWeight: 'bold' }}
+                labelStyle={{ color: '#0EA5E9', fontWeight: 'bold' }}
               />
-              <Bar dataKey="value" fill="#D1F366" radius={[8, 8, 0, 0]} barSize={40} />
+              <Bar dataKey="value" fill="#0EA5E9" radius={[8, 8, 0, 0]} barSize={40} />
             </BarChart>
           </ResponsiveContainer>
         </div>

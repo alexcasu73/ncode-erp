@@ -42,6 +42,14 @@ const camelToSnake = (obj: any): any => {
   return obj;
 };
 
+export interface AIProcessingState {
+  isProcessing: boolean;
+  sessionId: string | null;
+  current: number;
+  total: number;
+  shouldStop: boolean;
+}
+
 interface DataContextType {
   // Data
   customers: Customer[];
@@ -58,6 +66,11 @@ interface DataContextType {
   loading: boolean;
   error: string | null;
   isSupabaseConfigured: boolean;
+
+  // AI Processing state (global, persists across page changes)
+  aiProcessing: AIProcessingState;
+  setAiProcessing: (state: Partial<AIProcessingState>) => void;
+  stopAiProcessing: () => void;
 
   // Customer CRUD
   addCustomer: (customer: Omit<Customer, 'id'>) => Promise<Customer | null>;
@@ -97,6 +110,7 @@ interface DataContextType {
   addReconciliationSession: (session: ReconciliationSession) => Promise<ReconciliationSession | null>;
   updateReconciliationSession: (id: string, session: Partial<ReconciliationSession>) => Promise<boolean>;
   deleteReconciliationSession: (id: string) => Promise<boolean>;
+  clearAllReconciliationSessions: () => Promise<boolean>;
 
   // Bank Transaction CRUD
   addBankTransaction: (transaction: BankTransaction) => Promise<BankTransaction | null>;
@@ -127,6 +141,23 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [bankBalances, setBankBalances] = useState<BankBalance[]>([]);
   const [reconciliationSessions, setReconciliationSessions] = useState<ReconciliationSession[]>([]);
   const [bankTransactions, setBankTransactions] = useState<BankTransaction[]>([]);
+
+  // AI Processing state - persists across component unmounts
+  const [aiProcessing, setAiProcessingState] = useState<AIProcessingState>({
+    isProcessing: false,
+    sessionId: null,
+    current: 0,
+    total: 0,
+    shouldStop: false
+  });
+
+  const setAiProcessing = useCallback((state: Partial<AIProcessingState>) => {
+    setAiProcessingState(prev => ({ ...prev, ...state }));
+  }, []);
+
+  const stopAiProcessing = useCallback(() => {
+    setAiProcessingState(prev => ({ ...prev, shouldStop: true }));
+  }, []);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -483,15 +514,19 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Financial Item CRUD
   const addFinancialItem = async (item: Omit<FinancialItem, 'id'>): Promise<FinancialItem | null> => {
+    // Generate ID for financial item
+    const newId = `FI-${Date.now()}`;
+    const itemWithId = { ...item, id: newId };
+
     if (!isSupabaseConfigured) {
-      const newItem = { ...item, id: `FI-${Date.now()}` } as FinancialItem;
+      const newItem = itemWithId as FinancialItem;
       setFinancialItems(prev => [...prev, newItem]);
       return newItem;
     }
 
     const { data, error } = await supabase
       .from('financial_items')
-      .insert(camelToSnake(item))
+      .insert(camelToSnake(itemWithId))
       .select()
       .single();
 
@@ -730,6 +765,40 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return true;
   };
 
+  const clearAllReconciliationSessions = async (): Promise<boolean> => {
+    if (!isSupabaseConfigured) {
+      setReconciliationSessions([]);
+      setBankTransactions([]);
+      return true;
+    }
+
+    // Delete all reconciliation sessions
+    const { error: sessionsError } = await supabase
+      .from('reconciliation_sessions')
+      .delete()
+      .neq('id', ''); // Delete all rows
+
+    if (sessionsError) {
+      console.error('Error clearing reconciliation sessions:', sessionsError);
+      return false;
+    }
+
+    // Delete all bank transactions
+    const { error: transactionsError } = await supabase
+      .from('bank_transactions')
+      .delete()
+      .neq('id', ''); // Delete all rows
+
+    if (transactionsError) {
+      console.error('Error clearing bank transactions:', transactionsError);
+      return false;
+    }
+
+    setReconciliationSessions([]);
+    setBankTransactions([]);
+    return true;
+  };
+
   // Bank Transaction CRUD
   const addBankTransaction = async (transaction: BankTransaction): Promise<BankTransaction | null> => {
     if (!isSupabaseConfigured) {
@@ -803,6 +872,9 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     loading,
     error,
     isSupabaseConfigured,
+    aiProcessing,
+    setAiProcessing,
+    stopAiProcessing,
     addCustomer,
     updateCustomer,
     deleteCustomer,
@@ -829,6 +901,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     addReconciliationSession,
     updateReconciliationSession,
     deleteReconciliationSession,
+    clearAllReconciliationSessions,
     addBankTransaction,
     updateBankTransaction,
     deleteBankTransaction,

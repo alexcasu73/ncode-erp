@@ -2,6 +2,7 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
 import { DataProvider } from './context/DataContext';
+import { ThemeProvider } from './context/ThemeContext';
 
 const rootElement = document.getElementById('root');
 if (!rootElement) {
@@ -11,8 +12,10 @@ if (!rootElement) {
 const root = ReactDOM.createRoot(rootElement);
 root.render(
   <React.StrictMode>
-    <DataProvider>
-      <App />
-    </DataProvider>
+    <ThemeProvider>
+      <DataProvider>
+        <App />
+      </DataProvider>
+    </ThemeProvider>
   </React.StrictMode>
 );

@@ -12,9 +12,14 @@ const formatDate = (dateStr: string): string => {
   return date.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' });
 };
 
-// Format invoice ID: ID is already in format "xyz/anno", just return it
+// Format invoice ID: "Fattura_xyz" -> "xyz/anno"
 const formatInvoiceId = (id: string, anno: number): string => {
-  return id; // ID is already in format "xyz/2026"
+  const numero = id.replace('Fattura_', '');
+  // Se il numero contiene già l'anno (es. "180/2026"), non duplicarlo
+  if (numero.includes('/')) {
+    return numero;
+  }
+  return `${numero}/${anno}`;
 };
 
 // Transaction row component
@@ -49,10 +54,10 @@ const TransactionRow: React.FC<{
 
   const getStatusColor = () => {
     switch (transaction.matchStatus) {
-      case 'matched': return 'bg-green-100 text-green-800';
-      case 'ignored': return 'bg-gray-50 text-gray-500';
-      case 'manual': return 'bg-blue-100 text-blue-800';
-      default: return 'bg-yellow-100 text-yellow-800';
+      case 'matched': return 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-400';
+      case 'ignored': return 'bg-gray-50 dark:bg-gray-800 text-gray-500 dark:text-gray-400';
+      case 'manual': return 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-400';
+      default: return 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-400';
     }
   };
 
@@ -72,9 +77,9 @@ const TransactionRow: React.FC<{
   };
 
   return (
-    <div className={`border-b border-gray-200 last:border-b-0 ${isSelected ? 'bg-primary/5' : ''}`}>
+    <div className={`border-b border-gray-200 dark:border-dark-border last:border-b-0 ${isSelected ? 'bg-primary/5 dark:bg-primary/10' : ''}`}>
       <div
-        className={`p-4 hover:bg-gray-50 transition-colors cursor-pointer ${expanded ? 'bg-gray-50' : ''}`}
+        className={`p-4 hover:bg-gray-50 dark:hover:bg-dark-bg transition-colors cursor-pointer ${expanded ? 'bg-gray-50 dark:bg-dark-bg' : ''}`}
         onClick={() => setExpanded(!expanded)}
       >
         <div className="flex items-center justify-between">
@@ -82,7 +87,7 @@ const TransactionRow: React.FC<{
             <button
               onClick={(e) => { e.stopPropagation(); onToggleSelect(); }}
               disabled={disabled}
-              className="text-gray-500 hover:text-dark transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="text-gray-500 dark:text-gray-400 hover:text-dark dark:hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isSelected ? (
                 <CheckSquare size={18} className="text-primary" />
@@ -90,13 +95,13 @@ const TransactionRow: React.FC<{
                 <Square size={18} />
               )}
             </button>
-            <div className="w-24 text-sm text-gray-500">{formatDate(transaction.data)}</div>
+            <div className="w-24 text-sm text-gray-500 dark:text-gray-400">{formatDate(transaction.data)}</div>
             <div className="flex-1">
-              <div className="font-medium text-dark text-sm truncate max-w-md">
+              <div className="font-medium text-dark dark:text-white text-sm truncate max-w-md">
                 {transaction.descrizione || transaction.causale || 'Movimento senza descrizione'}
               </div>
               {transaction.causale && transaction.descrizione && (
-                <div className="text-xs text-gray-500">{transaction.causale}</div>
+                <div className="text-xs text-gray-500 dark:text-gray-400">{transaction.causale}</div>
               )}
             </div>
           </div>
@@ -122,29 +127,29 @@ const TransactionRow: React.FC<{
       </div>
 
       {expanded && (
-        <div className="px-4 pb-4 bg-gray-50">
-          <div className="bg-white rounded-lg p-4" shadow-sm>
+        <div className="px-4 pb-4 bg-gray-50 dark:bg-dark-bg">
+          <div className="bg-white dark:bg-dark-card rounded-lg p-4 shadow-sm border border-gray-200 dark:border-dark-border">
             {/* Transaction details */}
-            <div className="mb-4 p-3 bg-gray-50 rounded-lg">
-              <div className="text-xs font-medium text-gray-500 mb-2">DETTAGLI TRANSAZIONE</div>
+            <div className="mb-4 p-3 bg-gray-50 dark:bg-dark-bg rounded-lg">
+              <div className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">DETTAGLI TRANSAZIONE</div>
               <div className="space-y-1">
                 {transaction.descrizione && (
-                  <div className="text-sm text-dark">
+                  <div className="text-sm text-dark dark:text-white">
                     <span className="font-medium">Descrizione:</span> {transaction.descrizione}
                   </div>
                 )}
                 {transaction.causale && (
-                  <div className="text-sm text-dark">
+                  <div className="text-sm text-dark dark:text-white">
                     <span className="font-medium">Causale:</span> {transaction.causale}
                   </div>
                 )}
                 {transaction.dataValuta && (
-                  <div className="text-sm text-gray-500">
+                  <div className="text-sm text-gray-500 dark:text-gray-400">
                     <span className="font-medium">Data Valuta:</span> {formatDate(transaction.dataValuta)}
                   </div>
                 )}
                 {transaction.saldo !== undefined && (
-                  <div className="text-sm text-gray-500">
+                  <div className="text-sm text-gray-500 dark:text-gray-400">
                     <span className="font-medium">Saldo dopo operazione:</span> {formatCurrency(transaction.saldo)}
                   </div>
                 )}
@@ -153,40 +158,40 @@ const TransactionRow: React.FC<{
 
             {/* Match info */}
             {transaction.matchReason && (
-              <div className="mb-4 p-3 bg-blue-50 rounded-lg">
+              <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
                 <div className="flex items-start gap-2">
-                  <AlertCircle size={16} className="text-blue-600 mt-0.5" />
-                  <div className="text-sm text-blue-800">{transaction.matchReason}</div>
+                  <AlertCircle size={16} className="text-blue-600 dark:text-blue-400 mt-0.5" />
+                  <div className="text-sm text-blue-800 dark:text-blue-300">{transaction.matchReason}</div>
                 </div>
               </div>
             )}
 
             {/* Matched cashflow (priority) */}
             {matchedCashflow && (
-              <div className="mb-4 p-4 border-2 border-green-500 bg-green-50 rounded-lg" shadow-sm>
+              <div className="mb-4 p-4 border-2 border-green-500 dark:border-green-600 bg-green-50 dark:bg-green-900/20 rounded-lg shadow-sm">
                 <div className="flex items-center gap-2 mb-3">
                   <div className="w-8 h-8 bg-green-600 rounded-full flex items-center justify-center">
                     <Link2 size={16} className="text-white" />
                   </div>
-                  <span className="text-sm font-semibold text-green-900">MOVIMENTO DI CASSA ABBINATO</span>
+                  <span className="text-sm font-semibold text-green-900 dark:text-green-300">MOVIMENTO DI CASSA ABBINATO</span>
                 </div>
-                <div className="bg-white rounded-lg p-3 space-y-2">
+                <div className="bg-white dark:bg-dark-card rounded-lg p-3 space-y-2 border border-gray-200 dark:border-dark-border">
                   <div className="flex items-baseline gap-2 text-sm">
-                    <span className="font-bold text-green-700">{matchedCashflow.id}</span>
-                    <span className="text-gray-400">|</span>
-                    <span className="text-gray-700">{matchedCashflow.dataPagamento ? formatDate(matchedCashflow.dataPagamento) : 'N/D'}</span>
-                    <span className="text-gray-400">|</span>
-                    <span className="font-bold text-lg text-green-600">
+                    <span className="font-bold text-green-700 dark:text-green-400">{matchedCashflow.id}</span>
+                    <span className="text-gray-400 dark:text-gray-500 dark:text-gray-400">|</span>
+                    <span className="text-gray-700 dark:text-gray-300 dark:text-gray-600">{matchedCashflow.dataPagamento ? formatDate(matchedCashflow.dataPagamento) : 'N/D'}</span>
+                    <span className="text-gray-400 dark:text-gray-500 dark:text-gray-400">|</span>
+                    <span className="font-bold text-lg text-green-600 dark:text-green-400">
                       {(matchedCashflow.importo || ((matchedInvoice?.flusso || 0) + (matchedInvoice?.iva || 0))).toFixed(2).replace('.', ',')} €
                     </span>
                   </div>
                   {(matchedCashflow.note || matchedCashflow.descrizione) && (
-                    <div className="text-sm text-gray-700 pt-1 border-t border-gray-100">
-                      <span className="font-medium text-gray-500">Note:</span> {matchedCashflow.note || matchedCashflow.descrizione}
+                    <div className="text-sm text-gray-700 dark:text-gray-300 pt-1 border-t border-gray-100 dark:border-dark-border">
+                      <span className="font-medium text-gray-500 dark:text-gray-400">Note:</span> {matchedCashflow.note || matchedCashflow.descrizione}
                     </div>
                   )}
                   {matchedInvoice && (
-                    <div className="text-xs text-gray-600 pt-1 border-t border-gray-100">
+                    <div className="text-xs text-gray-600 dark:text-gray-400 pt-1 border-t border-gray-100 dark:border-dark-border">
                       <span className="font-medium">Rif. Fattura:</span> {formatInvoiceId(matchedInvoice.id, matchedInvoice.anno)} - {matchedInvoice.nomeProgetto || matchedInvoice.spesa || 'N/A'}
                     </div>
                   )}
@@ -196,22 +201,22 @@ const TransactionRow: React.FC<{
 
             {/* Matched invoice only (when no cashflow) */}
             {!matchedCashflow && matchedInvoice && (
-              <div className="mb-4 p-3 border-2 border-green-500 bg-white rounded-lg" shadow-sm>
+              <div className="mb-4 p-3 border-2 border-green-500 dark:border-green-600 bg-white dark:bg-dark-card rounded-lg shadow-sm">
                 <div className="flex items-center gap-2 mb-2">
-                  <Link2 size={16} className="text-green-600" />
-                  <span className="text-sm font-medium text-dark">FATTURA ABBINATA</span>
+                  <Link2 size={16} className="text-green-600 dark:text-green-400" />
+                  <span className="text-sm font-medium text-dark dark:text-white">FATTURA ABBINATA</span>
                 </div>
                 <div className="space-y-2">
-                  <div className="text-sm text-dark">
+                  <div className="text-sm text-dark dark:text-white">
                     <span className="font-semibold">{formatInvoiceId(matchedInvoice.id, matchedInvoice.anno)}</span>
-                    <span className="mx-2 text-gray-500">•</span>
+                    <span className="mx-2 text-gray-500 dark:text-gray-400">•</span>
                     <span className="font-medium">{matchedInvoice.nomeProgetto || matchedInvoice.spesa || 'N/A'}</span>
-                    <span className="mx-2 text-gray-500">•</span>
-                    <span className="font-semibold text-green-600">{formatCurrency((matchedInvoice.flusso || 0) + (matchedInvoice.iva || 0))}</span>
+                    <span className="mx-2 text-gray-500 dark:text-gray-400">•</span>
+                    <span className="font-semibold text-green-600 dark:text-green-400">{formatCurrency((matchedInvoice.flusso || 0) + (matchedInvoice.iva || 0))}</span>
                   </div>
                   {matchedInvoice.note && (
-                    <div className="text-sm text-dark bg-gray-50 rounded p-2 border border-gray-200">
-                      <span className="font-medium text-dark">Descrizione:</span> {matchedInvoice.note}
+                    <div className="text-sm text-dark dark:text-white bg-gray-50 dark:bg-dark-bg rounded p-2 border border-gray-200 dark:border-dark-border">
+                      <span className="font-medium text-dark dark:text-white">Descrizione:</span> {matchedInvoice.note}
                     </div>
                   )}
                 </div>
@@ -233,7 +238,7 @@ const TransactionRow: React.FC<{
                 <button
                   onClick={(e) => { e.stopPropagation(); onManualMatch(); }}
                   disabled={disabled}
-                  className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-primary text-white rounded-lg text-sm font-medium hover:opacity-90 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <Link2 size={14} />
                   Abbina Manualmente
@@ -241,7 +246,7 @@ const TransactionRow: React.FC<{
                 <button
                   onClick={(e) => { e.stopPropagation(); onRunAI(); }}
                   disabled={isProcessing || disabled}
-                  className="flex items-center gap-1.5 px-3 py-1.5 bg-purple-600 text-white rounded-lg text-sm font-medium hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-accent text-white rounded-lg text-sm font-medium hover:opacity-90 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <RefreshCw size={14} className={isProcessing ? 'animate-spin' : ''} />
                   Analizza AI
@@ -249,7 +254,7 @@ const TransactionRow: React.FC<{
                 <button
                   onClick={(e) => { e.stopPropagation(); onIgnore(); }}
                   disabled={disabled}
-                  className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-50 text-gray-500 rounded-lg text-sm font-medium hover:bg-gray-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-50 dark:bg-gray-800/30 border border-gray-200 dark:border-dark-border text-gray-500 dark:text-gray-400 rounded-lg text-sm font-medium hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <X size={14} />
                   Ignora
@@ -318,22 +323,22 @@ const ManualMatchModal: React.FC<{
   }, [invoices, transaction.tipo, search]);
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={onClose}>
+    <div className="fixed inset-0 bg-black/50 dark:bg-black/70 flex items-center justify-center z-50" onClick={onClose}>
       <div
-        className="bg-white rounded-2xl w-full max-w-2xl max-h-[80vh] overflow-hidden shadow-xl" shadow-sm
+        className="bg-white dark:bg-dark-card rounded-lg w-full max-w-2xl max-h-[80vh] overflow-hidden shadow-xl"
         onClick={e => e.stopPropagation()}
       >
-        <div className="p-6 border-b border-gray-200">
-          <h3 className="text-xl font-semibold text-dark">Abbina Transazione</h3>
+        <div className="p-6 border-b border-gray-200 dark:border-dark-border">
+          <h3 className="text-xl font-semibold text-dark dark:text-white">Abbina Transazione</h3>
           <p className="text-sm text-gray-500 mt-1">
             {formatDate(transaction.data)} | {transaction.tipo === 'Entrata' ? '+' : '-'}{formatCurrency(transaction.importo)}
           </p>
           <p className="text-sm text-gray-500 mt-1">{transaction.descrizione}</p>
         </div>
 
-        <div className="p-4 border-b border-gray-200">
+        <div className="p-4 border-b border-gray-200 dark:border-dark-border">
           <div className="relative">
-            <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
+            <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400" />
             <input
               type="text"
               value={search}
@@ -346,7 +351,7 @@ const ManualMatchModal: React.FC<{
 
         <div className="overflow-y-auto max-h-96">
           {filteredInvoices.length === 0 ? (
-            <div className="p-8 text-center text-gray-500">
+            <div className="p-8 text-center text-gray-500 dark:text-gray-400">
               Nessuna fattura trovata
             </div>
           ) : (
@@ -365,7 +370,7 @@ const ManualMatchModal: React.FC<{
                   <div className="flex items-center justify-between">
                     <div className="flex-1">
                       <div className="flex items-center gap-2">
-                        <div className="font-medium text-dark">{formatInvoiceId(inv.id, inv.anno)}</div>
+                        <div className="font-medium text-dark dark:text-white">{formatInvoiceId(inv.id, inv.anno)}</div>
                       </div>
                       <div className="text-sm text-gray-500 mt-1">
                         {inv.nomeProgetto || inv.spesa || 'N/A'} | {inv.data instanceof Date ? formatDate(inv.data.toISOString()) : formatDate(inv.data)}
@@ -389,7 +394,7 @@ const ManualMatchModal: React.FC<{
         <div className="p-4 border-t border-gray-200 flex justify-end">
           <button
             onClick={onClose}
-            className="px-4 py-2 text-gray-500 hover:bg-gray-50 rounded-lg transition-colors"
+            className="pl-4 pr-12 py-2 text-gray-500 hover:bg-gray-50 rounded-lg transition-colors"
           >
             Annulla
           </button>
@@ -431,14 +436,14 @@ const CreateInvoiceModal: React.FC<{
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={onClose}>
+    <div className="fixed inset-0 bg-black/50 dark:bg-black/70 flex items-center justify-center z-50 p-4" onClick={onClose}>
       <div
-        className="bg-white rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-xl" shadow-sm
+        className="bg-white dark:bg-dark-card rounded-lg w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-xl"
         onClick={e => e.stopPropagation()}
       >
-        <div className="p-6 border-b border-gray-200">
-          <h3 className="text-xl font-semibold text-dark">Crea Fattura da Transazione</h3>
-          <p className="text-sm text-gray-500 mt-1">
+        <div className="p-6 border-b border-gray-200 dark:border-dark-border">
+          <h3 className="text-xl font-semibold text-dark dark:text-white">Crea Fattura da Transazione</h3>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
             {formatDate(transaction.data)} | {transaction.tipo === 'Entrata' ? '+' : '-'}{formatCurrency(transaction.importo)}
           </p>
         </div>
@@ -450,7 +455,7 @@ const CreateInvoiceModal: React.FC<{
               <select
                 value={formData.tipo}
                 onChange={(e) => setFormData({ ...formData, tipo: e.target.value as 'Entrata' | 'Uscita' })}
-                className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/50"
+                className="w-full pl-4 pr-12 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50"
               >
                 <option value="Entrata">Entrata</option>
                 <option value="Uscita">Uscita</option>
@@ -461,7 +466,7 @@ const CreateInvoiceModal: React.FC<{
               <select
                 value={formData.statoFatturazione}
                 onChange={(e) => setFormData({ ...formData, statoFatturazione: e.target.value as 'Stimato' | 'Effettivo' | 'Nessuno' })}
-                className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/50"
+                className="w-full pl-4 pr-12 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50"
               >
                 <option value="Effettivo">Effettivo</option>
                 <option value="Stimato">Stimato</option>
@@ -476,7 +481,7 @@ const CreateInvoiceModal: React.FC<{
               type="text"
               value={formData.nomeProgetto}
               onChange={(e) => setFormData({ ...formData, nomeProgetto: e.target.value })}
-              className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/50"
+              className="w-full pl-4 pr-12 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50"
               placeholder="Nome progetto..."
             />
           </div>
@@ -488,7 +493,7 @@ const CreateInvoiceModal: React.FC<{
                 type="text"
                 value={formData.spesa}
                 onChange={(e) => setFormData({ ...formData, spesa: e.target.value })}
-                className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/50"
+                className="w-full pl-4 pr-12 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50"
                 placeholder="Es: Utenze, Tools..."
               />
             </div>
@@ -498,7 +503,7 @@ const CreateInvoiceModal: React.FC<{
                 type="text"
                 value={formData.tipoSpesa}
                 onChange={(e) => setFormData({ ...formData, tipoSpesa: e.target.value })}
-                className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/50"
+                className="w-full pl-4 pr-12 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50"
                 placeholder="Es: Costi per servizi..."
               />
             </div>
@@ -513,7 +518,7 @@ const CreateInvoiceModal: React.FC<{
                 value={formData.flusso}
                 onChange={(e) => setFormData({ ...formData, flusso: parseFloat(e.target.value) || 0 })}
                 required
-                className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/50"
+                className="w-full pl-4 pr-12 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50"
               />
             </div>
             <div>
@@ -523,7 +528,7 @@ const CreateInvoiceModal: React.FC<{
                 step="0.01"
                 value={formData.iva}
                 onChange={(e) => setFormData({ ...formData, iva: parseFloat(e.target.value) || 0 })}
-                className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/50"
+                className="w-full pl-4 pr-12 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50"
               />
             </div>
           </div>
@@ -534,7 +539,7 @@ const CreateInvoiceModal: React.FC<{
               value={formData.note}
               onChange={(e) => setFormData({ ...formData, note: e.target.value })}
               rows={3}
-              className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/50 resize-none"
+              className="w-full pl-4 pr-12 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 resize-none"
             />
           </div>
 
@@ -542,13 +547,13 @@ const CreateInvoiceModal: React.FC<{
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 px-4 py-2 border border-gray-200 rounded-xl text-gray-500 hover:bg-gray-50 transition-colors"
+              className="flex-1 pl-4 pr-12 py-2 border border-gray-200 rounded-lg text-gray-500 hover:bg-gray-50 transition-colors"
             >
               Annulla
             </button>
             <button
               type="submit"
-              className="flex-1 px-4 py-2 bg-orange-600 text-white rounded-xl hover:bg-orange-700 transition-colors"
+              className="flex-1 pl-4 pr-12 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors"
             >
               Crea Fattura e Riconcilia
             </button>
@@ -580,14 +585,14 @@ const CreateCashflowModal: React.FC<{
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={onClose}>
+    <div className="fixed inset-0 bg-black/50 dark:bg-black/70 flex items-center justify-center z-50 p-4" onClick={onClose}>
       <div
-        className="bg-white rounded-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-xl" shadow-sm
+        className="bg-white dark:bg-dark-card rounded-lg w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-xl"
         onClick={e => e.stopPropagation()}
       >
-        <div className="p-6 border-b border-gray-200">
-          <h3 className="text-xl font-semibold text-dark">Crea Movimento da Transazione</h3>
-          <p className="text-sm text-gray-500 mt-1">
+        <div className="p-6 border-b border-gray-200 dark:border-dark-border">
+          <h3 className="text-xl font-semibold text-dark dark:text-white">Crea Movimento da Transazione</h3>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
             {formatDate(transaction.data)} | {transaction.tipo === 'Entrata' ? '+' : '-'}{formatCurrency(transaction.importo)}
           </p>
         </div>
@@ -601,7 +606,7 @@ const CreateCashflowModal: React.FC<{
                 value={formData.dataPagamento}
                 onChange={(e) => setFormData({ ...formData, dataPagamento: e.target.value })}
                 required
-                className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/50"
+                className="w-full pl-4 pr-12 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50"
               />
             </div>
             <div>
@@ -609,7 +614,7 @@ const CreateCashflowModal: React.FC<{
               <select
                 value={formData.tipo}
                 onChange={(e) => setFormData({ ...formData, tipo: e.target.value as 'Entrata' | 'Uscita' })}
-                className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/50"
+                className="w-full pl-4 pr-12 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50"
               >
                 <option value="Entrata">Entrata</option>
                 <option value="Uscita">Uscita</option>
@@ -624,7 +629,7 @@ const CreateCashflowModal: React.FC<{
               value={formData.descrizione}
               onChange={(e) => setFormData({ ...formData, descrizione: e.target.value })}
               required
-              className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/50"
+              className="w-full pl-4 pr-12 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50"
               placeholder="Descrizione movimento..."
             />
           </div>
@@ -638,7 +643,7 @@ const CreateCashflowModal: React.FC<{
                 value={formData.importo}
                 onChange={(e) => setFormData({ ...formData, importo: parseFloat(e.target.value) || 0 })}
                 required
-                className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/50"
+                className="w-full pl-4 pr-12 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50"
               />
             </div>
             <div>
@@ -647,7 +652,7 @@ const CreateCashflowModal: React.FC<{
                 type="text"
                 value={formData.categoria}
                 onChange={(e) => setFormData({ ...formData, categoria: e.target.value })}
-                className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/50"
+                className="w-full pl-4 pr-12 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50"
                 placeholder="Es: Banca, Altro..."
               />
             </div>
@@ -659,7 +664,7 @@ const CreateCashflowModal: React.FC<{
               value={formData.note}
               onChange={(e) => setFormData({ ...formData, note: e.target.value })}
               rows={2}
-              className="w-full px-4 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/50 resize-none"
+              className="w-full pl-4 pr-12 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 resize-none"
               placeholder="Note aggiuntive..."
             />
           </div>
@@ -668,13 +673,13 @@ const CreateCashflowModal: React.FC<{
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 px-4 py-2 border border-gray-200 rounded-xl text-gray-500 hover:bg-gray-50 transition-colors"
+              className="flex-1 pl-4 pr-12 py-2 border border-gray-200 rounded-lg text-gray-500 hover:bg-gray-50 transition-colors"
             >
               Annulla
             </button>
             <button
               type="submit"
-              className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition-colors"
+              className="flex-1 pl-4 pr-12 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
             >
               Crea Movimento e Riconcilia
             </button>
@@ -970,39 +975,39 @@ const UnmatchedView: React.FC<UnmatchedViewProps> = ({ unmatchedBankTransactions
   return (
     <div className="grid grid-cols-2 gap-6">
       {/* Transazioni Bancarie Non Abbinate */}
-      <div className="bg-white rounded-2xl border border-gray-200 p-6" shadow-sm>
+      <div className="bg-white dark:bg-dark-card rounded-lg border border-gray-200 dark:border-dark-border p-6 shadow-sm">
         <div className="mb-4">
-          <h3 className="text-lg font-semibold text-dark">Transazioni Bancarie Non Abbinate</h3>
-          <p className="text-sm text-gray-500 mt-1">Totale: {formatCurrency(totalBankAmount)}</p>
+          <h3 className="text-lg font-semibold text-dark dark:text-white">Transazioni Bancarie Non Abbinate</h3>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Totale: {formatCurrency(totalBankAmount)}</p>
         </div>
 
         <div className="space-y-3">
           {unmatchedBankTransactions.length === 0 ? (
-            <div className="text-center py-8 text-gray-500">
+            <div className="text-center py-8 text-gray-500 dark:text-gray-400">
               <Check className="w-12 h-12 mx-auto mb-2" />
               <p>Tutte le transazioni bancarie sono state riconciliate</p>
             </div>
           ) : (
             unmatchedBankTransactions.map(tx => (
-              <div key={tx.id} className="border border-red-200 bg-red-50 rounded-xl p-4">
+              <div key={tx.id} className="border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20 rounded-lg p-4">
                 <div className="flex items-start justify-between mb-2">
                   <div className="flex-1">
-                    <p className="font-medium text-dark">{tx.descrizione}</p>
-                    <p className="text-sm text-gray-500">{new Date(tx.data).toLocaleDateString('it-IT')}</p>
+                    <p className="font-medium text-dark dark:text-white">{tx.descrizione}</p>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">{new Date(tx.data).toLocaleDateString('it-IT')}</p>
                     {tx.causale && (
-                      <p className="text-xs text-gray-500 mt-1">{tx.causale}</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{tx.causale}</p>
                     )}
                   </div>
                   <div className="text-right ml-4">
                     <span className={`text-lg font-semibold ${
-                      tx.tipo === 'Entrata' ? 'text-green-600' : 'text-red-600'
+                      tx.tipo === 'Entrata' ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'
                     }`}>
                       {tx.tipo === 'Entrata' ? '+' : '-'}{formatCurrency(tx.importo)}
                     </span>
                   </div>
                 </div>
                 <div className="flex items-center gap-2 mt-2">
-                  <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-700">
+                  <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-400">
                     <AlertCircle className="w-3 h-3 mr-1" />
                     Non riconciliata
                   </span>
@@ -1014,15 +1019,15 @@ const UnmatchedView: React.FC<UnmatchedViewProps> = ({ unmatchedBankTransactions
       </div>
 
       {/* Flussi di Cassa Non Abbinati */}
-      <div className="bg-white rounded-2xl border border-gray-200 p-6" shadow-sm>
+      <div className="bg-white dark:bg-dark-card rounded-lg border border-gray-200 dark:border-dark-border p-6 shadow-sm">
         <div className="mb-4">
-          <h3 className="text-lg font-semibold text-dark">Flussi di Cassa Non Abbinati</h3>
-          <p className="text-sm text-gray-500 mt-1">Totale: {formatCurrency(totalCashflowAmount)}</p>
+          <h3 className="text-lg font-semibold text-dark dark:text-white">Flussi di Cassa Non Abbinati</h3>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Totale: {formatCurrency(totalCashflowAmount)}</p>
         </div>
 
         <div className="space-y-3">
           {unmatchedCashflows.length === 0 ? (
-            <div className="text-center py-8 text-gray-500">
+            <div className="text-center py-8 text-gray-500 dark:text-gray-400">
               <Check className="w-12 h-12 mx-auto mb-2" />
               <p>Tutti i flussi di cassa sono stati riconciliati</p>
             </div>
@@ -1033,27 +1038,27 @@ const UnmatchedView: React.FC<UnmatchedViewProps> = ({ unmatchedBankTransactions
               const descrizione = cf.descrizione || cf.invoice?.nomeProgetto || cf.invoice?.spesa || 'N/D';
 
               return (
-                <div key={cf.id} className="border border-red-200 bg-red-50 rounded-xl p-4">
+                <div key={cf.id} className="border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20 rounded-lg p-4">
                   <div className="flex items-start justify-between mb-2">
                     <div className="flex-1">
-                      <p className="font-medium text-dark">{descrizione}</p>
+                      <p className="font-medium text-dark dark:text-white">{descrizione}</p>
                       {cf.dataPagamento && (
-                        <p className="text-sm text-gray-500">{new Date(cf.dataPagamento).toLocaleDateString('it-IT')}</p>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">{new Date(cf.dataPagamento).toLocaleDateString('it-IT')}</p>
                       )}
                       {cf.invoice && (
-                        <p className="text-xs text-gray-500 mt-1">Da Fattura: {formatInvoiceId(cf.invoice.id, cf.invoice.anno)}</p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Da Fattura: {formatInvoiceId(cf.invoice.id, cf.invoice.anno)}</p>
                       )}
                     </div>
                     <div className="text-right ml-4">
                       <span className={`text-lg font-semibold ${
-                        tipo === 'Entrata' ? 'text-green-600' : 'text-red-600'
+                        tipo === 'Entrata' ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'
                       }`}>
                         {tipo === 'Entrata' ? '+' : '-'}{formatCurrency(amount)}
                       </span>
                     </div>
                   </div>
                   <div className="flex items-center gap-2 mt-2">
-                    <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-700">
+                    <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-400">
                       <AlertCircle className="w-3 h-3 mr-1" />
                       Non abbinata
                     </span>
@@ -1076,13 +1081,13 @@ interface SideBySideViewProps {
 const SideBySideView: React.FC<SideBySideViewProps> = ({ rows }) => {
   const getMatchStatusColor = (status: string, confidence?: number) => {
     if (status === 'matched') {
-      if (!confidence) return 'bg-green-100 text-green-700';
-      if (confidence > 80) return 'bg-green-100 text-green-700';
-      if (confidence > 50) return 'bg-yellow-100 text-yellow-700';
-      return 'bg-orange-100 text-orange-700';
+      if (!confidence) return 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400';
+      if (confidence > 80) return 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400';
+      if (confidence > 50) return 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400';
+      return 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400';
     }
-    if (status === 'unmatched') return 'bg-red-100 text-red-700';
-    return 'bg-gray-50 text-gray-500';
+    if (status === 'unmatched') return 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400';
+    return 'bg-gray-50 dark:bg-gray-800 text-gray-500 dark:text-gray-400';
   };
 
   const getMatchStatusLabel = (status: string) => {
@@ -1096,24 +1101,24 @@ const SideBySideView: React.FC<SideBySideViewProps> = ({ rows }) => {
   };
 
   return (
-    <div className="bg-white rounded-2xl border border-gray-200" shadow-sm>
+    <div className="bg-white dark:bg-dark-card rounded-lg border border-gray-200 dark:border-dark-border shadow-sm">
       <div className="overflow-x-auto">
         <table className="w-full">
-          <thead>
-            <tr className="border-b border-gray-200 bg-gray-50">
-              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-500">Data</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-500">Descrizione Banca</th>
-              <th className="px-4 py-3 text-right text-sm font-semibold text-gray-500">Importo Banca</th>
-              <th className="px-4 py-3 text-center text-sm font-semibold text-gray-500">Match</th>
-              <th className="px-4 py-3 text-right text-sm font-semibold text-gray-500">Importo Cashflow</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-500">Descrizione Cashflow</th>
-              <th className="px-4 py-3 text-center text-sm font-semibold text-gray-500">Stato</th>
+          <thead className="bg-gray-50 dark:bg-dark-bg">
+            <tr className="text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+              <th className="px-6 py-4 whitespace-nowrap">Data</th>
+              <th className="px-6 py-4 whitespace-nowrap">Descrizione Banca</th>
+              <th className="px-6 py-4 whitespace-nowrap text-right">Importo Banca</th>
+              <th className="px-6 py-4 whitespace-nowrap text-center">Match</th>
+              <th className="px-6 py-4 whitespace-nowrap text-right">Importo Cashflow</th>
+              <th className="px-6 py-4 whitespace-nowrap">Descrizione Cashflow</th>
+              <th className="px-6 py-4 whitespace-nowrap text-center">Stato</th>
             </tr>
           </thead>
-          <tbody>
+          <tbody className="divide-y divide-gray-200 dark:divide-dark-border">
             {rows.length === 0 ? (
               <tr>
-                <td colSpan={7} className="px-4 py-8 text-center text-gray-500">
+                <td colSpan={7} className="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
                   Nessun dato disponibile
                 </td>
               </tr>
@@ -1128,75 +1133,75 @@ const SideBySideView: React.FC<SideBySideViewProps> = ({ rows }) => {
                 const cashflowTipo = row.cashflow?.tipo || row.cashflow?.invoice?.tipo;
 
                 return (
-                  <tr key={idx} className="border-b border-gray-200 hover:bg-gray-50">
-                    <td className="px-4 py-3 text-sm text-gray-500">
+                  <tr key={idx} className="hover:bg-gray-50 dark:hover:bg-dark-bg transition-colors">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                       {row.bankTransaction?.data
                         ? new Date(row.bankTransaction.data).toLocaleDateString('it-IT')
                         : row.cashflow?.dataPagamento
                           ? new Date(row.cashflow.dataPagamento).toLocaleDateString('it-IT')
                           : '-'}
                     </td>
-                    <td className="px-4 py-3 text-sm">
+                    <td className="px-6 py-4 text-sm">
                       {row.bankTransaction ? (
                         <div>
-                          <div className="text-dark font-medium">
+                          <div className="text-dark dark:text-white font-medium">
                             {row.bankTransaction.descrizione || '-'}
                           </div>
                           {row.bankTransaction.causale && (
-                            <div className="text-xs text-gray-500 mt-0.5">
+                            <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
                               {row.bankTransaction.causale}
                             </div>
                           )}
                         </div>
                       ) : '-'}
                     </td>
-                    <td className="px-4 py-3 text-sm text-right">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-right">
                       {bankAmount !== undefined ? (
-                        <span className={bankTipo === 'Entrata' ? 'text-green-600 font-medium' : 'text-red-600 font-medium'}>
+                        <span className={bankTipo === 'Entrata' ? 'text-green-600 dark:text-green-400 font-medium' : 'text-red-600 dark:text-red-400 font-medium'}>
                           {bankTipo === 'Entrata' ? '+' : '-'}{formatCurrency(bankAmount)}
                         </span>
                       ) : (
-                        <span className="text-gray-500">-</span>
+                        <span className="text-gray-500 dark:text-gray-400">-</span>
                       )}
                     </td>
-                    <td className="px-4 py-3 text-center">
+                    <td className="px-6 py-4 whitespace-nowrap text-center">
                       {row.matchStatus === 'matched' ? (
                         <div className="flex items-center justify-center">
-                          <Check className="w-5 h-5 text-green-600" />
+                          <Check className="w-5 h-5 text-green-600 dark:text-green-400" />
                           {row.confidence && (
-                            <span className="ml-1 text-xs text-gray-500">{row.confidence}%</span>
+                            <span className="ml-1 text-xs text-gray-500 dark:text-gray-400">{row.confidence}%</span>
                           )}
                         </div>
                       ) : row.matchStatus === 'unmatched' ? (
-                        <AlertCircle className="w-5 h-5 text-red-500 mx-auto" />
+                        <AlertCircle className="w-5 h-5 text-red-500 dark:text-red-400 mx-auto" />
                       ) : (
-                        <span className="text-gray-500">-</span>
+                        <span className="text-gray-500 dark:text-gray-400">-</span>
                       )}
                     </td>
-                    <td className="px-4 py-3 text-sm text-right">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-right">
                       {cashflowAmount !== undefined ? (
-                        <span className={cashflowTipo === 'Entrata' ? 'text-green-600 font-medium' : 'text-red-600 font-medium'}>
+                        <span className={cashflowTipo === 'Entrata' ? 'text-green-600 dark:text-green-400 font-medium' : 'text-red-600 dark:text-red-400 font-medium'}>
                           {cashflowTipo === 'Entrata' ? '+' : '-'}{formatCurrency(cashflowAmount)}
                         </span>
                       ) : (
-                        <span className="text-gray-500">-</span>
+                        <span className="text-gray-500 dark:text-gray-400">-</span>
                       )}
                     </td>
-                    <td className="px-4 py-3 text-sm">
+                    <td className="px-6 py-4 text-sm">
                       {row.cashflow ? (
                         <div>
-                          <div className="text-dark font-medium">
+                          <div className="text-dark dark:text-white font-medium">
                             {row.cashflow.invoice?.nomeProgetto || row.cashflow.invoice?.spesa || row.cashflow.descrizione || '-'}
                           </div>
                           {(row.cashflow.invoice?.note || row.cashflow.note) && (
-                            <div className="text-xs text-gray-500 mt-0.5">
+                            <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
                               {row.cashflow.invoice?.note || row.cashflow.note}
                             </div>
                           )}
                         </div>
                       ) : '-'}
                     </td>
-                    <td className="px-4 py-3 text-center">
+                    <td className="px-6 py-4 text-center">
                       <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getMatchStatusColor(row.matchStatus, row.confidence)}`}>
                         {getMatchStatusLabel(row.matchStatus)}
                       </span>
@@ -1224,7 +1229,7 @@ const ReportView: React.FC<ReportViewProps> = ({ report }) => {
     <div className="space-y-6">
       {/* KPI Cards */}
       <div className="grid grid-cols-3 gap-6">
-        <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl p-6 text-white">
+        <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg p-6 text-white">
           <div className="flex items-center justify-between mb-2">
             <h3 className="text-sm font-medium opacity-90">Percentuale Riconciliazione</h3>
             <FileCheck className="w-5 h-5 opacity-75" />
@@ -1232,7 +1237,7 @@ const ReportView: React.FC<ReportViewProps> = ({ report }) => {
           <p className="text-3xl font-bold">{report.reconciliationPercentage.toFixed(1)}%</p>
         </div>
 
-        <div className="bg-gradient-to-br from-green-500 to-green-600 rounded-2xl p-6 text-white">
+        <div className="bg-gradient-to-br from-green-500 to-green-600 rounded-lg p-6 text-white">
           <div className="flex items-center justify-between mb-2">
             <h3 className="text-sm font-medium opacity-90">Transazioni Abbinate</h3>
             <Check className="w-5 h-5 opacity-75" />
@@ -1240,7 +1245,7 @@ const ReportView: React.FC<ReportViewProps> = ({ report }) => {
           <p className="text-3xl font-bold">{report.matchedCount}</p>
         </div>
 
-        <div className="bg-gradient-to-br from-red-500 to-red-600 rounded-2xl p-6 text-white">
+        <div className="bg-gradient-to-br from-red-500 to-red-600 rounded-lg p-6 text-white">
           <div className="flex items-center justify-between mb-2">
             <h3 className="text-sm font-medium opacity-90">Voci Non Abbinate</h3>
             <AlertCircle className="w-5 h-5 opacity-75" />
@@ -1251,31 +1256,31 @@ const ReportView: React.FC<ReportViewProps> = ({ report }) => {
       </div>
 
       {/* Comparison Table */}
-      <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden" shadow-sm>
-        <div className="px-6 py-4 border-b border-gray-200">
-          <h3 className="text-lg font-semibold text-dark">Confronto Totali</h3>
+      <div className="bg-white dark:bg-dark-card rounded-lg border border-gray-200 dark:border-dark-border overflow-hidden shadow-sm">
+        <div className="px-6 py-4 border-b border-gray-200 dark:border-dark-border">
+          <h3 className="text-lg font-semibold text-dark dark:text-white">Confronto Totali</h3>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead>
-              <tr className="bg-gray-50 border-b border-gray-200">
-                <th className="px-6 py-3 text-left text-sm font-semibold text-gray-500">Categoria</th>
-                <th className="px-6 py-3 text-right text-sm font-semibold text-gray-500">Banca</th>
-                <th className="px-6 py-3 text-right text-sm font-semibold text-gray-500">Registrato</th>
-                <th className="px-6 py-3 text-right text-sm font-semibold text-gray-500">Differenza</th>
+            <thead className="bg-gray-50 dark:bg-dark-bg">
+              <tr className="text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                <th className="px-6 py-4 whitespace-nowrap">Categoria</th>
+                <th className="px-6 py-4 whitespace-nowrap text-right">Banca</th>
+                <th className="px-6 py-4 whitespace-nowrap text-right">Registrato</th>
+                <th className="px-6 py-4 whitespace-nowrap text-right">Differenza</th>
               </tr>
             </thead>
-            <tbody>
-              <tr className="border-b border-gray-200">
-                <td className="px-6 py-4 text-sm font-medium text-dark">Entrate Totali</td>
-                <td className="px-6 py-4 text-sm text-right text-green-600 font-medium">
+            <tbody className="divide-y divide-gray-200 dark:divide-dark-border">
+              <tr className="hover:bg-gray-50 dark:hover:bg-dark-bg transition-colors">
+                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-dark dark:text-white">Entrate Totali</td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-green-600 dark:text-green-400 font-medium">
                   {formatCurrency(report.totalBankEntrate)}
                 </td>
-                <td className="px-6 py-4 text-sm text-right text-green-600 font-medium">
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-green-600 dark:text-green-400 font-medium">
                   {formatCurrency(report.totalCashflowEntrate)}
                 </td>
-                <td className={`px-6 py-4 text-sm text-right font-medium ${
-                  hasDifference(report.differenceEntrate) ? 'text-red-600' : 'text-gray-500'
+                <td className={`px-6 py-4 whitespace-nowrap text-sm text-right font-medium ${
+                  hasDifference(report.differenceEntrate) ? 'text-red-600 dark:text-red-400' : 'text-gray-500 dark:text-gray-400'
                 }`}>
                   {report.differenceEntrate >= 0 ? '+' : ''}{formatCurrency(report.differenceEntrate)}
                   {hasDifference(report.differenceEntrate) && (
@@ -1283,16 +1288,16 @@ const ReportView: React.FC<ReportViewProps> = ({ report }) => {
                   )}
                 </td>
               </tr>
-              <tr className="border-b border-gray-200">
-                <td className="px-6 py-4 text-sm font-medium text-dark">Uscite Totali</td>
-                <td className="px-6 py-4 text-sm text-right text-red-600 font-medium">
+              <tr className="hover:bg-gray-50 dark:hover:bg-dark-bg transition-colors">
+                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-dark dark:text-white">Uscite Totali</td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-red-600 dark:text-red-400 font-medium">
                   {formatCurrency(report.totalBankUscite)}
                 </td>
-                <td className="px-6 py-4 text-sm text-right text-red-600 font-medium">
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-red-600 dark:text-red-400 font-medium">
                   {formatCurrency(report.totalCashflowUscite)}
                 </td>
-                <td className={`px-6 py-4 text-sm text-right font-medium ${
-                  hasDifference(report.differenceUscite) ? 'text-red-600' : 'text-gray-500'
+                <td className={`px-6 py-4 whitespace-nowrap text-sm text-right font-medium ${
+                  hasDifference(report.differenceUscite) ? 'text-red-600 dark:text-red-400' : 'text-gray-500 dark:text-gray-400'
                 }`}>
                   {report.differenceUscite >= 0 ? '+' : ''}{formatCurrency(report.differenceUscite)}
                   {hasDifference(report.differenceUscite) && (
@@ -1300,20 +1305,20 @@ const ReportView: React.FC<ReportViewProps> = ({ report }) => {
                   )}
                 </td>
               </tr>
-              <tr className="bg-gray-50 font-semibold">
-                <td className="px-6 py-4 text-sm text-dark">Saldo Netto</td>
-                <td className={`px-6 py-4 text-sm text-right ${
-                  report.totalBankNet >= 0 ? 'text-green-600' : 'text-red-600'
+              <tr className="bg-gray-50 dark:bg-dark-bg font-semibold">
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-dark dark:text-white">Saldo Netto</td>
+                <td className={`px-6 py-4 whitespace-nowrap text-sm text-right ${
+                  report.totalBankNet >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'
                 }`}>
                   {formatCurrency(report.totalBankNet)}
                 </td>
-                <td className={`px-6 py-4 text-sm text-right ${
-                  report.totalCashflowNet >= 0 ? 'text-green-600' : 'text-red-600'
+                <td className={`px-6 py-4 whitespace-nowrap text-sm text-right ${
+                  report.totalCashflowNet >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'
                 }`}>
                   {formatCurrency(report.totalCashflowNet)}
                 </td>
-                <td className={`px-6 py-4 text-sm text-right ${
-                  hasDifference(report.differenceNet) ? 'text-red-600' : 'text-gray-500'
+                <td className={`px-6 py-4 whitespace-nowrap text-sm text-right ${
+                  hasDifference(report.differenceNet) ? 'text-red-600 dark:text-red-400' : 'text-gray-500 dark:text-gray-400'
                 }`}>
                   {report.differenceNet >= 0 ? '+' : ''}{formatCurrency(report.differenceNet)}
                   {hasDifference(report.differenceNet) && (
@@ -1328,7 +1333,7 @@ const ReportView: React.FC<ReportViewProps> = ({ report }) => {
 
       {/* Anomalies Section */}
       {report.anomalies && report.anomalies.length > 0 && (
-        <div className="bg-red-50 rounded-2xl border border-red-200 overflow-hidden">
+        <div className="bg-red-50 rounded-lg border border-red-200 overflow-hidden">
           <div className="px-6 py-4 border-b border-red-200 bg-red-100">
             <div className="flex items-center gap-2">
               <AlertCircle className="w-5 h-5 text-red-600" />
@@ -1339,11 +1344,11 @@ const ReportView: React.FC<ReportViewProps> = ({ report }) => {
           <div className="p-6">
             <div className="space-y-3">
               {report.anomalies.map((anomaly, idx) => (
-                <div key={idx} className="bg-white border border-red-200 rounded-xl p-4" shadow-sm>
+                <div key={idx} className="bg-white dark:bg-dark-card border border-red-200 dark:border-red-800 rounded-lg p-4">
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-2">
-                        <span className="font-semibold text-dark">
+                        <span className="font-semibold text-dark dark:text-white">
                           {formatInvoiceId(anomaly.invoice.id, anomaly.invoice.anno)}
                         </span>
                         <span className="px-2 py-0.5 bg-red-100 text-red-700 text-xs font-semibold rounded-full">
@@ -1359,7 +1364,7 @@ const ReportView: React.FC<ReportViewProps> = ({ report }) => {
                     </div>
                     <div className="text-right ml-4">
                       <div className="text-xs text-gray-500 mb-1">Registrato</div>
-                      <div className="text-lg font-bold text-dark">
+                      <div className="text-lg font-bold text-dark dark:text-white">
                         {formatCurrency(anomaly.cashflowAmount)}
                       </div>
                       {anomaly.bankTransactionAmount !== undefined && (
@@ -1385,7 +1390,7 @@ const ReportView: React.FC<ReportViewProps> = ({ report }) => {
 // ====== END COMPARISON VIEW COMPONENTS ======
 
 export const Reconciliation: React.FC = () => {
-  const { invoices, cashflowRecords, reconciliationSessions, bankTransactions, addReconciliationSession, addBankTransaction, updateBankTransaction, updateReconciliationSession, deleteBankTransaction, deleteReconciliationSession, addInvoice, addCashflowRecord } = useData();
+  const { invoices, cashflowRecords, reconciliationSessions, bankTransactions, addReconciliationSession, addBankTransaction, updateBankTransaction, updateReconciliationSession, deleteBankTransaction, deleteReconciliationSession, clearAllReconciliationSessions, addInvoice, addCashflowRecord, aiProcessing, setAiProcessing, stopAiProcessing } = useData();
 
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -1396,10 +1401,7 @@ export const Reconciliation: React.FC = () => {
     const saved = localStorage.getItem('reconciliation_filter');
     return (saved as 'all' | 'pending' | 'matched' | 'ignored') || 'all';
   });
-  const [isProcessingAI, setIsProcessingAI] = useState(false);
-  const [aiProgress, setAiProgress] = useState({ current: 0, total: 0 });
   const [isStoppingAI, setIsStoppingAI] = useState(false);
-  const stopAIProcessingRef = useRef(false);
   const [manualMatchTransaction, setManualMatchTransaction] = useState<BankTransaction | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [isDeleting, setIsDeleting] = useState(false);
@@ -1419,6 +1421,7 @@ export const Reconciliation: React.FC = () => {
   });
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const stopAIProcessingRef = useRef<boolean>(false);
 
   // Persist state to localStorage
   React.useEffect(() => {
@@ -1454,6 +1457,11 @@ export const Reconciliation: React.FC = () => {
   React.useEffect(() => {
     localStorage.setItem('reconciliation_selectedAiModel', selectedAiModel);
   }, [selectedAiModel]);
+
+  // Sync aiProcessing.shouldStop with stopAIProcessingRef
+  React.useEffect(() => {
+    stopAIProcessingRef.current = aiProcessing.shouldStop;
+  }, [aiProcessing.shouldStop]);
 
   // Get AI model details
   const getAiModelInfo = (model: 'haiku' | 'sonnet' | 'sonnet4' | 'opus' | 'opus4') => {
@@ -1602,9 +1610,14 @@ export const Reconciliation: React.FC = () => {
 
       // Create bank transactions with AI matching (if enabled)
       if (aiMatchingEnabled) {
-        setIsProcessingAI(true);
+        setAiProcessing({
+          isProcessing: true,
+          sessionId,
+          current: 0,
+          total: parsed.transactions.length,
+          shouldStop: false
+        });
         setIsStoppingAI(false);
-        stopAIProcessingRef.current = false;
       }
       let matchedCount = 0;
 
@@ -1615,7 +1628,7 @@ export const Reconciliation: React.FC = () => {
 
       for (let i = 0; i < parsed.transactions.length && !shouldStop; i++) {
         // Check if user wants to stop - use local variable for clarity
-        shouldStop = stopAIProcessingRef.current;
+        shouldStop = aiProcessing.shouldStop;
         if (shouldStop) {
           console.log(`⏹️⏹️⏹️ AI processing STOPPED by user at ${i}/${parsed.transactions.length}`);
           console.log(`Breaking out of loop NOW`);
@@ -1624,7 +1637,7 @@ export const Reconciliation: React.FC = () => {
 
         const tx = parsed.transactions[i];
         console.log(`📊 Processing transaction ${i + 1}/${parsed.transactions.length} ${aiMatchingEnabled ? 'with AI' : 'without AI'}`);
-        setAiProgress({ current: i + 1, total: parsed.transactions.length });
+        setAiProcessing({ current: i + 1, total: parsed.transactions.length });
 
         const bankTx: BankTransaction = {
           id: crypto.randomUUID(),
@@ -1656,7 +1669,7 @@ export const Reconciliation: React.FC = () => {
           const aiMatchResult = await suggestMatch(bankTx, invoices, cashflowRecords, modelInfo.id);
 
           // Check if user stopped processing after AI call
-          shouldStop = stopAIProcessingRef.current;
+          shouldStop = aiProcessing.shouldStop;
           if (shouldStop) {
             console.log(`⏹️ AI processing stopped by user after AI analysis`);
             // Save the current transaction without matching before stopping
@@ -1752,7 +1765,7 @@ export const Reconciliation: React.FC = () => {
         if (i < parsed.transactions.length - 1) {
           await new Promise(resolve => setTimeout(resolve, 200));
           // Check one more time after delay
-          shouldStop = stopAIProcessingRef.current;
+          shouldStop = aiProcessing.shouldStop;
         }
       }
 
@@ -1762,7 +1775,7 @@ export const Reconciliation: React.FC = () => {
       }
 
       console.log(`✅ Loop completed. Matched: ${matchedCount}, Total: ${parsed.transactions.length}`);
-      console.log(`Was stopped by user? ${stopAIProcessingRef.current}`);
+      console.log(`Was stopped by user? ${aiProcessing.shouldStop}`);
 
       // Update session with final counts
       await updateReconciliationSession(sessionId, {
@@ -1770,17 +1783,27 @@ export const Reconciliation: React.FC = () => {
         pendingCount: parsed.transactions.length - matchedCount
       });
 
-      setIsProcessingAI(false);
+      setAiProcessing({
+        isProcessing: false,
+        sessionId: null,
+        current: 0,
+        total: 0,
+        shouldStop: false
+      });
       setIsStoppingAI(false);
-      setAiProgress({ current: 0, total: 0 });
     } catch (err) {
       console.error('Upload error:', err);
       setError(err instanceof Error ? err.message : 'Errore nel caricamento del file');
     } finally {
       setIsUploading(false);
-      setIsProcessingAI(false);
+      setAiProcessing({
+        isProcessing: false,
+        sessionId: null,
+        current: 0,
+        total: 0,
+        shouldStop: false
+      });
       setIsStoppingAI(false);
-      setAiProgress({ current: 0, total: 0 });
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }
@@ -1960,6 +1983,19 @@ export const Reconciliation: React.FC = () => {
     }
   };
 
+  const handleClearAllSessions = async () => {
+    if (!confirm(`Sei sicuro di voler eliminare TUTTE le riconciliazioni? Questa azione non può essere annullata.`)) return;
+
+    setIsDeleting(true);
+    try {
+      await clearAllReconciliationSessions();
+      setSelectedSession(null);
+      setSelectedIds(new Set());
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   // Handle close/reopen session
   const handleCloseSession = async () => {
     if (!currentSession) return;
@@ -2060,12 +2096,12 @@ export const Reconciliation: React.FC = () => {
       {/* Header */}
       <div className="mb-6 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
         <div>
-          <h1 className="text-2xl lg:text-3xl font-bold text-dark">Riconciliazione Bancaria</h1>
-          <p className="text-gray-500 mt-1">Carica l'estratto conto e riconcilia le transazioni con Claude AI</p>
+          <h1 className="text-2xl lg:text-3xl font-bold text-dark dark:text-white">Riconciliazione Bancaria</h1>
+          <p className="text-gray-500 dark:text-gray-400 mt-1">Carica l'estratto conto e riconcilia le transazioni con Claude AI</p>
         </div>
         <div className="flex items-center gap-3">
           {/* AI Toggle */}
-          <div className="flex items-center gap-3 px-4 py-2.5 bg-white border-2 border-gray-200 rounded-xl">
+          <div className="flex items-center gap-3 px-4 py-2 bg-white dark:bg-dark-card border-2 border-gray-200 dark:border-dark-border rounded-lg">
             <label className="flex items-center gap-2 cursor-pointer">
               <input
                 type="checkbox"
@@ -2073,7 +2109,7 @@ export const Reconciliation: React.FC = () => {
                 onChange={(e) => setAiMatchingEnabled(e.target.checked)}
                 className="w-4 h-4 text-purple-600 border-gray-300 rounded focus:ring-2 focus:ring-purple-500"
               />
-              <span className="text-sm font-medium text-dark">
+              <span className="text-sm font-medium text-dark dark:text-white">
                 Matching AI
               </span>
             </label>
@@ -2081,12 +2117,12 @@ export const Reconciliation: React.FC = () => {
 
           {/* AI Model Selector */}
           {aiMatchingEnabled && (
-            <div className="flex items-center gap-2 px-4 py-2.5 bg-white border-2 border-gray-200 rounded-xl">
-              <span className="text-xs text-gray-500 font-medium">Modello:</span>
+            <div className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-dark-card border-2 border-gray-200 dark:border-dark-border rounded-lg">
+              <span className="text-xs text-gray-500 dark:text-gray-400 font-medium">Modello:</span>
               <select
                 value={selectedAiModel}
                 onChange={(e) => setSelectedAiModel(e.target.value as 'haiku' | 'sonnet' | 'sonnet4' | 'opus' | 'opus4')}
-                className="text-sm font-medium text-dark bg-transparent border-none focus:outline-none focus:ring-2 focus:ring-purple-500 rounded px-2 py-1 cursor-pointer"
+                className="text-sm font-medium text-dark dark:text-white bg-transparent border-none focus:outline-none focus:ring-2 focus:ring-purple-500 rounded px-2 cursor-pointer"
               >
                 <option value="haiku">Haiku 3.5 - ~15¢/100 tx (Veloce)</option>
                 <option value="sonnet">Sonnet 3.5 - ~$1.50/100 tx (Alta qualità)</option>
@@ -2107,82 +2143,36 @@ export const Reconciliation: React.FC = () => {
           <button
             onClick={() => fileInputRef.current?.click()}
             disabled={isUploading}
-            className="flex items-center gap-2 px-4 py-2.5 bg-primary text-white rounded-xl font-medium hover:bg-primary/90 transition-colors disabled:opacity-50"
+            className="flex items-center gap-2 px-6 py-2 bg-primary text-white rounded-lg font-medium hover:opacity-90 transition-all shadow-sm disabled:opacity-50"
           >
             {isUploading ? (
               <RefreshCw size={18} className="animate-spin" />
             ) : (
               <Upload size={18} />
             )}
-            {isUploading
-              ? (isProcessingAI && aiProgress.total > 0
-                  ? `Analisi AI ${aiProgress.current}/${aiProgress.total}...`
-                  : `Importazione ${aiProgress.current > 0 ? `${aiProgress.current}/${aiProgress.total}` : ''}...`)
-              : 'Carica Estratto Conto'}
+            {isUploading ? 'Importazione...' : 'Carica Estratto Conto'}
           </button>
+
+          {/* Clear all sessions button - always visible */}
+          {reconciliationSessions.length > 0 && (
+            <button
+              onClick={handleClearAllSessions}
+              disabled={isDeleting || aiProcessing.isProcessing || isUploading}
+              className="flex items-center gap-2 px-6 py-2 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 rounded-lg font-medium hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <Trash2 size={18} />
+              Svuota Tutto
+            </button>
+          )}
         </div>
       </div>
 
-      {/* AI Processing Progress Banner */}
-      {isProcessingAI && aiProgress.total > 0 && (
-        <div className="mb-6 p-4 bg-purple-50 border border-purple-200 rounded-xl">
-          <div className="flex items-center justify-between mb-2">
-            <div className="flex items-center gap-3">
-              <RefreshCw size={20} className="text-purple-600 animate-spin" />
-              <div>
-                <div className="font-medium text-purple-900 flex items-center gap-2">
-                  Analisi AI in corso: {aiProgress.current} / {aiProgress.total}
-                  <span className="px-2 py-0.5 text-xs font-semibold rounded-full bg-purple-100 text-purple-700">
-                    {getAiModelInfo(selectedAiModel).name}
-                  </span>
-                </div>
-                <div className="text-sm text-purple-600">
-                  Le transazioni appaiono in tempo reale • Costo stimato: {getAiModelInfo(selectedAiModel).cost}
-                </div>
-              </div>
-            </div>
-            <div className="flex items-center gap-4">
-              <div className="text-2xl font-bold text-purple-600">
-                {Math.round((aiProgress.current / aiProgress.total) * 100)}%
-              </div>
-              <button
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  console.log(`🛑🛑🛑 STOP BUTTON CLICKED! Setting stopAIProcessingRef.current = true`);
-                  console.log(`BEFORE: stopAIProcessingRef.current =`, stopAIProcessingRef.current);
-                  stopAIProcessingRef.current = true;
-                  console.log(`AFTER: stopAIProcessingRef.current =`, stopAIProcessingRef.current);
-                  setIsStoppingAI(true);
-                  console.log(`✅ Stop flag set, waiting for next loop iteration to exit...`);
-                }}
-                disabled={isStoppingAI}
-                className={`px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2 ${
-                  isStoppingAI
-                    ? 'bg-gray-400 text-gray-200 cursor-not-allowed'
-                    : 'bg-red-500 text-white hover:bg-red-600'
-                }`}
-              >
-                <X size={16} />
-                {isStoppingAI ? 'Interruzione...' : 'Ferma Analisi'}
-              </button>
-            </div>
-          </div>
-          <div className="w-full bg-purple-200 rounded-full h-2">
-            <div
-              className="bg-purple-600 h-2 rounded-full transition-all duration-300"
-              style={{ width: `${(aiProgress.current / aiProgress.total) * 100}%` }}
-            />
-          </div>
-        </div>
-      )}
-
       {/* Error */}
       {error && (
-        <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl flex items-center gap-3">
-          <AlertCircle size={20} className="text-red-600" />
-          <span className="text-red-800">{error}</span>
-          <button onClick={() => setError(null)} className="ml-auto text-red-600 hover:text-red-800">
+        <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg flex items-center gap-3">
+          <AlertCircle size={20} className="text-red-600 dark:text-red-400" />
+          <span className="text-red-800 dark:text-red-300">{error}</span>
+          <button onClick={() => setError(null)} className="ml-auto text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300">
             <X size={18} />
           </button>
         </div>
@@ -2196,11 +2186,11 @@ export const Reconciliation: React.FC = () => {
               <button
                 key={session.id}
                 onClick={() => setSelectedSession(session.id)}
-                disabled={isProcessingAI || isUploading}
-                className={`flex-shrink-0 px-4 py-2.5 rounded-xl border transition-colors relative ${
+                disabled={aiProcessing.isProcessing || isUploading}
+                className={`flex-shrink-0 px-4 py-2.5 rounded-lg border transition-colors relative ${
                   selectedSession === session.id
                     ? 'bg-primary text-white border-primary'
-                    : 'bg-white text-gray-500 border-gray-200 hover:border-primary'
+                    : 'bg-white dark:bg-dark-card text-gray-500 dark:text-gray-400 border-gray-200 dark:border-dark-border hover:border-primary dark:hover:border-primary'
                 } disabled:opacity-50 disabled:cursor-not-allowed`}
               >
                 <div className="flex items-center gap-2">
@@ -2209,7 +2199,7 @@ export const Reconciliation: React.FC = () => {
                     <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${
                       selectedSession === session.id
                         ? 'bg-white/20 text-white'
-                        : 'bg-gray-50 text-gray-500'
+                        : 'bg-gray-50 dark:bg-gray-800/30 text-gray-500 dark:text-gray-400'
                     }`}>
                       Chiusa
                     </span>
@@ -2229,41 +2219,41 @@ export const Reconciliation: React.FC = () => {
         <>
           {/* KPI Cards */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-            <div className="bg-white rounded-2xl p-4" shadow-sm>
-              <div className="text-gray-500 text-sm mb-1">Totale Transazioni</div>
-              <div className="text-2xl font-bold text-dark">{stats.total}</div>
+            <div className="bg-white dark:bg-dark-card rounded-xl p-4 border-t-4 border-gray-300 dark:border-gray-600">
+              <div className="text-gray-500 dark:text-gray-400 text-sm mb-1">Totale Transazioni</div>
+              <div className="text-2xl font-bold text-dark dark:text-white">{stats.total}</div>
             </div>
-            <div className="bg-white rounded-2xl p-4" shadow-sm>
-              <div className="text-yellow-600 text-sm mb-1">Da Verificare</div>
-              <div className="text-2xl font-bold text-yellow-600">{stats.pending}</div>
+            <div className="bg-white dark:bg-dark-card rounded-xl p-4 border-t-4 border-yellow-400">
+              <div className="text-yellow-600 dark:text-yellow-400 text-sm mb-1">Da Verificare</div>
+              <div className="text-2xl font-bold text-yellow-600 dark:text-yellow-400">{stats.pending}</div>
             </div>
-            <div className="bg-white rounded-2xl p-4" shadow-sm>
-              <div className="text-green-600 text-sm mb-1">Riconciliati</div>
-              <div className="text-2xl font-bold text-green-600">{stats.matched}</div>
+            <div className="bg-white dark:bg-dark-card rounded-xl p-4 border-t-4 border-green-500">
+              <div className="text-green-600 dark:text-green-400 text-sm mb-1">Riconciliati</div>
+              <div className="text-2xl font-bold text-green-600 dark:text-green-400">{stats.matched}</div>
             </div>
-            <div className="bg-white rounded-2xl p-4" shadow-sm>
-              <div className="text-gray-500 text-sm mb-1">Ignorati</div>
-              <div className="text-2xl font-bold text-gray-500">{stats.ignored}</div>
+            <div className="bg-white dark:bg-dark-card rounded-xl p-4 border-t-4 border-gray-300 dark:border-gray-600">
+              <div className="text-gray-500 dark:text-gray-400 text-sm mb-1">Ignorati</div>
+              <div className="text-2xl font-bold text-gray-500 dark:text-gray-400">{stats.ignored}</div>
             </div>
           </div>
 
           {/* Session status and actions */}
           {currentSession.status === 'closed' && (
-            <div className="mb-6 p-4 bg-gray-50 border border-gray-200 rounded-xl flex items-center justify-between">
+            <div className="mb-6 p-4 bg-gray-50 dark:bg-gray-800/30 border border-gray-200 dark:border-dark-border rounded-lg flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 bg-gray-600 rounded-full flex items-center justify-center">
                   <FileCheck size={20} className="text-white" />
                 </div>
                 <div>
-                  <div className="font-medium text-dark">Sessione Chiusa</div>
-                  <div className="text-sm text-gray-500">
+                  <div className="font-medium text-dark dark:text-white">Sessione Chiusa</div>
+                  <div className="text-sm text-gray-500 dark:text-gray-400">
                     {currentSession.closedDate && `Chiusa il ${formatDate(currentSession.closedDate)}`}
                   </div>
                 </div>
               </div>
               <button
                 onClick={handleCloseSession}
-                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors"
+                className="flex items-center gap-2 pl-4 pr-12 py-2 bg-primary text-white rounded-lg font-medium hover:opacity-90 transition-all"
               >
                 <RefreshCw size={16} />
                 Riapri Sessione
@@ -2275,47 +2265,47 @@ export const Reconciliation: React.FC = () => {
             <div className="mb-6 flex justify-end">
               <button
                 onClick={handleCloseSession}
-                disabled={isProcessingAI || isUploading}
-                className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-green-600"
+                disabled={aiProcessing.isProcessing || isUploading}
+                className="flex items-center gap-2 pl-4 pr-12 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-green-600"
               >
                 <FileCheck size={16} />
-                {isProcessingAI || isUploading ? 'Processamento in corso...' : 'Chiudi Sessione'}
+                {aiProcessing.isProcessing || isUploading ? 'Processamento in corso...' : 'Chiudi Sessione'}
               </button>
             </div>
           )}
 
           {/* Session info */}
           {(currentSession.saldoIniziale !== undefined || currentSession.saldoFinale !== undefined) && (
-            <div className="bg-blue-50 rounded-xl p-4 mb-6 flex flex-wrap gap-6">
+            <div className="bg-gray-50 dark:bg-gray-800/30 rounded-lg p-4 mb-6 flex flex-wrap gap-6">
               {currentSession.numeroConto && (
                 <div>
-                  <div className="text-xs text-blue-600 mb-1">Conto</div>
-                  <div className="font-medium text-blue-900">{currentSession.numeroConto}</div>
+                  <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">Conto</div>
+                  <div className="font-medium text-dark dark:text-white">{currentSession.numeroConto}</div>
                 </div>
               )}
               {currentSession.saldoIniziale !== undefined && (
                 <div>
-                  <div className="text-xs text-blue-600 mb-1">Saldo Iniziale</div>
-                  <div className="font-medium text-blue-900">{formatCurrency(currentSession.saldoIniziale)}</div>
+                  <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">Saldo Iniziale</div>
+                  <div className="font-medium text-dark dark:text-white">{formatCurrency(currentSession.saldoIniziale)}</div>
                 </div>
               )}
               {currentSession.saldoFinale !== undefined && (
                 <div>
-                  <div className="text-xs text-blue-600 mb-1">Saldo Finale</div>
-                  <div className="font-medium text-blue-900">{formatCurrency(currentSession.saldoFinale)}</div>
+                  <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">Saldo Finale</div>
+                  <div className="font-medium text-dark dark:text-white">{formatCurrency(currentSession.saldoFinale)}</div>
                 </div>
               )}
             </div>
           )}
 
           {/* Tab Navigation */}
-          <div className="flex items-center gap-2 mb-6 border-b border-gray-200 bg-white" shadow-sm>
+          <div className="flex items-center gap-2 mb-6 border-b border-gray-200 dark:border-dark-border bg-white dark:bg-dark-card">
             <button
               onClick={() => setComparisonView('transactions')}
               className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 ${
                 comparisonView === 'transactions'
-                  ? 'border-blue-600 text-dark bg-blue-50'
-                  : 'border-transparent text-gray-500 hover:text-dark hover:bg-gray-50'
+                  ? 'border-primary text-dark dark:text-white bg-primary/10 dark:bg-primary/20'
+                  : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-dark dark:hover:text-white hover:bg-gray-50 dark:hover:bg-dark-bg'
               }`}
             >
               Transazioni
@@ -2324,8 +2314,8 @@ export const Reconciliation: React.FC = () => {
               onClick={() => setComparisonView('unmatched')}
               className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 ${
                 comparisonView === 'unmatched'
-                  ? 'border-blue-600 text-dark bg-blue-50'
-                  : 'border-transparent text-gray-500 hover:text-dark hover:bg-gray-50'
+                  ? 'border-primary text-dark dark:text-white bg-primary/10 dark:bg-primary/20'
+                  : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-dark dark:hover:text-white hover:bg-gray-50 dark:hover:bg-dark-bg'
               }`}
             >
               Voci Mancanti
@@ -2334,8 +2324,8 @@ export const Reconciliation: React.FC = () => {
               onClick={() => setComparisonView('sidebyside')}
               className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 ${
                 comparisonView === 'sidebyside'
-                  ? 'border-blue-600 text-dark bg-blue-50'
-                  : 'border-transparent text-gray-500 hover:text-dark hover:bg-gray-50'
+                  ? 'border-primary text-dark dark:text-white bg-primary/10 dark:bg-primary/20'
+                  : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-dark dark:hover:text-white hover:bg-gray-50 dark:hover:bg-dark-bg'
               }`}
             >
               Vista Affiancata
@@ -2344,8 +2334,8 @@ export const Reconciliation: React.FC = () => {
               onClick={() => setComparisonView('report')}
               className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 ${
                 comparisonView === 'report'
-                  ? 'border-blue-600 text-dark bg-blue-50'
-                  : 'border-transparent text-gray-500 hover:text-dark hover:bg-gray-50'
+                  ? 'border-primary text-dark dark:text-white bg-primary/10 dark:bg-primary/20'
+                  : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-dark dark:hover:text-white hover:bg-gray-50 dark:hover:bg-dark-bg'
               }`}
             >
               Report Differenze
@@ -2359,8 +2349,8 @@ export const Reconciliation: React.FC = () => {
               {/* Select all button */}
               <button
                 onClick={handleSelectAll}
-                disabled={currentSession.status === 'closed' || isProcessingAI || isUploading}
-                className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium bg-gray-50 text-gray-500 hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled={currentSession.status === 'closed' || aiProcessing.isProcessing || isUploading}
+                className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium bg-white dark:bg-dark-card border border-gray-200 dark:border-dark-border text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-dark-bg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {selectionState === 'all' ? (
                   <CheckSquare size={16} className="text-primary" />
@@ -2380,7 +2370,7 @@ export const Reconciliation: React.FC = () => {
                   className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
                     filter === f
                       ? 'bg-primary text-white'
-                      : 'bg-gray-50 text-gray-500 hover:bg-gray-50'
+                      : 'bg-white dark:bg-dark-card border border-gray-200 dark:border-dark-border text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-dark-bg'
                   }`}
                 >
                   {f === 'all' && 'Tutti'}
@@ -2396,33 +2386,33 @@ export const Reconciliation: React.FC = () => {
               {selectedIds.size > 0 && (
                 <button
                   onClick={handleBulkDelete}
-                  disabled={isDeleting || isProcessingAI || isUploading || currentSession.status === 'closed'}
-                  className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg font-medium hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  disabled={isDeleting || aiProcessing.isProcessing || isUploading || currentSession.status === 'closed'}
+                  className="flex items-center gap-2 pl-4 pr-12 py-2 bg-red-600 text-white rounded-lg font-medium hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <Trash2 size={16} />
-                  {isProcessingAI || isUploading ? 'Processamento in corso...' : isDeleting ? 'Eliminazione...' : `Elimina (${selectedIds.size})`}
+                  {aiProcessing.isProcessing || isUploading ? 'Processamento in corso...' : isDeleting ? 'Eliminazione...' : `Elimina (${selectedIds.size})`}
                 </button>
               )}
 
               {/* Delete session button */}
               <button
                 onClick={handleDeleteSession}
-                disabled={isDeleting || isProcessingAI || isUploading || currentSession.status === 'closed'}
-                className="flex items-center gap-2 px-4 py-2 bg-gray-50 text-gray-500 rounded-lg font-medium hover:bg-gray-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled={isDeleting || aiProcessing.isProcessing || isUploading || currentSession.status === 'closed'}
+                className="flex items-center gap-2 pl-4 pr-12 py-2 bg-white dark:bg-dark-card border border-gray-200 dark:border-dark-border text-gray-500 dark:text-gray-400 rounded-lg font-medium hover:bg-gray-50 dark:hover:bg-dark-bg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <Trash2 size={16} />
-                {isProcessingAI || isUploading ? 'Processamento in corso...' : 'Elimina Sessione'}
+                {aiProcessing.isProcessing || isUploading ? 'Processamento in corso...' : 'Elimina Sessione'}
               </button>
 
               {stats.pending > 0 && (
                 <button
                   onClick={handleRunAIAll}
-                  disabled={isProcessingAI || currentSession.status === 'closed'}
-                  className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg font-medium hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  disabled={aiProcessing.isProcessing || currentSession.status === 'closed'}
+                  className="flex items-center gap-2 pl-4 pr-12 py-2 bg-accent text-white rounded-lg font-medium hover:opacity-90 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  <RefreshCw size={16} className={isProcessingAI ? 'animate-spin' : ''} />
-                  {isProcessingAI
-                    ? `Analisi AI ${aiProgress.current}/${aiProgress.total}...`
+                  <RefreshCw size={16} className={aiProcessing.isProcessing ? 'animate-spin' : ''} />
+                  {aiProcessing.isProcessing
+                    ? `Analisi AI ${aiProcessing.current}/${aiProcessing.total}...`
                     : `Analizza Tutti con AI (${stats.pending})`
                   }
                 </button>
@@ -2433,9 +2423,9 @@ export const Reconciliation: React.FC = () => {
 
           {/* Conditional View Rendering */}
           {comparisonView === 'transactions' && (
-            <div className="bg-white rounded-2xl overflow-hidden" shadow-sm>
+            <div className="bg-white dark:bg-dark-card rounded-lg overflow-hidden shadow-sm border border-gray-200 dark:border-dark-border">
               {filteredTransactions.length === 0 ? (
-                <div className="p-8 text-center text-gray-500">
+                <div className="p-8 text-center text-gray-500 dark:text-gray-400">
                   {filter === 'all'
                     ? 'Nessuna transazione in questa sessione'
                     : `Nessuna transazione ${filter === 'pending' ? 'da verificare' : filter === 'matched' ? 'riconciliata' : 'ignorata'}`
@@ -2452,12 +2442,12 @@ export const Reconciliation: React.FC = () => {
                     onIgnore={() => handleIgnore(tx.id)}
                     onManualMatch={() => setManualMatchTransaction(tx)}
                     onRunAI={() => handleRunAI(tx.id)}
-                    isProcessing={isProcessingAI}
+                    isProcessing={aiProcessing.isProcessing}
                     isSelected={selectedIds.has(tx.id)}
                     onToggleSelect={() => handleToggleSelect(tx.id)}
                     onCreateInvoice={() => setCreateInvoiceTransaction(tx)}
                     onCreateCashflow={() => setCreateCashflowTransaction(tx)}
-                    disabled={currentSession.status === 'closed' || isProcessingAI || isUploading}
+                    disabled={currentSession.status === 'closed' || aiProcessing.isProcessing || isUploading}
                   />
                 ))
               )}
@@ -2481,18 +2471,18 @@ export const Reconciliation: React.FC = () => {
         </>
       ) : (
         // Empty state
-        <div className="bg-white rounded-2xl p-12 text-center" shadow-sm>
-          <FileCheck size={64} className="mx-auto text-gray-300 mb-4" />
-          <h3 className="text-xl font-semibold text-dark mb-2">Nessun estratto conto caricato</h3>
-          <p className="text-gray-500 mb-6">
+        <div className="bg-white dark:bg-dark-card rounded-lg p-12 text-center shadow-sm border border-gray-200 dark:border-dark-border">
+          <FileCheck size={64} className="mx-auto text-gray-300 dark:text-gray-600 mb-4" />
+          <h3 className="text-xl font-semibold text-dark dark:text-white mb-2">Nessun estratto conto caricato</h3>
+          <p className="text-gray-500 dark:text-gray-400 mb-6">
             Carica un file Excel (.xlsx) con le transazioni bancarie per iniziare la riconciliazione
           </p>
           <button
             onClick={() => fileInputRef.current?.click()}
             disabled={isUploading}
-            className="inline-flex items-center gap-2 px-6 py-3 bg-primary text-white rounded-xl font-medium hover:bg-primary/90 transition-colors"
+            className="inline-flex items-center gap-2 px-6 py-2 bg-primary text-white rounded-lg font-medium hover:opacity-90 transition-all shadow-sm disabled:opacity-50"
           >
-            <Upload size={20} />
+            <Upload size={18} />
             Carica Estratto Conto
           </button>
         </div>
