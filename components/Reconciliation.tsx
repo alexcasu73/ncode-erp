@@ -2091,12 +2091,10 @@ export const Reconciliation: React.FC = () => {
   const handleCreateInvoice = async (invoiceData: Omit<Invoice, 'id'>, transaction: BankTransaction) => {
     const newInvoice = await addInvoice(invoiceData);
     if (newInvoice) {
-      // Create a cashflow record automatically for this invoice with fixed amount
-      const importoEffettivo = (newInvoice.flusso || 0) + (newInvoice.iva || 0);
+      // Create a cashflow record automatically for this invoice (without importo, reads from invoice)
       await addCashflowRecord({
         invoiceId: newInvoice.id,
         dataPagamento: transaction.data,
-        importo: importoEffettivo, // Save fixed amount at creation time
         note: `Movimento automatico da riconciliazione - ${transaction.descrizione || transaction.causale || ''}`
       });
 
