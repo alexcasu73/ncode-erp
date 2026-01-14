@@ -2233,7 +2233,7 @@ export const Reconciliation: React.FC = () => {
             {reconciliationSessions.map(session => (
               <button
                 key={session.id}
-                onClick={() => setSelectedSession(session.id)}
+                onClick={() => setSelectedSession(selectedSession === session.id ? null : session.id)}
                 disabled={aiProcessing.isProcessing || isUploading}
                 className={`flex-shrink-0 px-4 py-2.5 rounded-lg border transition-colors relative ${
                   selectedSession === session.id
