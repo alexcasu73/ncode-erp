@@ -1,10 +1,58 @@
 import Anthropic from '@anthropic-ai/sdk';
+import OpenAI from 'openai';
 import type { Invoice, CashflowRecord, BankTransaction } from '../types';
 
-const anthropic = new Anthropic({
-  apiKey: import.meta.env.VITE_ANTHROPIC_API_KEY,
-  dangerouslyAllowBrowser: true // Required for client-side usage
-});
+// Load AI settings from localStorage (used as cache)
+// Primary source is now the database via DataContext
+function getAISettings() {
+  const savedSettings = localStorage.getItem('ai_settings');
+  if (savedSettings) {
+    try {
+      return JSON.parse(savedSettings);
+    } catch {
+      return null;
+    }
+  }
+  return null;
+}
+
+// Initialize Anthropic client (lazy)
+let anthropicClient: Anthropic | null = null;
+function getAnthropicClient(): Anthropic {
+  if (!anthropicClient) {
+    const settings = getAISettings();
+    const apiKey = settings?.anthropicApiKey || import.meta.env.VITE_ANTHROPIC_API_KEY;
+
+    if (!apiKey) {
+      throw new Error('🔑 API Key Anthropic non configurata. Vai su Impostazioni per configurarla.');
+    }
+
+    anthropicClient = new Anthropic({
+      apiKey,
+      dangerouslyAllowBrowser: true
+    });
+  }
+  return anthropicClient;
+}
+
+// Initialize OpenAI client (lazy)
+let openaiClient: OpenAI | null = null;
+function getOpenAIClient(): OpenAI {
+  if (!openaiClient) {
+    const settings = getAISettings();
+    const apiKey = settings?.openaiApiKey;
+
+    if (!apiKey) {
+      throw new Error('🔑 API Key OpenAI non configurata. Vai su Impostazioni per configurarla.');
+    }
+
+    openaiClient = new OpenAI({
+      apiKey,
+      dangerouslyAllowBrowser: true
+    });
+  }
+  return openaiClient;
+}
 
 export interface MatchSuggestion {
   invoiceId: string | null;
@@ -20,8 +68,10 @@ function formatInvoice(inv: Invoice): string {
     ? inv.data.toISOString().split('T')[0]
     : inv.data;
 
+  const progetto = inv.nomeProgetto ? ` | Progetto: "${inv.nomeProgetto}"` : '';
+  const spesa = inv.spesa ? ` | Spesa: "${inv.spesa}"` : '';
   const note = inv.note ? ` | Note: "${inv.note}"` : '';
-  return `ID: ${inv.id} | Data: ${data} | Totale: €${totale.toFixed(2)} | Progetto: ${inv.nomeProgetto || inv.spesa || 'N/A'} | Stato: ${inv.statoFatturazione}${note}`;
+  return `ID: ${inv.id} | Data: ${data} | Totale: €${totale.toFixed(2)}${progetto}${spesa} | Stato: ${inv.statoFatturazione}${note}`;
 }
 
 // Format cashflow record for AI context
@@ -30,8 +80,10 @@ function formatCashflow(cf: CashflowRecord, invoice?: Invoice): string {
   const progetto = invoice?.nomeProgetto || invoice?.spesa || 'N/A';
   const noteFattura = invoice?.note ? ` | Note Fattura: "${invoice.note}"` : '';
   const noteCashflow = cf.note ? ` | Note Movimento: "${cf.note}"` : '';
+  const descCashflow = cf.descrizione ? ` | Desc Movimento: "${cf.descrizione}"` : '';
+  const categoria = cf.categoria ? ` | Categoria: "${cf.categoria}"` : '';
 
-  return `ID: ${cf.id} | Data Pag: ${cf.dataPagamento || 'N/D'} | Importo: €${importo.toFixed(2)} | Fattura: ${cf.invoiceId} | Progetto: ${progetto}${noteFattura}${noteCashflow}`;
+  return `ID: ${cf.id} | Data Pag: ${cf.dataPagamento || 'N/D'} | Importo: €${importo.toFixed(2)} | Fattura: ${cf.invoiceId} | Progetto: ${progetto}${noteFattura}${noteCashflow}${descCashflow}${categoria}`;
 }
 
 // Format bank transaction for AI context
@@ -46,60 +98,109 @@ export async function suggestMatch(
   cashflowRecords: CashflowRecord[],
   model?: string
 ): Promise<MatchSuggestion> {
-  // Filter invoices by type (match Entrata with Entrata, Uscita with Uscita)
-  const filteredInvoices = invoices.filter(inv => inv.tipo === transaction.tipo);
+  // Extract month and year from transaction date
+  const transactionDate = new Date(transaction.data);
+  const transactionMonth = transactionDate.getMonth(); // 0-11
+  const transactionYear = transactionDate.getFullYear();
+
+  console.log(`[AI] Transaction date: ${transaction.data}, Month: ${transactionMonth + 1}, Year: ${transactionYear}`);
+
+  // Helper function to check if date is in same month/year
+  const isSameMonthYear = (dateStr: string | Date): boolean => {
+    if (!dateStr) return false;
+    const date = new Date(dateStr);
+    return date.getMonth() === transactionMonth && date.getFullYear() === transactionYear;
+  };
+
+  // Filter invoices by type AND date (same month/year)
+  const filteredInvoices = invoices.filter(inv =>
+    inv.tipo === transaction.tipo && isSameMonthYear(inv.data)
+  );
 
   // Get cashflow records with their invoices for context
-  // Include both cashflow with invoices AND standalone cashflow that match tipo
+  // Filter by tipo AND date (using ONLY cashflow date, not invoice date)
   const cashflowWithInvoices = cashflowRecords.map(cf => {
     const invoice = invoices.find(inv => inv.id === cf.invoiceId);
     return { cf, invoice };
   }).filter(({ cf, invoice }) => {
-    // Include if invoice matches tipo OR if it's standalone with matching tipo
-    if (invoice) {
-      return invoice.tipo === transaction.tipo;
-    } else {
-      return cf.tipo === transaction.tipo;
+    // Check tipo
+    const tipoMatches = invoice ? invoice.tipo === transaction.tipo : cf.tipo === transaction.tipo;
+    if (!tipoMatches) return false;
+
+    // Check date (same month/year) - USE ONLY CASHFLOW DATE
+    // If dataPagamento is missing, include the cashflow anyway (don't filter it out)
+    if (!cf.dataPagamento) {
+      console.log(`[AI] ⚠️ Cashflow ${cf.id} has no dataPagamento, including in results`);
+      return true; // Include cashflows without date
     }
+    return isSameMonthYear(cf.dataPagamento);
   });
 
   console.log(`[AI] Transaction tipo: ${transaction.tipo}, importo: €${transaction.importo}, descrizione: "${transaction.descrizione}"`);
-  console.log(`[AI] Total cashflow records: ${cashflowRecords.length}, Filtered invoices: ${filteredInvoices.length}, cashflow with invoices: ${cashflowWithInvoices.length}`);
+  console.log(`[AI] Filtering: Total invoices=${invoices.length} → Filtered (tipo+date)=${filteredInvoices.length}`);
+  console.log(`[AI] Filtering: Total cashflows=${cashflowRecords.length} → Filtered (tipo+date)=${cashflowWithInvoices.length}`);
 
-  // Log keywords from transaction description for debugging
-  const transactionKeywords = (transaction.descrizione || '').toLowerCase().split(/\s+/).filter(w => w.length > 3);
-  console.log(`[AI] Transaction keywords:`, transactionKeywords);
+  // Log all cashflows being sent to AI with their dates
+  console.log(`[AI] 📋 Cashflows being sent to AI (${cashflowWithInvoices.length}):`, cashflowWithInvoices.map(({ cf, invoice }) => {
+    const cfAmount = cf.importo || (invoice ? (invoice.flusso || 0) + (invoice.iva || 0) : 0);
+    return {
+      id: cf.id,
+      importo: cfAmount,
+      dataPagamento: cf.dataPagamento,
+      invoiceDate: invoice?.data,
+      tipo: cf.tipo || invoice?.tipo
+    };
+  }));
+
+  // Check for exact amount match in cashflows
+  const exactAmountMatches = cashflowWithInvoices.filter(({ cf, invoice }) => {
+    const cfAmount = cf.importo || (invoice ? (invoice.flusso || 0) + (invoice.iva || 0) : 0);
+    const diff = Math.abs(cfAmount - Math.abs(transaction.importo));
+    return diff <= 0.10;
+  });
+  if (exactAmountMatches.length > 0) {
+    console.log(`[AI] 🎯 Found ${exactAmountMatches.length} cashflow(s) with matching amount (±€0.10):`, exactAmountMatches.map(({ cf, invoice }) => ({
+      id: cf.id,
+      invoiceId: cf.invoiceId,
+      importo: cf.importo || (invoice ? (invoice.flusso || 0) + (invoice.iva || 0) : 0),
+      note: cf.note,
+      descMovimento: cf.descrizione,
+      noteFattura: invoice?.note,
+      progetto: invoice?.nomeProgetto,
+      spesa: invoice?.spesa
+    })));
+  } else {
+    console.log(`[AI] ⚠️ NO cashflow found with matching amount €${Math.abs(transaction.importo)}. Available amounts:`,
+      cashflowWithInvoices.slice(0, 10).map(({ cf, invoice }) => ({
+        id: cf.id,
+        amount: cf.importo || (invoice ? (invoice.flusso || 0) + (invoice.iva || 0) : 0)
+      }))
+    );
+  }
+
+  // Check for ALL cashflows with amounts within ±1€ tolerance
+  const amountTolerance1Euro = cashflowWithInvoices.filter(({ cf, invoice }) => {
+    const cfAmount = cf.importo || (invoice ? (invoice.flusso || 0) + (invoice.iva || 0) : 0);
+    const diff = Math.abs(cfAmount - Math.abs(transaction.importo));
+    return diff <= 1.00;
+  });
+  if (amountTolerance1Euro.length > 0) {
+    console.log(`[AI] 📊 Found ${amountTolerance1Euro.length} cashflow(s) within ±€1 tolerance:`, amountTolerance1Euro.map(({ cf, invoice }) => ({
+      id: cf.id,
+      invoiceId: cf.invoiceId,
+      importo: cf.importo || (invoice ? (invoice.flusso || 0) + (invoice.iva || 0) : 0),
+      diff: Math.abs((cf.importo || (invoice ? (invoice.flusso || 0) + (invoice.iva || 0) : 0)) - Math.abs(transaction.importo)).toFixed(2),
+      note: cf.note,
+      categoria: cf.categoria,
+      descrizione: cf.descrizione,
+      spesa: invoice?.spesa
+    })));
+  }
 
   // Check if we have old-style IDs (long timestamp format) - this indicates cache issue
   const hasOldStyleIds = cashflowRecords.some(cf => cf.id.includes('-') && cf.id.split('-').length === 3 && cf.id.split('-')[1].length > 5);
   if (hasOldStyleIds) {
     console.warn(`[AI] ⚠️ WARNING: Detected old-style cashflow IDs! Please RELOAD the page (F5) to get new progressive IDs from database.`);
-  }
-
-  // Log some cashflow samples to debug
-  if (cashflowWithInvoices.length > 0) {
-    console.log(`[AI] Sample cashflow:`, cashflowWithInvoices.slice(0, 2).map(({ cf, invoice }) => ({
-      id: cf.id,
-      invoiceId: cf.invoiceId,
-      importo: cf.importo,
-      tipo: cf.tipo || invoice?.tipo,
-      note: cf.note || invoice?.note
-    })));
-  }
-
-  // Search for Verisure specifically for debugging
-  const verisureMatches = cashflowWithInvoices.filter(({ cf, invoice }) => {
-    const cfNote = (cf.note || '').toLowerCase();
-    const invNote = (invoice?.note || '').toLowerCase();
-    return cfNote.includes('verisure') || invNote.includes('verisure');
-  });
-  if (verisureMatches.length > 0) {
-    console.log(`[AI] 🔍 Found ${verisureMatches.length} Verisure cashflow records:`, verisureMatches.map(({ cf, invoice }) => ({
-      id: cf.id,
-      importo: cf.importo || ((invoice?.flusso || 0) + (invoice?.iva || 0)),
-      dataPagamento: cf.dataPagamento,
-      note: cf.note || invoice?.note
-    })));
   }
 
   // If no invoices match the type, return no match
@@ -113,89 +214,107 @@ export async function suggestMatch(
     };
   }
 
-  const prompt = `Sei un assistente esperto in contabilità per la riconciliazione bancaria di una piccola azienda italiana. Analizza questa transazione bancaria e trova il miglior abbinamento tra le fatture e i movimenti di cassa disponibili.
-
-⚠️ ATTENZIONE: L'IMPORTO È IL CRITERIO PIÙ IMPORTANTE! Se gli importi non corrispondono (differenza >2€), NON fare il match anche se le descrizioni sono simili!
+  const prompt = `Sei un assistente per la riconciliazione bancaria. Trova il MOVIMENTO DI CASSA che corrisponde alla transazione bancaria.
 
 TRANSAZIONE BANCARIA DA RICONCILIARE:
 ${formatBankTransaction(transaction)}
 
-FATTURE DISPONIBILI (tipo: ${transaction.tipo}):
-${filteredInvoices.length > 0
-  ? filteredInvoices.map(inv => formatInvoice(inv)).join('\n')
-  : 'Nessuna fattura disponibile'}
-
-MOVIMENTI DI CASSA GIÀ REGISTRATI (tipo: ${transaction.tipo}):
+MOVIMENTI DI CASSA DISPONIBILI (già filtrati per tipo ${transaction.tipo} e mese/anno):
 ${cashflowWithInvoices.length > 0
-  ? cashflowWithInvoices.map(({ cf, invoice }) => formatCashflow(cf, invoice)).join('\n')
-  : 'Nessun movimento registrato'}
+      ? cashflowWithInvoices.map(({ cf, invoice }) => formatCashflow(cf, invoice)).join('\n')
+      : 'Nessun movimento registrato'}
 
-ISTRUZIONI FONDAMENTALI:
+ALGORITMO DI RICONCILIAZIONE (segui ESATTAMENTE questi step):
 
-🔴 STEP 1 - VERIFICA IMPORTO (OBBLIGATORIO):
-Prima di tutto, calcola la differenza assoluta tra l'importo della transazione bancaria e l'importo di ogni movimento/fattura.
-- Se la differenza è >2€, IGNORA quel movimento/fattura completamente, anche se la descrizione è identica.
-- Esempio: Transazione -20€ vs Movimento 50€ = differenza 30€ → NON ABBINARE (confidence = 0)
-- Esempio: Transazione -50€ vs Movimento 50€ = differenza 0€ → CONTINUARE con verifica descrizione
+STEP 1 - FILTRA PER IMPORTO:
+- I movimenti sono già filtrati per tipo (${transaction.tipo}) e mese/anno
+- Per ogni movimento, calcola: differenza = |importo_transazione - importo_movimento|
+- Se differenza > 2€ → ESCLUDI quel movimento, passa al successivo
+- Se differenza ≤ 2€ → CONTINUA con STEP 2
 
-🟡 STEP 2 - VERIFICA DESCRIZIONE (se importo ok):
-Solo se l'importo corrisponde (differenza ≤2€), controlla la descrizione:
-- Fai un matching MOLTO FLESSIBILE: ignora maiuscole/minuscole, ignora caratteri speciali (*/-_.), ignora spazi
-- Cerca nomi di aziende/servizi dentro la descrizione completa
+STEP 2 - VERIFICA DESCRIZIONE:
+- Prendi la DESCRIZIONE della transazione (campo "Descrizione:")
+- Estrai le parole chiave significative (ignora articoli, preposizioni, caratteri speciali)
+- Confronta con questi campi del movimento:
+  * Note Movimento (campo "Note Movimento:")
+  * Note Fattura (campo "Note:")
+  * Spesa (campo "Spesa:")
+  * Categoria (campo "Categoria:")
+
+- Matching FLESSIBILE: ignora maiuscole/minuscole, punteggiatura, caratteri speciali
+- Cerca parole chiave comuni o concetti simili
 - Esempi di match validi:
-  * "GOOGLE*WORKSPACE" → "Google Workspace" ✅
-  * "VERISURE ITALY SRL" → "Verisure" ✅
-  * "DIGITAL OCEAN LLC" → "DigitalOcean" ✅
-  * "ANTHROPIC PBC" → "Anthropic" ✅
-- Basta che UNA PAROLA CHIAVE (>4 caratteri) sia presente in entrambe le stringhe
-- NON serve match completo, basta match PARZIALE del nome azienda/servizio
-- Se trovi anche solo il nome base dell'azienda (es: "Google", "Verisure"), è un match valido
+  * "ANTHROPIC +14152360599" vs Note: "Anthropic" → ✅ MATCH
+  * "VERISURE ITALY SRL" vs Spesa: "Verisure" → ✅ MATCH
+  * "GOOGLE WORKSPACE" vs Note: "Google" → ✅ MATCH
 
-🟢 STEP 3 - VERIFICA DATA (opzionale):
-Se importo E descrizione matchano, controlla la vicinanza della data (±60 giorni) per aumentare ulteriormente la confidence.
-IMPORTANTE: Se importo e descrizione matchano perfettamente, NON scartare il match solo perché la data è lontana!
+DECISIONE FINALE:
 
-PRIORITÀ:
-1. IMPORTO (se non matcha → confidence = 0, STOP)
-2. DESCRIZIONE (se importo ok ma descrizione no → confidence bassa 20-30)
-3. DATA (bonus per aumentare confidence se gli altri 2 criteri matchano)
+✅ SE IMPORTO OK (≤2€) E DESCRIZIONE MATCHA:
+   → confidence = 90-95%
+   → cashflowId = [ID del movimento]
+   → reason = "Match: movimento [ID] per €[importo] - [breve spiegazione]"
+   → RICONCILIA AUTOMATICAMENTE
+
+⚠️ SE IMPORTO OK (≤2€) MA DESCRIZIONE NON MATCHA:
+   → confidence = 40-60% (in base a quanto è vicino l'importo)
+   → cashflowId = [ID del movimento con importo più vicino]
+   → reason = "Importo compatibile (€[X]) ma descrizione non corrisponde - verifica manuale"
+   → MOSTRA ALL'UTENTE PER VERIFICA
+
+❌ SE NESSUN MOVIMENTO CON IMPORTO ≤2€:
+   → confidence = 0
+   → cashflowId = null, invoiceId = null
+   → reason = "Nessun movimento con importo compatibile (€[X]) trovato"
+
+FORMATO RISPOSTA:
+Rispondi SOLO con JSON (senza markdown, senza backticks):
+{"invoiceId": null, "cashflowId": "CF-XXX o null", "confidence": numero_0_100, "reason": "spiegazione breve in italiano"}
 
 ESEMPI:
-❌ BAD: Transazione "Anthropic -20€" + Movimento "Anthropic 50€" → confidence = 0 (importi diversi di 30€!)
-✅ GOOD: Transazione "Anthropic -50€" + Movimento "Anthropic 50€" → confidence = 95 (importo identico + descrizione match)
-✅ GOOD: Transazione "Digital Ocean -34.99€" + Movimento "Digital Ocean 34.99€" → confidence = 95
-✅ GOOD: Transazione "SDD A : VERISURE ITALY SRL 2601C265808" + Movimento note "Verisure" → confidence = 90 (nome azienda presente)
-✅ GOOD: Transazione "BONIF A : NCODE STUDIO SRL" + Movimento note "Ncode Studio" → confidence = 90 (match parziale nome)
-✅ GOOD: Transazione "POS CARTA...GOOGLE*WORKSPACE...GOOGLE.COM" + Movimento note "Google Workspace" → confidence = 95 (match flessibile)
-✅ GOOD: Transazione "ADDEBITO DIRETTO AMAZON PRIME" + Movimento note "Amazon Prime Video" → confidence = 85 (parola comune "AMAZON")
 
-⚠️ REGOLA D'ORO: SE IMPORTO MATCHA + NOME AZIENDA/SERVIZIO PRESENTE = FAI IL MATCH!
-Non essere troppo restrittivo! Se l'importo è corretto e vedi il nome dell'azienda (anche parziale, anche con caratteri speciali), è molto probabile che sia un match valido. Confidence alta (80-95%)!
+✅ Transazione: "ANTHROPIC +14152360599" €10.00 del 02/01/2026
+   Movimento: CF-0053 €10.00 del 05/01/2026 Note: "Anthropic"
+   → {"invoiceId": null, "cashflowId": "CF-0053", "confidence": 95, "reason": "Match perfetto: CF-0053 per €10.00 - 'Anthropic' trovato in note"}
 
-Rispondi ESCLUSIVAMENTE con un oggetto JSON valido (senza markdown, senza backticks) nel seguente formato:
-{"invoiceId": "id_fattura_o_null", "cashflowId": "id_cashflow_o_null", "confidence": numero_da_0_a_100, "reason": "breve spiegazione in italiano"}
+⚠️ Transazione: "PAGAMENTO POS" €67.08 del 02/01/2026
+   Movimento: CF-0123 €67.08 del 03/01/2026 Note: "Verisure"
+   Movimento: CF-0124 €67.10 del 04/01/2026 Note: ""
+   → {"invoiceId": null, "cashflowId": "CF-0123", "confidence": 60, "reason": "Importo compatibile (€67.08) ma descrizione generica - verifica manuale"}
 
-IMPORTANTE:
-- Usa "null" (senza virgolette) per i campi vuoti, non la stringa "null"
-- Non includere testo prima o dopo il JSON
-- Nel campo "reason" fai SEMPRE riferimento al MOVIMENTO DI CASSA (con il suo ID: es. "CF-xxx"), NON alla fattura
-- Se confidence = 0 per differenza importo, scrivi nel reason: "Importi non corrispondenti: transazione €X vs movimento CF-YYY €Z (diff: €W)"
-- Se confidence > 0, esempio reason corretto: "Match perfetto: movimento CF-0053 del 06/01/26 per €50.00 con note 'Anthropic'"
-- Esempio reason ERRATO: "Match perfetto con Fattura_295"
-- Il campo reason deve spiegare brevemente perché hai scelto o scartato quel MOVIMENTO DI CASSA`;
+❌ Transazione: "Commissioni bancarie" €0.59 del 02/01/2026
+   Movimenti disponibili: €10.00, €17.08, €50.00
+   → {"invoiceId": null, "cashflowId": null, "confidence": 0, "reason": "Nessun movimento con importo compatibile (€0.59) trovato"}`;
 
   try {
     const selectedModel = model || 'claude-3-5-haiku-20241022';
     console.log(`[AI] 🤖 Using model: ${selectedModel}`);
     console.log(`[AI] Sending prompt (first 1000 chars):`, prompt.substring(0, 1000) + '...');
 
-    const response = await anthropic.messages.create({
-      model: selectedModel,
-      max_tokens: 500,
-      messages: [{ role: 'user', content: prompt }]
-    });
+    let text = '';
 
-    const text = response.content[0].type === 'text' ? response.content[0].text : '';
+    // Determine provider based on model name
+    if (selectedModel.startsWith('gpt-')) {
+      // OpenAI models
+      const openai = getOpenAIClient();
+      const response = await openai.chat.completions.create({
+        model: selectedModel,
+        max_tokens: 500,
+        messages: [{ role: 'user', content: prompt }],
+        response_format: { type: 'json_object' }
+      });
+      text = response.choices[0]?.message?.content || '';
+    } else {
+      // Anthropic models (claude-*)
+      const anthropic = getAnthropicClient();
+      const response = await anthropic.messages.create({
+        model: selectedModel,
+        max_tokens: 500,
+        messages: [{ role: 'user', content: prompt }]
+      });
+      text = response.content[0].type === 'text' ? response.content[0].text : '';
+    }
+
     console.log(`[AI] Raw response:`, text);
 
     // Clean potential markdown formatting
@@ -241,11 +360,94 @@ IMPORTANTE:
     };
   } catch (error) {
     console.error('Error in AI matching:', error);
+    console.error('Error details:', JSON.stringify(error, null, 2));
+
+    // Provide specific error messages based on error type
+    let errorMessage = 'Errore sconosciuto';
+    let isFatalError = false;
+
+    // Check for Anthropic SDK error structure
+    if (error && typeof error === 'object') {
+      const err = error as any;
+
+      // Check error.status for HTTP status codes
+      const status = err.status || err.statusCode;
+
+      // Check error.type for Anthropic error types
+      const errorType = err.type || err.error?.type;
+
+      // Get the message from various possible locations
+      const message = (err.message || err.error?.message || '').toLowerCase();
+      const fullError = JSON.stringify(error).toLowerCase();
+
+      console.log(`[AI Error] Status: ${status}, Type: ${errorType}, Message: ${message}`);
+
+      // 401 - Authentication error (FATAL)
+      if (status === 401 || message.includes('unauthorized') || message.includes('authentication') ||
+        message.includes('api key') || message.includes('apikey') || errorType === 'authentication_error') {
+        errorMessage = '🔑 Chiave API di Claude mancante o non valida. Verifica la configurazione in .env';
+        isFatalError = true;
+      }
+      // 402 - Payment required / Credits insufficient (FATAL)
+      else if (status === 402 || message.includes('payment') || message.includes('credit') ||
+        message.includes('insufficient') || fullError.includes('credit') ||
+        fullError.includes('402') || errorType === 'payment_required') {
+        errorMessage = '💳 CREDITI CLAUDE INSUFFICIENTI! Ricarica il tuo account Anthropic su console.anthropic.com/settings/billing';
+        isFatalError = true;
+      }
+      // 429 - Rate limiting
+      else if (status === 429 || message.includes('rate limit') || message.includes('too many requests') ||
+        errorType === 'rate_limit_error') {
+        errorMessage = '⏱️ Limite di richieste API raggiunto. Attendi qualche minuto prima di riprovare';
+      }
+      // 403 - Permission denied / Quota exceeded (FATAL)
+      else if (status === 403 || message.includes('quota') || message.includes('billing') ||
+        message.includes('permission') || errorType === 'permission_error') {
+        errorMessage = '⛔ Quota API superata o permessi insufficienti. Verifica il tuo account Anthropic';
+        isFatalError = true;
+      }
+      // 500/502/503 - Server errors
+      else if (status >= 500 || message.includes('server error') || message.includes('503') ||
+        message.includes('502') || errorType === 'api_error') {
+        errorMessage = '🔧 Servizio Claude temporaneamente non disponibile. Riprova tra qualche minuto';
+      }
+      // Network errors
+      else if (message.includes('network') || message.includes('fetch') || message.includes('connection') ||
+        message.includes('econnrefused') || message.includes('enotfound')) {
+        errorMessage = '🌐 Errore di connessione. Verifica la tua connessione internet e riprova';
+      }
+      // JSON parsing errors
+      else if (message.includes('json') || message.includes('parse') || message.includes('unexpected token')) {
+        errorMessage = '📝 Errore nel formato della risposta AI. Il modello potrebbe essere sovraccarico, riprova';
+      }
+      // Model not found
+      else if (status === 404 || message.includes('model') || message.includes('not found') ||
+        errorType === 'not_found_error') {
+        errorMessage = '🤖 Modello AI non disponibile. Prova con un modello diverso';
+      }
+      // Timeout
+      else if (message.includes('timeout') || message.includes('timed out') || message.includes('deadline')) {
+        errorMessage = '⏲️ Timeout della richiesta AI. Riprova tra qualche secondo';
+      }
+      // Generic error with message
+      else if (message) {
+        errorMessage = message.length > 200 ? message.substring(0, 200) + '...' : message;
+      }
+    }
+
+    // For fatal errors, throw the exception so it can be caught by the caller
+    if (isFatalError) {
+      const fatalError = new Error(errorMessage);
+      (fatalError as any).isFatal = true;
+      throw fatalError;
+    }
+
+    // For non-fatal errors, return a result with confidence 0
     return {
       invoiceId: null,
       cashflowId: null,
       confidence: 0,
-      reason: `Errore nell'analisi AI: ${error instanceof Error ? error.message : 'Errore sconosciuto'}`
+      reason: `Errore nell'analisi AI: ${errorMessage}`
     };
   }
 }
@@ -331,7 +533,7 @@ export function quickMatch(
       // Check if description matches cashflow note or invoice note
       const invoice = invoices.find(inv => inv.id === cf.invoiceId);
       return hasDescriptionMatch(description, cf.note) ||
-             (invoice && hasDescriptionMatch(description, invoice.note));
+        (invoice && hasDescriptionMatch(description, invoice.note));
     });
 
     // If only one has description match, use it
@@ -375,7 +577,7 @@ export function quickMatch(
 
   // Check description match
   const hasDescMatch = hasDescriptionMatch(description, matchedCashflow.note) ||
-                       (matchedInvoice && hasDescriptionMatch(description, matchedInvoice.note));
+    (matchedInvoice && hasDescriptionMatch(description, matchedInvoice.note));
 
   // Check date proximity with payment date
   let isDateClose = false;

@@ -77,6 +77,31 @@ const TransactionRow: React.FC<{
     return 'text-red-600';
   };
 
+  const getMatchReasonStyle = (confidence: number | undefined) => {
+    if (confidence === undefined || confidence >= 80) {
+      // High confidence or matched - blue/info style
+      return {
+        container: 'bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800',
+        icon: 'text-blue-600 dark:text-blue-400',
+        text: 'text-blue-800 dark:text-blue-300'
+      };
+    } else if (confidence >= 50) {
+      // Medium confidence - yellow/warning style
+      return {
+        container: 'bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800',
+        icon: 'text-yellow-600 dark:text-yellow-400',
+        text: 'text-yellow-800 dark:text-yellow-300'
+      };
+    } else {
+      // Low confidence - red/error style
+      return {
+        container: 'bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800',
+        icon: 'text-red-600 dark:text-red-400',
+        text: 'text-red-800 dark:text-red-300'
+      };
+    }
+  };
+
   return (
     <div className={`border-b border-gray-200 dark:border-dark-border last:border-b-0 ${isSelected ? 'bg-primary/5 dark:bg-primary/10' : ''}`}>
       <div
@@ -160,14 +185,80 @@ const TransactionRow: React.FC<{
             </div>
 
             {/* Match info */}
-            {transaction.matchReason && (
-              <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
-                <div className="flex items-start gap-2">
-                  <AlertCircle size={16} className="text-blue-600 dark:text-blue-400 mt-0.5" />
-                  <div className="text-sm text-blue-800 dark:text-blue-300">{transaction.matchReason}</div>
+            {transaction.matchReason && (() => {
+              const style = getMatchReasonStyle(transaction.matchConfidence);
+
+              // Extract cashflow ID from reason (e.g., "CF-0123" or "movimento CF-0123")
+              const cfIdMatch = transaction.matchReason.match(/CF-\d+/i);
+              const suggestedCashflowId = cfIdMatch ? cfIdMatch[0] : null;
+              const suggestedCashflow = suggestedCashflowId ? cashflowRecords.find(cf => cf.id === suggestedCashflowId) : null;
+              const suggestedInvoice = suggestedCashflow?.invoiceId ? invoices.find(inv => inv.id === suggestedCashflow.invoiceId) : null;
+
+              const showSuggestedCashflow = transaction.matchConfidence !== undefined &&
+                                           transaction.matchConfidence < 80 &&
+                                           suggestedCashflow;
+
+              return (
+                <div className={`mb-4 p-3 rounded-lg ${style.container}`}>
+                  <div className="flex items-start gap-2">
+                    <AlertCircle size={16} className={`${style.icon} mt-0.5 flex-shrink-0`} />
+                    <div className="flex-1">
+                      <div className={`text-sm ${style.text}`}>
+                        {transaction.matchReason}
+                      </div>
+                      {transaction.matchConfidence !== undefined && (
+                        <div className={`text-xs font-semibold mt-1 ${getConfidenceColor(transaction.matchConfidence)}`}>
+                          Affidabilità: {transaction.matchConfidence}%
+                        </div>
+                      )}
+
+                      {/* Show suggested cashflow when confidence is low */}
+                      {showSuggestedCashflow && (
+                        <div className="mt-3 pt-3 border-t border-gray-300 dark:border-gray-600">
+                          <div className="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                            Movimento confrontato:
+                          </div>
+                          <div className="bg-white dark:bg-dark-card rounded p-2 text-xs space-y-1">
+                            <div className="flex justify-between">
+                              <span className="text-gray-600 dark:text-gray-400">ID:</span>
+                              <span className="font-mono font-semibold text-gray-900 dark:text-white">{suggestedCashflow.id}</span>
+                            </div>
+                            {suggestedCashflow.dataPagamento && (
+                              <div className="flex justify-between">
+                                <span className="text-gray-600 dark:text-gray-400">Data:</span>
+                                <span className="text-gray-900 dark:text-white">{suggestedCashflow.dataPagamento}</span>
+                              </div>
+                            )}
+                            <div className="flex justify-between">
+                              <span className="text-gray-600 dark:text-gray-400">Importo:</span>
+                              <span className="font-semibold text-gray-900 dark:text-white">
+                                {suggestedCashflow.tipo === 'Entrata' ? '+' : '-'}€{(suggestedCashflow.importo || (suggestedInvoice ? (suggestedInvoice.flusso || 0) + (suggestedInvoice.iva || 0) : 0)).toFixed(2)}
+                              </span>
+                            </div>
+                            {(suggestedCashflow.note || suggestedInvoice?.note) && (
+                              <div className="flex justify-between">
+                                <span className="text-gray-600 dark:text-gray-400">Note:</span>
+                                <span className="text-gray-900 dark:text-white text-right max-w-[200px] truncate">
+                                  {suggestedCashflow.note || suggestedInvoice?.note}
+                                </span>
+                              </div>
+                            )}
+                            {suggestedInvoice && (
+                              <div className="flex justify-between">
+                                <span className="text-gray-600 dark:text-gray-400">Progetto:</span>
+                                <span className="text-gray-900 dark:text-white text-right max-w-[200px] truncate">
+                                  {suggestedInvoice.nomeProgetto || suggestedInvoice.spesa || 'N/A'}
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 </div>
-              </div>
-            )}
+              );
+            })()}
 
             {/* Matched cashflow (priority) */}
             {matchedCashflow && (
@@ -336,17 +427,22 @@ const ManualMatchModal: React.FC<{
   }, [invoices, transaction.tipo, search]);
 
   return (
-    <div className="fixed inset-0 bg-black/50 dark:bg-black/70 flex items-center justify-center z-50" onClick={onClose}>
+    <div className="fixed inset-0 bg-black/50 dark:bg-black/70 flex items-center justify-center z-50 p-4" onClick={onClose}>
       <div
-        className="bg-white dark:bg-dark-card rounded-lg w-full max-w-2xl max-h-[80vh] overflow-hidden shadow-xl"
+        className="bg-white dark:bg-dark-card rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto"
         onClick={e => e.stopPropagation()}
       >
-        <div className="p-6 border-b border-gray-200 dark:border-dark-border">
-          <h3 className="text-xl font-semibold text-dark dark:text-white">Abbina Transazione</h3>
-          <p className="text-sm text-gray-500 mt-1">
-            {formatDate(transaction.data)} | {transaction.tipo === 'Entrata' ? '+' : '-'}{formatCurrency(transaction.importo)}
-          </p>
-          <p className="text-sm text-gray-500 mt-1">{transaction.descrizione}</p>
+        <div className="p-6 border-b border-gray-200 dark:border-dark-border flex justify-between items-center">
+          <div>
+            <h2 className="text-xl font-bold text-dark dark:text-white">Abbina Transazione</h2>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+              {formatDate(transaction.data)} | {transaction.tipo === 'Entrata' ? '+' : '-'}{formatCurrency(transaction.importo)}
+            </p>
+            <p className="text-sm text-gray-500 dark:text-gray-400">{transaction.descrizione}</p>
+          </div>
+          <button onClick={onClose} className="text-gray-500 dark:text-gray-400 hover:text-dark dark:hover:text-white">
+            <X size={24} />
+          </button>
         </div>
 
         <div className="p-4 border-b border-gray-200 dark:border-dark-border">
@@ -357,12 +453,12 @@ const ManualMatchModal: React.FC<{
               value={search}
               onChange={e => setSearch(e.target.value)}
               placeholder="Cerca per ID, progetto, importo..."
-              className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+              className="w-full pl-10 pr-4 py-2.5 bg-gray-50 dark:bg-gray-800/30 border border-gray-200 dark:border-dark-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 text-dark dark:text-white"
             />
           </div>
         </div>
 
-        <div className="overflow-y-auto max-h-96">
+        <div className="max-h-96 overflow-y-auto">
           {filteredInvoices.length === 0 ? (
             <div className="p-8 text-center text-gray-500 dark:text-gray-400">
               Nessuna fattura trovata
@@ -376,8 +472,8 @@ const ManualMatchModal: React.FC<{
                 <div
                   key={inv.id}
                   onClick={() => onMatch(inv.id)}
-                  className={`p-4 border-b border-gray-200 last:border-b-0 cursor-pointer hover:bg-gray-50 transition-colors ${
-                    isExactMatch ? 'bg-green-50' : ''
+                  className={`p-4 border-b border-gray-200 dark:border-dark-border last:border-b-0 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-colors ${
+                    isExactMatch ? 'bg-green-50 dark:bg-green-900/20' : ''
                   }`}
                 >
                   <div className="flex items-center justify-between">
@@ -385,16 +481,16 @@ const ManualMatchModal: React.FC<{
                       <div className="flex items-center gap-2">
                         <div className="font-medium text-dark dark:text-white">{formatInvoiceId(inv.id, inv.anno)}</div>
                       </div>
-                      <div className="text-sm text-gray-500 mt-1">
+                      <div className="text-sm text-gray-500 dark:text-gray-400 mt-1">
                         {inv.nomeProgetto || inv.spesa || 'N/A'} | {inv.data instanceof Date ? formatDate(inv.data.toISOString()) : formatDate(inv.data)}
                       </div>
                     </div>
                     <div className="text-right ml-4">
-                      <div className={`font-semibold ${inv.tipo === 'Entrata' ? 'text-green-600' : 'text-red-600'}`}>
+                      <div className={`font-semibold ${inv.tipo === 'Entrata' ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
                         {formatCurrency(totale)}
                       </div>
                       {isExactMatch && (
-                        <span className="text-xs text-green-600 font-medium">Importo esatto</span>
+                        <span className="text-xs text-green-600 dark:text-green-400 font-medium">Importo esatto</span>
                       )}
                     </div>
                   </div>
@@ -402,15 +498,6 @@ const ManualMatchModal: React.FC<{
               );
             })
           )}
-        </div>
-
-        <div className="p-4 border-t border-gray-200 flex justify-end">
-          <button
-            onClick={onClose}
-            className="pl-4 pr-12 py-2 text-gray-500 hover:bg-gray-50 rounded-lg transition-colors"
-          >
-            Annulla
-          </button>
         </div>
       </div>
     </div>
@@ -588,9 +675,9 @@ const CreateCashflowModal: React.FC<{
     dataPagamento: transaction.data,
     importo: Math.abs(transaction.importo), // Use absolute value for amount
     tipo: transaction.tipo as 'Entrata' | 'Uscita',
-    descrizione: transaction.descrizione || transaction.causale || '',
+    descrizione: '', // Leave empty - user will fill it in
     categoria: '',
-    note: transaction.descrizione || transaction.causale || ''
+    note: transaction.descrizione || transaction.causale || '' // Bank transaction description goes in notes
   });
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -750,9 +837,9 @@ function getUnmatchedData(
     session.periodoAl
   );
 
-  // Unmatched bank transactions (pending status)
+  // Unmatched bank transactions (pending status without any match)
   const unmatchedBankTransactions = bankTransactions.filter(
-    tx => tx.matchStatus === 'pending'
+    tx => tx.matchStatus === 'pending' && !tx.matchedInvoiceId && !tx.matchedCashflowId
   );
 
   // Unmatched cashflows (no bank transaction reference)
@@ -762,8 +849,15 @@ function getUnmatchedData(
       .map(tx => tx.matchedCashflowId!)
   );
 
+  // Also include cashflows whose invoices are matched
+  const matchedInvoiceIds = new Set(
+    bankTransactions
+      .filter(tx => tx.matchedInvoiceId && tx.matchStatus !== 'ignored')
+      .map(tx => tx.matchedInvoiceId!)
+  );
+
   const unmatchedCashflows = cashflowsInPeriod.filter(
-    cf => !matchedCashflowIds.has(cf.id)
+    cf => !matchedCashflowIds.has(cf.id) && (!cf.invoiceId || !matchedInvoiceIds.has(cf.invoiceId))
   );
 
   return { unmatchedBankTransactions, unmatchedCashflows };
@@ -890,7 +984,7 @@ function generateDifferenceReport(
   ).length;
 
   const unmatchedBankCount = bankTransactions.filter(
-    tx => tx.matchStatus === 'pending'
+    tx => tx.matchStatus === 'pending' && !tx.matchedInvoiceId && !tx.matchedCashflowId
   ).length;
 
   const matchedCashflowIds = new Set(
@@ -899,8 +993,15 @@ function generateDifferenceReport(
       .map(tx => tx.matchedCashflowId!)
   );
 
+  // Also include cashflows whose invoices are matched
+  const matchedInvoiceIds = new Set(
+    bankTransactions
+      .filter(tx => tx.matchedInvoiceId && tx.matchStatus !== 'ignored')
+      .map(tx => tx.matchedInvoiceId!)
+  );
+
   const unmatchedCashflowCount = cashflowsInPeriod.filter(
-    cf => !matchedCashflowIds.has(cf.id)
+    cf => !matchedCashflowIds.has(cf.id) && (!cf.invoiceId || !matchedInvoiceIds.has(cf.invoiceId))
   ).length;
 
   const totalTransactions = bankTransactions.length + cashflowsInPeriod.length;
@@ -1404,7 +1505,7 @@ const ReportView: React.FC<ReportViewProps> = ({ report }) => {
 // ====== END COMPARISON VIEW COMPONENTS ======
 
 export const Reconciliation: React.FC = () => {
-  const { invoices, cashflowRecords, reconciliationSessions, bankTransactions, addReconciliationSession, addBankTransaction, updateBankTransaction, updateReconciliationSession, deleteBankTransaction, deleteReconciliationSession, clearAllReconciliationSessions, addInvoice, addCashflowRecord, aiProcessing, setAiProcessing, stopAiProcessing } = useData();
+  const { invoices, cashflowRecords, reconciliationSessions, bankTransactions, addReconciliationSession, addBankTransaction, updateBankTransaction, updateReconciliationSession, deleteBankTransaction, deleteReconciliationSession, clearAllReconciliationSessions, addInvoice, addCashflowRecord, aiProcessing, setAiProcessing, stopAiProcessing, refreshData } = useData();
 
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -1429,9 +1530,39 @@ export const Reconciliation: React.FC = () => {
     const saved = localStorage.getItem('reconciliation_aiMatchingEnabled');
     return saved === null ? false : saved === 'true'; // Default: DISABILITATA per sicurezza costi
   });
-  const [selectedAiModel, setSelectedAiModel] = useState<'haiku' | 'sonnet' | 'sonnet4' | 'opus' | 'opus4'>(() => {
+
+  // Check if AI keys are configured
+  const checkAIKeysConfigured = () => {
+    const savedSettings = localStorage.getItem('ai_settings');
+    if (!savedSettings) return false;
+    try {
+      const parsed = JSON.parse(savedSettings);
+      return (parsed.anthropicApiKey && parsed.anthropicApiKey.length > 0) ||
+             (parsed.openaiApiKey && parsed.openaiApiKey.length > 0);
+    } catch {
+      return false;
+    }
+  };
+  const [selectedAiProvider, setSelectedAiProvider] = useState<'anthropic' | 'openai'>(() => {
+    const saved = localStorage.getItem('reconciliation_selectedAiProvider');
+    // Try to load from AI settings
+    if (!saved) {
+      const aiSettings = localStorage.getItem('ai_settings');
+      if (aiSettings) {
+        try {
+          const parsed = JSON.parse(aiSettings);
+          return parsed.defaultProvider || 'anthropic';
+        } catch {
+          return 'anthropic';
+        }
+      }
+    }
+    return (saved as 'anthropic' | 'openai') || 'anthropic';
+  });
+
+  const [selectedAiModel, setSelectedAiModel] = useState<string>(() => {
     const saved = localStorage.getItem('reconciliation_selectedAiModel');
-    return (saved as 'haiku' | 'sonnet' | 'sonnet4' | 'opus' | 'opus4') || 'haiku';
+    return saved || (selectedAiProvider === 'openai' ? 'gpt-4o-mini' : 'claude-3-5-haiku-20241022');
   });
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -1459,6 +1590,10 @@ export const Reconciliation: React.FC = () => {
   }, [aiMatchingEnabled]);
 
   React.useEffect(() => {
+    localStorage.setItem('reconciliation_selectedAiProvider', selectedAiProvider);
+  }, [selectedAiProvider]);
+
+  React.useEffect(() => {
     localStorage.setItem('reconciliation_selectedAiModel', selectedAiModel);
   }, [selectedAiModel]);
 
@@ -1468,44 +1603,40 @@ export const Reconciliation: React.FC = () => {
   }, [aiProcessing.shouldStop]);
 
   // Get AI model details
-  const getAiModelInfo = (model: 'haiku' | 'sonnet' | 'sonnet4' | 'opus' | 'opus4') => {
-    switch (model) {
-      case 'haiku':
-        return {
-          id: 'claude-3-5-haiku-20241022',
-          name: 'Haiku 3.5',
-          cost: '~15¢/100 tx',
-          description: 'Veloce ed economico'
-        };
-      case 'sonnet':
-        return {
-          id: 'claude-3-5-sonnet-20241022',
-          name: 'Sonnet 3.5',
-          cost: '~$1.50/100 tx',
-          description: 'Bilanciato, alta qualità'
-        };
-      case 'sonnet4':
-        return {
-          id: 'claude-sonnet-4-20250514',
-          name: 'Sonnet 4',
-          cost: '~$3/100 tx',
-          description: 'Più recente e performante'
-        };
-      case 'opus':
-        return {
-          id: 'claude-3-opus-20240229',
-          name: 'Opus 3',
-          cost: '~$7.50/100 tx',
-          description: 'Altissima qualità'
-        };
-      case 'opus4':
-        return {
-          id: 'claude-opus-4-5-20251101',
-          name: 'Opus 4.5',
-          cost: '~$15/100 tx',
-          description: 'Massima qualità assoluta'
-        };
+  const getAiModelInfo = (modelId: string) => {
+    // Anthropic models
+    if (modelId === 'claude-3-5-haiku-20241022') {
+      return { id: modelId, name: 'Haiku 3.5', cost: '~15¢/100 tx', description: 'Veloce ed economico' };
     }
+    if (modelId === 'claude-3-5-sonnet-20241022') {
+      return { id: modelId, name: 'Sonnet 3.5', cost: '~$1.50/100 tx', description: 'Bilanciato, alta qualità' };
+    }
+    if (modelId === 'claude-sonnet-4-20250514') {
+      return { id: modelId, name: 'Sonnet 4', cost: '~$3/100 tx', description: 'Più recente e performante' };
+    }
+    if (modelId === 'claude-3-opus-20240229') {
+      return { id: modelId, name: 'Opus 3', cost: '~$7.50/100 tx', description: 'Altissima qualità' };
+    }
+    if (modelId === 'claude-opus-4-5-20251101') {
+      return { id: modelId, name: 'Opus 4.5', cost: '~$15/100 tx', description: 'Massima qualità assoluta' };
+    }
+
+    // OpenAI models
+    if (modelId === 'gpt-4o-mini') {
+      return { id: modelId, name: 'GPT-4o Mini', cost: '~$0.05/100 tx', description: 'Velocissimo ed economico' };
+    }
+    if (modelId === 'gpt-4o') {
+      return { id: modelId, name: 'GPT-4o', cost: '~$0.50/100 tx', description: 'Veloce e potente' };
+    }
+    if (modelId === 'gpt-4-turbo') {
+      return { id: modelId, name: 'GPT-4 Turbo', cost: '~$2/100 tx', description: 'Alta qualità' };
+    }
+    if (modelId === 'gpt-3.5-turbo') {
+      return { id: modelId, name: 'GPT-3.5 Turbo', cost: '~$0.15/100 tx', description: 'Economico e veloce' };
+    }
+
+    // Fallback
+    return { id: modelId, name: modelId, cost: 'N/A', description: 'Modello sconosciuto' };
   };
 
   // Current session transactions
@@ -1630,8 +1761,15 @@ export const Reconciliation: React.FC = () => {
       // Select session immediately so transactions appear as they're added
       setSelectedSession(sessionId);
 
-      // Create bank transactions with AI matching (if enabled)
-      if (aiMatchingEnabled) {
+      // Check if AI keys are configured before starting AI processing
+      const canUseAI = aiMatchingEnabled && checkAIKeysConfigured();
+
+      if (aiMatchingEnabled && !checkAIKeysConfigured()) {
+        setError('⚠️ AI Matching è abilitato ma le API keys non sono configurate. Le transazioni verranno importate senza matching automatico. Configura le chiavi nelle Impostazioni.');
+      }
+
+      // Create bank transactions with AI matching (if enabled AND keys configured)
+      if (canUseAI) {
         setAiProcessing({
           isProcessing: true,
           sessionId,
@@ -1639,6 +1777,7 @@ export const Reconciliation: React.FC = () => {
           total: parsed.transactions.length,
           shouldStop: false
         });
+        stopAIProcessingRef.current = false; // Reset ref
         setIsStoppingAI(false);
       }
       let matchedCount = 0;
@@ -1649,8 +1788,8 @@ export const Reconciliation: React.FC = () => {
       let shouldStop = false;
 
       for (let i = 0; i < parsed.transactions.length && !shouldStop; i++) {
-        // Check if user wants to stop - use local variable for clarity
-        shouldStop = aiProcessing.shouldStop;
+        // Check if user wants to stop - use ref for most up-to-date value
+        shouldStop = stopAIProcessingRef.current;
         if (shouldStop) {
           console.log(`⏹️⏹️⏹️ AI processing STOPPED by user at ${i}/${parsed.transactions.length}`);
           console.log(`Breaking out of loop NOW`);
@@ -1658,8 +1797,11 @@ export const Reconciliation: React.FC = () => {
         }
 
         const tx = parsed.transactions[i];
-        console.log(`📊 Processing transaction ${i + 1}/${parsed.transactions.length} ${aiMatchingEnabled ? 'with AI' : 'without AI'}`);
-        setAiProcessing({ current: i + 1, total: parsed.transactions.length });
+        console.log(`📊 Processing transaction ${i + 1}/${parsed.transactions.length} ${canUseAI ? 'with AI' : 'without AI'}`);
+        if (canUseAI) {
+          // Only update progress, don't touch other fields
+          setAiProcessing({ current: i + 1 });
+        }
 
         const bankTx: BankTransaction = {
           id: crypto.randomUUID(),
@@ -1674,8 +1816,8 @@ export const Reconciliation: React.FC = () => {
           matchStatus: tx.hasErrors ? 'ignored' : 'pending'
         };
 
-        // Try automatic matching with AI (only if enabled and no errors)
-        if (aiMatchingEnabled && !tx.hasErrors) {
+        // Try automatic matching with AI (only if enabled, keys configured, and no errors)
+        if (canUseAI && !tx.hasErrors) {
         try {
           console.log(`[AI Match ${i+1}/${parsed.transactions.length}] Analyzing transaction:`, {
             descrizione: tx.descrizione,
@@ -1686,12 +1828,16 @@ export const Reconciliation: React.FC = () => {
           console.log(`Available invoices: ${invoices.length}, cashflow records: ${cashflowRecords.length}`);
           console.log(`Sample cashflow IDs:`, cashflowRecords.slice(0, 5).map(cf => cf.id));
 
+          // Filter out cashflows already used in this batch
+          const availableCashflows = cashflowRecords.filter(cf => !matchedCashflowIds.has(cf.id));
+          console.log(`Available cashflows after filtering used ones: ${availableCashflows.length}/${cashflowRecords.length}`);
+
           const modelInfo = getAiModelInfo(selectedAiModel);
           console.log(`🤖 Using AI model: ${modelInfo.name} (${modelInfo.id})`);
-          const aiMatchResult = await suggestMatch(bankTx, invoices, cashflowRecords, modelInfo.id);
+          const aiMatchResult = await suggestMatch(bankTx, invoices, availableCashflows, modelInfo.id);
 
-          // Check if user stopped processing after AI call
-          shouldStop = aiProcessing.shouldStop;
+          // Check if user stopped processing after AI call - use ref
+          shouldStop = stopAIProcessingRef.current;
           if (shouldStop) {
             console.log(`⏹️ AI processing stopped by user after AI analysis`);
             // Save the current transaction without matching before stopping
@@ -1715,12 +1861,17 @@ export const Reconciliation: React.FC = () => {
             console.log(`Reason: "${aiMatchResult.reason}"`);
           }
 
+          // ALWAYS save AI confidence and reason (even if confidence is low)
+          bankTx.matchConfidence = aiMatchResult.confidence;
+          bankTx.matchReason = aiMatchResult.reason;
+
           // Auto-match if confidence is high enough
           if (aiMatchResult.confidence >= 80) {
             if (aiMatchResult.cashflowId) {
               // Check if this cashflow is already matched to prevent duplicates
               if (matchedCashflowIds.has(aiMatchResult.cashflowId)) {
                 console.log(`⚠️ Cashflow ${aiMatchResult.cashflowId} already matched to another transaction, leaving as pending`);
+                bankTx.matchReason = `${aiMatchResult.reason} (Movimento già abbinato ad altra transazione)`;
               } else {
                 // Verify cashflow exists
                 const cashflowExists = cashflowRecords.some(cf => cf.id === aiMatchResult.cashflowId);
@@ -1735,8 +1886,6 @@ export const Reconciliation: React.FC = () => {
                 if (cashflowExists) {
                   bankTx.matchedCashflowId = aiMatchResult.cashflowId;
                   bankTx.matchedInvoiceId = aiMatchResult.invoiceId || undefined;
-                  bankTx.matchConfidence = aiMatchResult.confidence;
-                  bankTx.matchReason = aiMatchResult.reason;
                   bankTx.matchStatus = 'matched';
                   matchedCount++;
                   matchedCashflowIds.add(aiMatchResult.cashflowId);
@@ -1749,22 +1898,46 @@ export const Reconciliation: React.FC = () => {
               console.log(`Invoice ${aiMatchResult.invoiceId} exists: ${invoiceExists}`);
               if (invoiceExists) {
                 bankTx.matchedInvoiceId = aiMatchResult.invoiceId;
-                bankTx.matchConfidence = aiMatchResult.confidence;
-                bankTx.matchReason = aiMatchResult.reason;
                 bankTx.matchStatus = 'matched';
                 matchedCount++;
                 console.log(`✅ Transaction matched to invoice ${aiMatchResult.invoiceId}`);
               }
             }
           } else {
-            console.log(`⚠️ Confidence too low (${aiMatchResult.confidence}%), not auto-matching`);
+            console.log(`⚠️ Confidence too low (${aiMatchResult.confidence}%), not auto-matching but saving reason`);
           }
         } catch (aiError) {
           console.error('❌ AI matching error for transaction:', tx.id, aiError);
-          // Continue without matching if AI fails
+          const errorMessage = aiError instanceof Error ? aiError.message : 'Errore sconosciuto';
+
+          // Check if this is a FATAL error that should stop processing
+          const isFatalError = errorMessage.toLowerCase().includes('crediti') ||
+                              errorMessage.toLowerCase().includes('credit') ||
+                              errorMessage.toLowerCase().includes('payment') ||
+                              errorMessage.toLowerCase().includes('api key') ||
+                              errorMessage.toLowerCase().includes('authentication') ||
+                              errorMessage.toLowerCase().includes('unauthorized');
+
+          if (isFatalError) {
+            console.error('❌ FATAL ERROR - Stopping AI processing');
+            setError(`🛑 ERRORE CRITICO - Elaborazione interrotta: ${errorMessage}`);
+            // Stop processing immediately for fatal errors
+            shouldStop = true;
+            break;
+          } else {
+            // For non-fatal errors (timeout, network glitches), show warning but continue
+            setError(`⚠️ Errore AI durante l'elaborazione della transazione ${i + 1}: ${errorMessage}`);
+            // Continue without matching if AI fails
+          }
         }
         } else {
           console.log(`⏭️ AI matching disabled, skipping AI analysis for transaction ${i + 1}`);
+        }
+
+        // CRITICAL: Check if a fatal error occurred and stop immediately
+        if (shouldStop) {
+          console.log(`⏹️ AI processing stopped (fatal error or user request), skipping remaining transactions`);
+          break;
         }
 
         // Check again before saving
@@ -1786,8 +1959,8 @@ export const Reconciliation: React.FC = () => {
         // Small delay to avoid rate limiting
         if (i < parsed.transactions.length - 1) {
           await new Promise(resolve => setTimeout(resolve, 200));
-          // Check one more time after delay
-          shouldStop = aiProcessing.shouldStop;
+          // Check one more time after delay - use ref
+          shouldStop = stopAIProcessingRef.current;
         }
       }
 
@@ -1797,7 +1970,7 @@ export const Reconciliation: React.FC = () => {
       }
 
       console.log(`✅ Loop completed. Matched: ${matchedCount}, Total: ${parsed.transactions.length}`);
-      console.log(`Was stopped by user? ${aiProcessing.shouldStop}`);
+      console.log(`Was stopped by user? ${stopAIProcessingRef.current}`);
 
       // Update session with final counts
       await updateReconciliationSession(sessionId, {
@@ -1868,10 +2041,21 @@ export const Reconciliation: React.FC = () => {
 
   // Run AI analysis on single transaction
   const handleRunAI = async (transactionId: string) => {
+    // Check if AI keys are configured
+    if (!checkAIKeysConfigured()) {
+      setError('⚠️ Configura le API keys nelle Impostazioni prima di usare l\'AI matching');
+      return;
+    }
+
     const tx = bankTransactions.find(t => t.id === transactionId);
     if (!tx) return;
 
     try {
+      // Refresh data to ensure we have latest cashflows from database
+      console.log(`[Single AI Match] Refreshing data from database...`);
+      await refreshData();
+      console.log(`[Single AI Match] Data refreshed. Now have ${invoices.length} invoices, ${cashflowRecords.length} cashflow records`);
+
       const modelInfo = getAiModelInfo(selectedAiModel);
       console.log(`[Single AI Match] Analyzing transaction:`, {
         id: tx.id,
@@ -1880,6 +2064,8 @@ export const Reconciliation: React.FC = () => {
         tipo: tx.tipo,
         data: tx.data
       });
+      console.log(`[Single AI Match] Available data: ${invoices.length} invoices, ${cashflowRecords.length} cashflow records`);
+
       const suggestion = await suggestMatch(tx, invoices, cashflowRecords, modelInfo.id);
       console.log(`[Single AI Match Result]`, suggestion);
       await updateBankTransaction(transactionId, {
@@ -1890,6 +2076,8 @@ export const Reconciliation: React.FC = () => {
       });
     } catch (err) {
       console.error('AI matching error:', err);
+      const errorMessage = err instanceof Error ? err.message : 'Errore sconosciuto';
+      setError(`⚠️ Errore durante l'abbinamento AI: ${errorMessage}`);
     }
   };
 
@@ -1940,6 +2128,12 @@ export const Reconciliation: React.FC = () => {
 
   // Run AI on all pending
   const handleRunAIAll = async () => {
+    // Check if AI keys are configured
+    if (!checkAIKeysConfigured()) {
+      setError('⚠️ Configura le API keys nelle Impostazioni prima di usare l\'AI matching');
+      return;
+    }
+
     const pending = sessionTransactions.filter(tx => tx.matchStatus === 'pending');
     if (pending.length === 0) return;
 
@@ -1950,31 +2144,40 @@ export const Reconciliation: React.FC = () => {
       total: pending.length,
       shouldStop: false
     });
+    stopAIProcessingRef.current = false; // Reset ref
 
     try {
+      // Refresh data to ensure we have latest cashflows from database
+      console.log(`[Batch AI Match] Refreshing data from database...`);
+      await refreshData();
+      console.log(`[Batch AI Match] Data refreshed. Now have ${invoices.length} invoices, ${cashflowRecords.length} cashflow records`);
+
       const modelInfo = getAiModelInfo(selectedAiModel);
+      const usedCashflowIds = new Set<string>(); // Track used cashflows
+
       for (let i = 0; i < pending.length; i++) {
-        // Check if user wants to stop
-        if (aiProcessing.shouldStop) {
+        // Check if user wants to stop - use ref for most up-to-date value
+        if (stopAIProcessingRef.current) {
           console.log(`⏹️ AI processing stopped by user at ${i}/${pending.length}`);
           break;
         }
 
         const tx = pending[i];
 
-        // Update progress
+        // Update progress (don't touch shouldStop, let stopAiProcessing control it)
         setAiProcessing({
-          isProcessing: true,
-          sessionId: currentSession?.id || null,
           current: i + 1,
-          total: pending.length,
-          shouldStop: aiProcessing.shouldStop
+          total: pending.length
         });
 
-        const suggestion = await suggestMatch(tx, invoices, cashflowRecords, modelInfo.id);
+        // Filter out cashflows already used in this batch
+        const availableCashflows = cashflowRecords.filter(cf => !usedCashflowIds.has(cf.id));
+        console.log(`[Batch AI Match ${i+1}/${pending.length}] Available cashflows: ${availableCashflows.length}/${cashflowRecords.length}`);
 
-        // Check again after AI call
-        if (aiProcessing.shouldStop) {
+        const suggestion = await suggestMatch(tx, invoices, availableCashflows, modelInfo.id);
+
+        // Check again after AI call - use ref
+        if (stopAIProcessingRef.current) {
           console.log(`⏹️ AI processing stopped by user after AI call`);
           break;
         }
@@ -1986,13 +2189,19 @@ export const Reconciliation: React.FC = () => {
           matchReason: suggestion.reason
         });
 
+        // Mark cashflow as used if matched
+        if (suggestion.cashflowId) {
+          usedCashflowIds.add(suggestion.cashflowId);
+          console.log(`[Batch AI Match] Cashflow ${suggestion.cashflowId} marked as used`);
+        }
+
         // Small delay to avoid rate limiting
         if (i < pending.length - 1) {
           await new Promise(resolve => setTimeout(resolve, 300));
         }
 
-        // Check one more time after delay
-        if (aiProcessing.shouldStop) {
+        // Check one more time after delay - use ref
+        if (stopAIProcessingRef.current) {
           console.log(`⏹️ AI processing stopped by user after delay`);
           break;
         }
@@ -2191,75 +2400,136 @@ export const Reconciliation: React.FC = () => {
   return (
     <div className="p-0">
       {/* Header */}
-      <div className="mb-6 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl lg:text-3xl font-bold text-dark dark:text-white">Riconciliazione Bancaria</h1>
-          <p className="text-gray-500 dark:text-gray-400 mt-1">Carica l'estratto conto e riconcilia le transazioni con Claude AI</p>
+      <div className="mb-6">
+        {/* Title Row */}
+        <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4 mb-4">
+          <div className="flex-1">
+            <h1 className="text-2xl lg:text-3xl font-bold text-dark dark:text-white mb-2">
+              Riconciliazione Bancaria
+            </h1>
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              Riconcilia automaticamente le transazioni bancarie con fatture e movimenti di cassa
+            </p>
+          </div>
+
+          {/* Primary Actions */}
+          <div className="flex items-center gap-3 flex-shrink-0">
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".xlsx,.xls"
+              onChange={handleFileUpload}
+              className="hidden"
+            />
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              disabled={isUploading}
+              className="flex items-center gap-2 px-6 py-2.5 bg-primary text-white rounded-lg font-medium hover:opacity-90 transition-all shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isUploading ? (
+                <RefreshCw size={18} className="animate-spin" />
+              ) : (
+                <Upload size={18} />
+              )}
+              {isUploading ? 'Importazione...' : 'Carica Estratto Conto'}
+            </button>
+
+            {/* Clear all sessions button */}
+            {reconciliationSessions.length > 0 && (
+              <button
+                onClick={handleClearAllSessions}
+                disabled={isDeleting || aiProcessing.isProcessing || isUploading}
+                className="flex items-center gap-2 px-6 py-2.5 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 rounded-lg font-medium hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <Trash2 size={18} />
+                Svuota Tutto
+              </button>
+            )}
+          </div>
         </div>
-        <div className="flex items-center gap-3">
-          {/* AI Toggle */}
-          <div className="flex items-center gap-3 px-4 py-2 bg-white dark:bg-dark-card border-2 border-gray-200 dark:border-dark-border rounded-lg">
-            <label className="flex items-center gap-2 cursor-pointer">
+
+        {/* AI Settings Panel */}
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3 p-4 bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-900/10 dark:to-blue-900/10 border border-purple-200 dark:border-purple-800/30 rounded-lg">
+          {/* AI Toggle with Status Indicator */}
+          <div className="flex items-center gap-2.5">
+            <label className="relative inline-flex items-center cursor-pointer group">
               <input
                 type="checkbox"
                 checked={aiMatchingEnabled}
                 onChange={(e) => setAiMatchingEnabled(e.target.checked)}
-                className="w-4 h-4 text-purple-600 border-gray-300 rounded focus:ring-2 focus:ring-purple-500"
+                className="sr-only peer"
               />
-              <span className="text-sm font-medium text-dark dark:text-white">
+              <div className="w-11 h-6 bg-gray-200 dark:bg-gray-700 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple-300 dark:peer-focus:ring-purple-800 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
+              <span className="ms-3 text-sm font-semibold text-dark dark:text-white flex items-center gap-2">
+                <span className={`inline-block w-2 h-2 rounded-full ${aiMatchingEnabled ? 'bg-green-500 animate-pulse' : 'bg-gray-400'}`}></span>
                 Matching AI
               </span>
             </label>
           </div>
 
-          {/* AI Model Selector */}
+          {/* Vertical Divider */}
           {aiMatchingEnabled && (
-            <div className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-dark-card border-2 border-gray-200 dark:border-dark-border rounded-lg">
-              <span className="text-xs text-gray-500 dark:text-gray-400 font-medium">Modello:</span>
-              <select
-                value={selectedAiModel}
-                onChange={(e) => setSelectedAiModel(e.target.value as 'haiku' | 'sonnet' | 'sonnet4' | 'opus' | 'opus4')}
-                className="text-sm font-medium text-dark dark:text-white bg-transparent border-none focus:outline-none focus:ring-2 focus:ring-purple-500 rounded pl-2 pr-6 cursor-pointer"
-              >
-                <option value="haiku">Haiku 3.5 - ~15¢/100 tx (Veloce)</option>
-                <option value="sonnet">Sonnet 3.5 - ~$1.50/100 tx (Alta qualità)</option>
-                <option value="sonnet4">Sonnet 4 - ~$3/100 tx (Più performante)</option>
-                <option value="opus">Opus 3 - ~$7.50/100 tx (Altissima qualità)</option>
-                <option value="opus4">Opus 4.5 - ~$15/100 tx (Massima qualità)</option>
-              </select>
+            <div className="hidden sm:block h-8 w-px bg-purple-200 dark:bg-purple-700"></div>
+          )}
+
+          {/* AI Configuration - Only show when enabled */}
+          {aiMatchingEnabled && (
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3 flex-1">
+              {/* Provider Selector */}
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-gray-600 dark:text-gray-300 font-medium uppercase tracking-wide">
+                  Provider:
+                </span>
+                <select
+                  value={selectedAiProvider}
+                  onChange={(e) => {
+                    const newProvider = e.target.value as 'anthropic' | 'openai';
+                    setSelectedAiProvider(newProvider);
+                    setSelectedAiModel(newProvider === 'openai' ? 'gpt-4o-mini' : 'claude-3-5-haiku-20241022');
+                  }}
+                  className="text-sm font-semibold text-dark dark:text-white bg-white/50 dark:bg-gray-800/50 border border-purple-200 dark:border-purple-700 rounded-md px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-purple-500 cursor-pointer hover:bg-white dark:hover:bg-gray-800 transition-colors"
+                >
+                  <option value="anthropic">Anthropic (Claude)</option>
+                  <option value="openai">OpenAI (GPT)</option>
+                </select>
+              </div>
+
+              {/* Model Selector */}
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-gray-600 dark:text-gray-300 font-medium uppercase tracking-wide">
+                  Modello:
+                </span>
+                <select
+                  value={selectedAiModel}
+                  onChange={(e) => setSelectedAiModel(e.target.value)}
+                  className="text-sm font-semibold text-dark dark:text-white bg-white/50 dark:bg-gray-800/50 border border-purple-200 dark:border-purple-700 rounded-md px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-purple-500 cursor-pointer hover:bg-white dark:hover:bg-gray-800 transition-colors min-w-[200px]"
+                >
+                  {selectedAiProvider === 'anthropic' ? (
+                    <>
+                      <option value="claude-3-5-haiku-20241022">Haiku 3.5 (~15¢/100 tx)</option>
+                      <option value="claude-3-5-sonnet-20241022">Sonnet 3.5 (~$1.50/100 tx)</option>
+                      <option value="claude-sonnet-4-20250514">Sonnet 4 (~$3/100 tx)</option>
+                      <option value="claude-3-opus-20240229">Opus 3 (~$7.50/100 tx)</option>
+                      <option value="claude-opus-4-5-20251101">Opus 4.5 (~$15/100 tx)</option>
+                    </>
+                  ) : (
+                    <>
+                      <option value="gpt-4o-mini">GPT-4o Mini (~$0.05/100 tx)</option>
+                      <option value="gpt-4o">GPT-4o (~$0.50/100 tx)</option>
+                      <option value="gpt-4-turbo">GPT-4 Turbo (~$2/100 tx)</option>
+                      <option value="gpt-3.5-turbo">GPT-3.5 Turbo (~$0.15/100 tx)</option>
+                    </>
+                  )}
+                </select>
+              </div>
             </div>
           )}
 
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept=".xlsx,.xls"
-            onChange={handleFileUpload}
-            className="hidden"
-          />
-          <button
-            onClick={() => fileInputRef.current?.click()}
-            disabled={isUploading}
-            className="flex items-center gap-2 px-6 py-2 bg-primary text-white rounded-lg font-medium hover:opacity-90 transition-all shadow-sm disabled:opacity-50"
-          >
-            {isUploading ? (
-              <RefreshCw size={18} className="animate-spin" />
-            ) : (
-              <Upload size={18} />
-            )}
-            {isUploading ? 'Importazione...' : 'Carica Estratto Conto'}
-          </button>
-
-          {/* Clear all sessions button - always visible */}
-          {reconciliationSessions.length > 0 && (
-            <button
-              onClick={handleClearAllSessions}
-              disabled={isDeleting || aiProcessing.isProcessing || isUploading}
-              className="flex items-center gap-2 px-6 py-2 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 rounded-lg font-medium hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <Trash2 size={18} />
-              Svuota Tutto
-            </button>
+          {/* Info Text when AI is disabled */}
+          {!aiMatchingEnabled && (
+            <p className="text-sm text-gray-600 dark:text-gray-300 italic flex-1">
+              Attiva il matching AI per riconciliare automaticamente le transazioni usando Claude o GPT
+            </p>
           )}
         </div>
       </div>
@@ -2270,6 +2540,24 @@ export const Reconciliation: React.FC = () => {
           <AlertCircle size={20} className="text-red-600 dark:text-red-400" />
           <span className="text-red-800 dark:text-red-300">{error}</span>
           <button onClick={() => setError(null)} className="ml-auto text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300">
+            <X size={18} />
+          </button>
+        </div>
+      )}
+
+      {/* Warning: AI keys not configured */}
+      {aiMatchingEnabled && !checkAIKeysConfigured() && (
+        <div className="mb-6 p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg flex items-start gap-3">
+          <AlertCircle size={20} className="text-yellow-600 dark:text-yellow-400 flex-shrink-0 mt-0.5" />
+          <div className="flex-1">
+            <div className="font-semibold text-yellow-800 dark:text-yellow-300 mb-1">
+              API Keys non configurate
+            </div>
+            <div className="text-sm text-yellow-700 dark:text-yellow-400">
+              L'AI Matching è abilitato ma nessuna API key è configurata. Vai su <strong>Impostazioni</strong> per configurare le chiavi API di Anthropic Claude o OpenAI.
+            </div>
+          </div>
+          <button onClick={() => setAiMatchingEnabled(false)} className="text-yellow-600 dark:text-yellow-400 hover:text-yellow-800 dark:hover:text-yellow-300">
             <X size={18} />
           </button>
         </div>

@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
-import { Customer, Deal, Invoice, Transaction, FinancialItem, DealStage, CashflowRecord, BankBalance, BankTransaction, ReconciliationSession } from '../types';
+import { Customer, Deal, Invoice, Transaction, FinancialItem, DealStage, CashflowRecord, BankBalance, BankTransaction, ReconciliationSession, AppSettings } from '../types';
 import {
   MOCK_CUSTOMERS,
   MOCK_DEALS,
@@ -61,6 +61,7 @@ interface DataContextType {
   bankBalances: BankBalance[];
   reconciliationSessions: ReconciliationSession[];
   bankTransactions: BankTransaction[];
+  settings: AppSettings | null;
 
   // Loading states
   loading: boolean;
@@ -117,6 +118,10 @@ interface DataContextType {
   updateBankTransaction: (id: string, transaction: Partial<BankTransaction>) => Promise<boolean>;
   deleteBankTransaction: (id: string) => Promise<boolean>;
 
+  // Settings
+  getSettings: () => Promise<AppSettings | null>;
+  updateSettings: (settings: Partial<Omit<AppSettings, 'id'>>) => Promise<boolean>;
+
   // Refresh
   refreshData: () => Promise<void>;
 }
@@ -141,6 +146,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [bankBalances, setBankBalances] = useState<BankBalance[]>([]);
   const [reconciliationSessions, setReconciliationSessions] = useState<ReconciliationSession[]>([]);
   const [bankTransactions, setBankTransactions] = useState<BankTransaction[]>([]);
+  const [settings, setSettings] = useState<AppSettings | null>(null);
 
   // AI Processing state - persists across component unmounts
   const [aiProcessing, setAiProcessingState] = useState<AIProcessingState>({
@@ -187,7 +193,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     try {
-      const [customersRes, dealsRes, invoicesRes, transactionsRes, financialItemsRes, cashflowRes, bankBalancesRes, reconciliationSessionsRes, bankTransactionsRes] = await Promise.all([
+      const [customersRes, dealsRes, invoicesRes, transactionsRes, financialItemsRes, cashflowRes, bankBalancesRes, reconciliationSessionsRes, bankTransactionsRes, settingsRes] = await Promise.all([
         supabase.from('customers').select('*'),
         supabase.from('deals').select('*'),
         supabase.from('invoices').select('*'),
@@ -197,6 +203,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         supabase.from('bank_balances').select('*'),
         supabase.from('reconciliation_sessions').select('*'),
         supabase.from('bank_transactions').select('*'),
+        supabase.from('settings').select('*').eq('id', 'default').single(),
       ]);
 
       if (customersRes.error) throw customersRes.error;
@@ -204,7 +211,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (invoicesRes.error) throw invoicesRes.error;
       if (transactionsRes.error) throw transactionsRes.error;
       if (financialItemsRes.error) throw financialItemsRes.error;
-      // Cashflow and bank_balances tables may not exist yet, so we don't throw on error
+      // Cashflow, bank_balances, and settings tables may not exist yet, so we don't throw on error
 
       setCustomers(snakeToCamel(customersRes.data || []));
       setDeals(snakeToCamel(dealsRes.data || []));
@@ -215,6 +222,18 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setBankBalances(snakeToCamel(bankBalancesRes.data || []));
       setReconciliationSessions(snakeToCamel(reconciliationSessionsRes.data || []));
       setBankTransactions(snakeToCamel(bankTransactionsRes.data || []));
+      // Settings - single row, may not exist yet
+      if (settingsRes.data) {
+        setSettings(snakeToCamel(settingsRes.data));
+      } else {
+        // Initialize with defaults if doesn't exist
+        setSettings({
+          id: 'default',
+          defaultAiProvider: 'anthropic',
+          anthropicApiKey: '',
+          openaiApiKey: ''
+        });
+      }
     } catch (err: any) {
       console.error('Error fetching data:', err);
       setError(err.message || 'Error fetching data');
@@ -884,6 +903,64 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return true;
   };
 
+  // Settings functions
+  const getSettings = async (): Promise<AppSettings | null> => {
+    if (!isSupabaseConfigured) {
+      // Return from state if Supabase not configured
+      return settings;
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from('settings')
+        .select('*')
+        .eq('id', 'default')
+        .single();
+
+      if (error) {
+        console.error('Error fetching settings:', error);
+        return null;
+      }
+
+      const convertedSettings = snakeToCamel(data);
+      setSettings(convertedSettings);
+      return convertedSettings;
+    } catch (err) {
+      console.error('Error in getSettings:', err);
+      return null;
+    }
+  };
+
+  const updateSettings = async (newSettings: Partial<Omit<AppSettings, 'id'>>): Promise<boolean> => {
+    if (!isSupabaseConfigured) {
+      // Update local state if Supabase not configured
+      setSettings(prev => prev ? { ...prev, ...newSettings } : null);
+      return true;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('settings')
+        .upsert({
+          id: 'default',
+          ...camelToSnake(newSettings),
+          updated_at: new Date().toISOString()
+        });
+
+      if (error) {
+        console.error('Error updating settings:', error);
+        return false;
+      }
+
+      // Update local state
+      setSettings(prev => prev ? { ...prev, ...newSettings } : null);
+      return true;
+    } catch (err) {
+      console.error('Error in updateSettings:', err);
+      return false;
+    }
+  };
+
   const value: DataContextType = {
     customers,
     deals,
@@ -927,6 +1004,9 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     addBankTransaction,
     updateBankTransaction,
     deleteBankTransaction,
+    settings,
+    getSettings,
+    updateSettings,
     refreshData: fetchData,
   };
 

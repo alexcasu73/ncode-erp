@@ -7,6 +7,14 @@ export enum DealStage {
   LOST = 'Perso'
 }
 
+export interface AppSettings {
+  id: string; // Always 'default' - single row
+  defaultAiProvider: 'anthropic' | 'openai';
+  anthropicApiKey: string;
+  openaiApiKey: string;
+  updatedAt?: string;
+}
+
 export interface Customer {
   id: string;
   name: string;

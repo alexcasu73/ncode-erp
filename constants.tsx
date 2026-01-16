@@ -1,5 +1,5 @@
 import { Deal, DealStage, Customer, Invoice, Transaction, FinancialItem } from './types';
-import { LayoutDashboard, Users, Briefcase, Receipt, PieChart, Wallet, BookOpen, FileCheck } from 'lucide-react';
+import { LayoutDashboard, Users, Briefcase, Receipt, PieChart, Wallet, BookOpen, FileCheck, Settings as SettingsIcon } from 'lucide-react';
 
 export const APP_NAME = "Ncode ERP";
 
@@ -11,6 +11,7 @@ export const NAV_ITEMS = [
   { id: 'cashflow', label: 'Flusso di Cassa', icon: Wallet },
   { id: 'reconciliation', label: 'Riconciliazione', icon: FileCheck },
   { id: 'financials', label: 'Bilancio', icon: BookOpen },
+  { id: 'settings', label: 'Impostazioni', icon: SettingsIcon },
 ];
 
 export const MOCK_CUSTOMERS: Customer[] = [
