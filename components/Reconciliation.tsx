@@ -336,7 +336,7 @@ const TransactionRow: React.FC<{
                   <div className="space-y-2">
                     {candidates.map((candidate, idx) => (
                       <div key={candidate.cashflow.id} className="bg-white dark:bg-dark-card rounded p-3 border border-yellow-200 dark:border-yellow-800">
-                        <div className="space-y-1 text-xs mb-2">
+                        <div className="space-y-1 text-xs">
                           <div className="flex justify-between items-center">
                             <span className="text-gray-600 dark:text-gray-400">ID:</span>
                             <span className="font-mono font-semibold text-gray-900 dark:text-white">{candidate.cashflow.id}</span>
@@ -382,17 +382,19 @@ const TransactionRow: React.FC<{
                             </div>
                           )}
                         </div>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onConfirmCashflow(candidate.cashflow.id);
-                          }}
-                          disabled={disabled}
-                          className="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 bg-green-600 text-white rounded-lg text-sm font-medium hover:opacity-90 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                          <Check size={14} />
-                          Abbina
-                        </button>
+                        <div className="mt-2 flex justify-start">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onConfirmCashflow(candidate.cashflow.id);
+                            }}
+                            disabled={disabled}
+                            className="flex items-center gap-1 px-2 py-1 bg-green-600 text-white rounded text-xs font-medium hover:opacity-90 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            <Check size={12} />
+                            Abbina
+                          </button>
+                        </div>
                       </div>
                     ))}
                   </div>
