@@ -29,18 +29,12 @@ const Settings: React.FC = () => {
     loadSettings();
   }, [getSettings]);
 
-  // Sync from context state only on initial load (not on every change to prevent overwriting user input)
+  // Removed second useEffect to prevent conflicts with user input
+
+  // Debug: log when notificationRefreshInterval changes
   useEffect(() => {
-    if (dbSettings && !anthropicApiKey && !openaiApiKey) {
-      // Only sync if local state is empty (initial load)
-      setDefaultProvider(dbSettings.defaultAiProvider);
-      setAnthropicApiKey(dbSettings.anthropicApiKey);
-      setOpenaiApiKey(dbSettings.openaiApiKey);
-      // Cast to correct type
-      const interval = dbSettings.notificationRefreshInterval || 5;
-      setNotificationRefreshInterval([1, 3, 5].includes(interval) ? interval as 1 | 3 | 5 : 5);
-    }
-  }, [dbSettings, anthropicApiKey, openaiApiKey]);
+    console.log(`[Settings] notificationRefreshInterval state changed to:`, notificationRefreshInterval);
+  }, [notificationRefreshInterval]);
 
   const handleSave = async () => {
     setSaveStatus('saving');
@@ -78,10 +72,7 @@ const Settings: React.FC = () => {
     console.log(`[Settings] Changing notification interval to ${interval} minutes`);
     console.log(`[Settings] Current value before change:`, notificationRefreshInterval, typeof notificationRefreshInterval);
     setNotificationRefreshInterval(interval);
-    // Log dopo il set per vedere se cambia
-    setTimeout(() => {
-      console.log(`[Settings] New value after change:`, notificationRefreshInterval, typeof notificationRefreshInterval);
-    }, 100);
+    console.log(`[Settings] Called setNotificationRefreshInterval with:`, interval);
   };
 
   return (
