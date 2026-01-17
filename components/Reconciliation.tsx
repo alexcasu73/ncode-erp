@@ -2068,12 +2068,31 @@ export const Reconciliation: React.FC = () => {
 
       const suggestion = await suggestMatch(tx, invoices, cashflowRecords, modelInfo.id);
       console.log(`[Single AI Match Result]`, suggestion);
+
+      // Auto-match if confidence is high enough (>=80%)
+      let newMatchStatus: 'pending' | 'matched' = tx.matchStatus;
+      if (suggestion.confidence >= 80 && (suggestion.cashflowId || suggestion.invoiceId)) {
+        newMatchStatus = 'matched';
+        console.log(`✅ Auto-matching with confidence ${suggestion.confidence}%`);
+      } else {
+        console.log(`⚠️ Not auto-matching: confidence ${suggestion.confidence}% (threshold: 80%)`);
+      }
+
       await updateBankTransaction(transactionId, {
         matchedInvoiceId: suggestion.invoiceId || undefined,
         matchedCashflowId: suggestion.cashflowId || undefined,
         matchConfidence: suggestion.confidence,
-        matchReason: suggestion.reason
+        matchReason: suggestion.reason,
+        matchStatus: newMatchStatus
       });
+
+      // Update session counts if status changed from pending to matched
+      if (currentSession && tx.matchStatus === 'pending' && newMatchStatus === 'matched') {
+        await updateReconciliationSession(currentSession.id, {
+          matchedCount: currentSession.matchedCount + 1,
+          pendingCount: Math.max(0, currentSession.pendingCount - 1)
+        });
+      }
     } catch (err) {
       console.error('AI matching error:', err);
       const errorMessage = err instanceof Error ? err.message : 'Errore sconosciuto';
@@ -2182,11 +2201,21 @@ export const Reconciliation: React.FC = () => {
           break;
         }
 
+        // Auto-match if confidence is high enough (>=80%)
+        let newMatchStatus: 'pending' | 'matched' = 'pending';
+        if (suggestion.confidence >= 80 && (suggestion.cashflowId || suggestion.invoiceId)) {
+          newMatchStatus = 'matched';
+          console.log(`[Batch AI Match] ✅ Auto-matching transaction ${i+1}/${pending.length} with confidence ${suggestion.confidence}%`);
+        } else {
+          console.log(`[Batch AI Match] ⚠️ Not auto-matching transaction ${i+1}/${pending.length}: confidence ${suggestion.confidence}%`);
+        }
+
         await updateBankTransaction(tx.id, {
           matchedInvoiceId: suggestion.invoiceId || undefined,
           matchedCashflowId: suggestion.cashflowId || undefined,
           matchConfidence: suggestion.confidence,
-          matchReason: suggestion.reason
+          matchReason: suggestion.reason,
+          matchStatus: newMatchStatus
         });
 
         // Mark cashflow as used if matched
@@ -2205,6 +2234,22 @@ export const Reconciliation: React.FC = () => {
           console.log(`⏹️ AI processing stopped by user after delay`);
           break;
         }
+      }
+
+      // Update session counts after batch processing
+      if (currentSession) {
+        // Refresh transactions to get updated counts
+        const updatedTransactions = await fetchBankTransactions(currentSession.id);
+        const matchedCount = updatedTransactions.filter(tx => tx.matchStatus === 'matched' || tx.matchStatus === 'manual').length;
+        const pendingCount = updatedTransactions.filter(tx => tx.matchStatus === 'pending').length;
+        const ignoredCount = updatedTransactions.filter(tx => tx.matchStatus === 'ignored').length;
+
+        await updateReconciliationSession(currentSession.id, {
+          matchedCount,
+          pendingCount,
+          ignoredCount
+        });
+        console.log(`[Batch AI Match] Session stats updated: ${matchedCount} matched, ${pendingCount} pending, ${ignoredCount} ignored`);
       }
     } catch (err) {
       console.error('AI batch matching error:', err);
