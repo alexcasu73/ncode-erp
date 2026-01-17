@@ -1069,6 +1069,24 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const invoicesWithDueDate = invoices.filter(inv => inv.dataScadenza);
 
       for (const invoice of invoicesWithDueDate) {
+        // Check if this invoice has an associated cashflow
+        const cashflow = cashflowRecords.find(cf => cf.invoiceId === invoice.id);
+
+        // Skip if no cashflow exists (only check invoices with cashflow)
+        if (!cashflow) {
+          console.log(`[Notifications] Skipping invoice ${invoice.id} - no cashflow associated`);
+          continue;
+        }
+
+        // Skip if cashflow is 'Effettivo' (already paid)
+        if (cashflow.statoFatturazione === 'Effettivo') {
+          console.log(`[Notifications] Skipping invoice ${invoice.id} - cashflow is 'Effettivo' (paid)`);
+          continue;
+        }
+
+        // Only notify for invoices with cashflow in 'Previsto' or 'Stimato' state
+        console.log(`[Notifications] Checking invoice ${invoice.id} with cashflow stato '${cashflow.statoFatturazione}'`);
+
         const dueDate = new Date(invoice.dataScadenza!);
         dueDate.setHours(0, 0, 0, 0);
         const dueDateStr = dueDate.toISOString().split('T')[0];
@@ -1082,16 +1100,6 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
 
         if (tipo) {
-          // Check if there's a cashflow with stato 'Effettivo' for this invoice
-          const cashflowEffettivo = cashflowRecords.find(
-            cf => cf.invoiceId === invoice.id && cf.statoFatturazione === 'Effettivo'
-          );
-
-          // Don't create notification if cashflow is already 'Effettivo' (paid)
-          if (cashflowEffettivo) {
-            console.log(`[Notifications] Skipping notification for invoice ${invoice.id} - cashflow is 'Effettivo'`);
-            continue;
-          }
 
           // Check if notification already exists and is not dismissed (any type)
           const { data: existing } = await supabase
