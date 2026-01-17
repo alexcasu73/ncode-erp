@@ -1041,10 +1041,10 @@ export const Cashflow: React.FC = () => {
                 </th>
                 <th className="px-3 py-4 w-24">Tipo Sp.</th>
                 <th className="px-3 py-4 w-32">Note</th>
-                <th className="px-3 py-4 whitespace-nowrap cursor-pointer hover:bg-gray-50 dark:bg-dark-bg w-20" onClick={() => handleSort('tipo')}>
+                <th className="px-3 py-4 whitespace-nowrap cursor-pointer hover:bg-gray-50 dark:bg-dark-bg w-28" onClick={() => handleSort('tipo')}>
                   <div className="flex items-center gap-1">Tipo <SortIcon column="tipo" /></div>
                 </th>
-                <th className="px-3 py-4 whitespace-nowrap cursor-pointer hover:bg-gray-50 dark:bg-dark-bg w-24" onClick={() => handleSort('stato')}>
+                <th className="px-3 py-4 whitespace-nowrap cursor-pointer hover:bg-gray-50 dark:bg-dark-bg w-28" onClick={() => handleSort('stato')}>
                   <div className="flex items-center gap-1">Stato <SortIcon column="stato" /></div>
                 </th>
                 <th className="px-3 py-4 whitespace-nowrap text-right cursor-pointer hover:bg-gray-50 dark:bg-dark-bg w-24" onClick={() => handleSort('totale')}>
@@ -1096,12 +1096,12 @@ export const Cashflow: React.FC = () => {
                             ? 'bg-secondary'
                             : 'bg-red-600'
                         }`}>
-                          {tipo === 'Entrata' ? 'E' : 'U'}
+                          {tipo}
                         </span>
                       </td>
                       <td className="px-3 py-3 whitespace-nowrap">
                         <span className="px-2 py-1 text-xs font-medium rounded-md text-white bg-gray-500">
-                          -
+                          Nessuno
                         </span>
                       </td>
                       <td className={`px-3 py-3 whitespace-nowrap text-sm font-bold text-right ${
@@ -1169,7 +1169,7 @@ export const Cashflow: React.FC = () => {
                           ? 'bg-secondary'
                           : 'bg-red-600'
                       }`}>
-                        {inv.tipo === 'Entrata' ? 'E' : 'U'}
+                        {inv.tipo}
                       </span>
                     </td>
                     <td className="px-3 py-3 whitespace-nowrap">
@@ -1180,7 +1180,7 @@ export const Cashflow: React.FC = () => {
                           ? 'bg-primary'
                           : 'bg-gray-500'
                       }`}>
-                        {(record.statoFatturazione || inv.statoFatturazione)?.substring(0, 3)}
+                        {record.statoFatturazione || inv.statoFatturazione}
                       </span>
                     </td>
                     <td className={`px-3 py-3 whitespace-nowrap text-sm font-bold text-right ${
