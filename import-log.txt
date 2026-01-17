@@ -1,0 +1,621 @@
+📂 Reading Excel file...
+
+📄 === IMPORTING INVOICES ===
+
+Found 295 invoices
+
+❌ Error importing invoice 202/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 10/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 100/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 224/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 102/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 103/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 104/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 105/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 106/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 292/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 293/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 107/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 108/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 109/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 11/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 110/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 111/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 147/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 35/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 114/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 115/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 116/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 279/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 117/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 118/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 119/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 12/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 120/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 121/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 122/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 123/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 257/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 125/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 126/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 127/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 128/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 129/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 235/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 130/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 131/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 132/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 133/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 134/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 135/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 1/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 137/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 138/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 139/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 14/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 140/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 141/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 142/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 143/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 144/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 145/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 146/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 268/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 148/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 149/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 15/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 150/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 151/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 152/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 153/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 154/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 155/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 156/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 157/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 158/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 159/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 16/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 160/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 161/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 162/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 163/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 164/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 165/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 166/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 167/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 168/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 169/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 17/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 170/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 171/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 172/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 46/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 174/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 280/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 175/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 177/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 178/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 179/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 18/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 180/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 181/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 182/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 183/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 184/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 185/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 186/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 187/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 188/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 189/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 19/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 190/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 191/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 192/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 193/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 194/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 195/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 196/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 197/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 295/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 198/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 199/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 246/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 20/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 200/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 201/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 2/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 203/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 204/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 205/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 206/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 207/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 208/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 209/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 21/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 210/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 211/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 212/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 13/2025: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 214/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 215/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 216/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 228/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 218/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 219/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 22/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 220/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 221/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 222/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 223/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 24/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 225/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 226/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 227/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 176/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 229/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 23/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 230/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 231/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 232/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 233/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 234/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 57/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 236/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 237/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 238/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 239/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 112/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 240/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 241/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 242/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 243/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 244/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 245/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 90/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 247/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 248/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 249/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 25/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 250/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 251/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 252/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 253/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 217/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 255/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 256/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 213/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 258/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 259/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 26/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 260/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 261/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 262/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 263/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 264/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 265/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 266/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 267/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 101/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 269/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 27/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 270/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 271/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 272/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 273/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 274/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 275/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 276/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 277/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 278/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 28/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 29/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 3/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 30/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 31/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 32/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 33/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 34/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 113/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 36/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 37/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 38/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 39/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 4/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 40/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 41/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 42/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 43/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 44/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 45/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 124/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 47/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 48/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 49/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 5/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 50/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 51/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 52/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 53/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 54/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 55/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 56/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 173/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 58/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 59/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 6/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 60/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 61/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 62/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 63/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 64/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 65/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 66/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 67/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 68/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 69/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 7/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 70/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 71/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 72/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 73/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 74/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 75/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 76/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 77/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 78/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 79/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 8/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 80/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 81/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 82/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 83/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 84/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 85/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 86/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 87/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 88/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 89/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 9/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 136/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 91/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 92/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 93/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 94/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 95/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 281/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 282/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 283/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 290/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 284/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 285/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 286/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 287/2025: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 288/2025: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 96/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 294/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 97/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 98/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 289/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 99/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 291/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+❌ Error importing invoice 254/2026: Could not find the 'next_step' column of 'invoices' in the schema cache
+
+✅ Imported 0/295 invoices
+
+💰 === IMPORTING CASHFLOW RECORDS ===
+
+Found 302 cashflow records
+
+❌ Error importing cashflow CF-0001: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0002: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0003: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0004: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0005: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0006: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0007: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0008: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0009: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0010: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0011: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0012: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0013: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0014: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0015: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0016: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0017: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0018: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0019: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0020: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0021: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0022: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0023: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0024: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0025: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0026: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0027: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0028: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0029: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0030: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0031: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0032: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0033: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0034: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0035: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0036: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0037: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0038: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0039: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0040: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0041: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0042: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0043: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0044: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0045: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0046: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0047: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0048: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0049: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0050: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0051: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0052: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0053: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0054: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0055: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0056: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0057: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0058: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0059: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0060: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0061: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0062: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0063: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0064: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0065: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0066: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0067: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0068: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0069: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0070: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0071: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0072: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0073: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0074: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0075: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0076: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0077: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0078: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0079: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0080: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0081: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0082: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0083: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0084: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0085: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0086: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0087: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0088: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0089: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0090: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0091: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0092: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0093: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0094: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0095: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0096: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0097: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0098: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0099: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0100: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0101: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0102: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0103: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0104: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0105: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0106: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0107: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0108: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0109: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0110: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0111: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0112: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0113: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0114: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0115: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0116: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0117: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0118: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0119: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0120: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0121: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0122: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0123: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0124: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0125: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0126: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0127: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0128: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0129: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0130: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0131: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0132: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0133: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0134: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0135: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0136: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0137: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0138: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0139: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0140: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0141: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0142: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0143: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0144: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0145: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0146: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0147: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0148: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0149: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0150: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0151: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0152: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0153: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0154: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0155: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0156: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0157: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0158: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0159: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0160: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0161: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0162: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0163: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0164: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0165: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0166: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0167: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0168: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0169: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0170: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0171: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0172: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0173: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0174: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0175: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0176: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0177: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0178: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0179: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0180: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0181: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0182: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0183: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0184: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0185: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0186: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0187: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0188: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0189: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0190: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0191: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0192: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0193: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0194: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0195: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0196: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0197: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0198: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0199: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0200: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+⚠️  Skipping cashflow: invoice  not found in map
+❌ Error importing cashflow CF-0201: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0202: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0203: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0204: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0205: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0206: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0207: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0208: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0209: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0210: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0211: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0212: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0213: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0214: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0215: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0216: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0217: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0218: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0219: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0220: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0221: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0222: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0223: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0224: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0225: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0226: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0227: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0228: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0229: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0230: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0231: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0232: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0233: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0234: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0235: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0236: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0237: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0238: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0239: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0240: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0241: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0242: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0243: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0244: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0245: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0246: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0247: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0248: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0249: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0250: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0251: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0252: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0253: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0254: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0255: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0256: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0257: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0258: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0259: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0260: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0261: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0262: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0263: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0264: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0265: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0266: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0267: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0268: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0269: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0270: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0271: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0272: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0273: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0274: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0275: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0276: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0277: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0278: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0279: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0280: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0281: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0282: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0283: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0284: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0285: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0286: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0287: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0288: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0289: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0290: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0291: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0292: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0293: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0294: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0295: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0296: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0297: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0298: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+❌ Error importing cashflow CF-0299: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+⚠️  Skipping cashflow: invoice  not found in map
+❌ Error importing cashflow CF-0300: insert or update on table "cashflow_records" violates foreign key constraint "cashflow_records_invoice_id_fkey"
+
+✅ Imported 0/302 cashflow records
+
+
+🎉 IMPORT COMPLETE!
+
+📊 Summary:
+   - Invoices: 0 imported
+   - Cashflow records: 0 imported
+   - Invoice ID format: numero/anno (e.g., 202/2026)
+   - Cashflow ID format: CF-#### (e.g., CF-0001)

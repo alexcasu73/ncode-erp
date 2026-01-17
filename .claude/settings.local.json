@@ -1,7 +1,27 @@
 {
   "permissions": {
     "allow": [
-      "Bash(grep:*)"
+      "Bash(grep:*)",
+      "Bash(npm run build:*)",
+      "Bash(npm install:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(npx supabase:*)",
+      "Bash(npx supabase migration:*)",
+      "Bash(sqlite3:*)",
+      "Bash(supabase db query:*)",
+      "Bash(supabase status:*)",
+      "Bash(node scripts/check-anthropic.mjs:*)",
+      "Bash(node scripts/check-matches.mjs:*)",
+      "Bash(node -e \"\nimport { createClient } from ''@supabase/supabase-js'';\nimport { readFileSync } from ''fs'';\n\nconst envContent = readFileSync\\(''.env'', ''utf-8''\\);\nconst envVars = {};\nenvContent.split\\(''\\\\n''\\).forEach\\(line => {\n  const [key, ...valueParts] = line.split\\(''=''\\);\n  if \\(key && valueParts.length > 0\\) {\n    envVars[key.trim\\(\\)] = valueParts.join\\(''=''\\).trim\\(\\);\n  }\n}\\);\n\nconst supabase = createClient\\(envVars.VITE_SUPABASE_URL, envVars.VITE_SUPABASE_ANON_KEY\\);\n\n\\(async \\(\\) => {\n  const { data, error } = await supabase\n    .from\\(''invoices''\\)\n    .select\\(''*''\\)\n    .eq\\(''id'', ''Fattura_008''\\);\n  \n  if \\(error\\) {\n    console.error\\(error\\);\n  } else {\n    console.log\\(''Fattura_008:'', JSON.stringify\\(data, null, 2\\)\\);\n  }\n  \n  // Also check CF-0307  \n  const { data: cf, error: cfErr } = await supabase\n    .from\\(''cashflow_records''\\)\n    .select\\(''*''\\)\n    .eq\\(''id'', ''CF-0307''\\);\n    \n  if \\(cfErr\\) {\n    console.error\\(cfErr\\);\n  } else {\n    console.log\\(''\\\\nCF-0307:'', JSON.stringify\\(cf, null, 2\\)\\);\n  }\n}\\)\\(\\);\n\")",
+      "Bash(npx tsc:*)",
+      "Bash(npm run dev:*)",
+      "Bash(curl:*)",
+      "Bash(psql:*)",
+      "Bash(docker system prune:*)",
+      "Bash(docker restart:*)",
+      "Bash(docker logs:*)"
     ]
   }
 }

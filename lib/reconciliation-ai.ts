@@ -82,8 +82,10 @@ function formatCashflow(cf: CashflowRecord, invoice?: Invoice): string {
   const noteCashflow = cf.note ? ` | Note Movimento: "${cf.note}"` : '';
   const descCashflow = cf.descrizione ? ` | Desc Movimento: "${cf.descrizione}"` : '';
   const categoria = cf.categoria ? ` | Categoria: "${cf.categoria}"` : '';
+  const spesa = invoice?.spesa ? ` | Spesa: "${invoice.spesa}"` : '';
+  const tipoSpesa = invoice?.tipoSpesa ? ` | Tipo Spesa: "${invoice.tipoSpesa}"` : '';
 
-  return `ID: ${cf.id} | Data Pag: ${cf.dataPagamento || 'N/D'} | Importo: €${importo.toFixed(2)} | Fattura: ${cf.invoiceId} | Progetto: ${progetto}${noteFattura}${noteCashflow}${descCashflow}${categoria}`;
+  return `ID: ${cf.id} | Data Pag: ${cf.dataPagamento || 'N/D'} | Importo: €${importo.toFixed(2)} | Fattura: ${cf.invoiceId} | Progetto: ${progetto}${noteFattura}${noteCashflow}${descCashflow}${categoria}${spesa}${tipoSpesa}`;
 }
 
 // Format bank transaction for AI context
@@ -248,18 +250,21 @@ STEP 1 - FILTRA PER IMPORTO:
 STEP 2 - VERIFICA DESCRIZIONE:
 - Prendi la DESCRIZIONE della transazione (campo "Descrizione:")
 - Estrai le parole chiave significative (ignora articoli, preposizioni, caratteri speciali)
-- Confronta con questi campi del movimento:
+- Confronta con TUTTI questi campi del movimento e della fattura collegata:
   * Note Movimento (campo "Note Movimento:")
-  * Note Fattura (campo "Note:")
-  * Spesa (campo "Spesa:")
+  * Descrizione Movimento (campo "Desc Movimento:")
+  * Note Fattura (campo "Note Fattura:")
+  * Spesa (campo "Spesa:" - dalla fattura collegata)
+  * Tipo Spesa (campo "Tipo Spesa:" - dalla fattura collegata)
   * Categoria (campo "Categoria:")
 
 - Matching FLESSIBILE: ignora maiuscole/minuscole, punteggiatura, caratteri speciali
 - Cerca parole chiave comuni o concetti simili
 - Esempi di match validi:
-  * "ANTHROPIC +14152360599" vs Note: "Anthropic" → ✅ MATCH
+  * "ANTHROPIC +14152360599" vs Note Fattura: "Anthropic" → ✅ MATCH
   * "VERISURE ITALY SRL" vs Spesa: "Verisure" → ✅ MATCH
-  * "GOOGLE WORKSPACE" vs Note: "Google" → ✅ MATCH
+  * "GOOGLE WORKSPACE" vs Note Movimento: "Google" → ✅ MATCH
+  * "Paypal servizi online" vs Tipo Spesa: "Costi per servizi" → ✅ MATCH
 
 DECISIONE FINALE:
 
