@@ -29,6 +29,7 @@ const TransactionRow: React.FC<{
   cashflowRecords: CashflowRecord[];
   bankTransactions: BankTransaction[];
   onConfirm: (invoiceId: string) => void;
+  onConfirmCashflow: (cashflowId: string) => void;
   onIgnore: () => void;
   onManualMatch: () => void;
   onUnmatch: () => void;
@@ -39,7 +40,7 @@ const TransactionRow: React.FC<{
   onCreateInvoice: () => void;
   onCreateCashflow: () => void;
   disabled?: boolean;
-}> = ({ transaction, invoices, cashflowRecords, bankTransactions, onConfirm, onIgnore, onManualMatch, onUnmatch, onRunAI, isProcessing, isSelected, onToggleSelect, onCreateInvoice, onCreateCashflow, disabled = false }) => {
+}> = ({ transaction, invoices, cashflowRecords, bankTransactions, onConfirm, onConfirmCashflow, onIgnore, onManualMatch, onUnmatch, onRunAI, isProcessing, isSelected, onToggleSelect, onCreateInvoice, onCreateCashflow, disabled = false }) => {
   const [expanded, setExpanded] = useState(false);
 
   // Find matched cashflow first (priority)
@@ -334,51 +335,64 @@ const TransactionRow: React.FC<{
 
                   <div className="space-y-2">
                     {candidates.map((candidate, idx) => (
-                      <div key={candidate.cashflow.id} className="bg-white dark:bg-dark-card rounded p-2 border border-yellow-200 dark:border-yellow-800 text-xs space-y-1">
-                        <div className="flex justify-between items-center">
-                          <span className="text-gray-600 dark:text-gray-400">ID:</span>
-                          <span className="font-mono font-semibold text-gray-900 dark:text-white">{candidate.cashflow.id}</span>
-                        </div>
-                        {candidate.cashflow.dataPagamento && (
+                      <div key={candidate.cashflow.id} className="bg-white dark:bg-dark-card rounded p-3 border border-yellow-200 dark:border-yellow-800">
+                        <div className="space-y-1 text-xs mb-2">
+                          <div className="flex justify-between items-center">
+                            <span className="text-gray-600 dark:text-gray-400">ID:</span>
+                            <span className="font-mono font-semibold text-gray-900 dark:text-white">{candidate.cashflow.id}</span>
+                          </div>
+                          {candidate.cashflow.dataPagamento && (
+                            <div className="flex justify-between">
+                              <span className="text-gray-600 dark:text-gray-400">Data:</span>
+                              <span className="text-gray-900 dark:text-white">
+                                {candidate.cashflow.dataPagamento}
+                                {candidate.dateDiff > 0 && (
+                                  <span className="ml-1 text-gray-500 dark:text-gray-400">
+                                    ({Math.round(candidate.dateDiff)}gg diff.)
+                                  </span>
+                                )}
+                              </span>
+                            </div>
+                          )}
                           <div className="flex justify-between">
-                            <span className="text-gray-600 dark:text-gray-400">Data:</span>
-                            <span className="text-gray-900 dark:text-white">
-                              {candidate.cashflow.dataPagamento}
-                              {candidate.dateDiff > 0 && (
+                            <span className="text-gray-600 dark:text-gray-400">Importo:</span>
+                            <span className="font-semibold text-gray-900 dark:text-white">
+                              {candidate.cashflow.tipo === 'Entrata' ? '+' : '-'}€{(candidate.cashflow.importo || (candidate.invoice ? (candidate.invoice.flusso || 0) + (candidate.invoice.iva || 0) : 0)).toFixed(2)}
+                              {candidate.amountDiff > 0.01 && (
                                 <span className="ml-1 text-gray-500 dark:text-gray-400">
-                                  ({Math.round(candidate.dateDiff)}gg diff.)
+                                  (diff. €{candidate.amountDiff.toFixed(2)})
                                 </span>
                               )}
                             </span>
                           </div>
-                        )}
-                        <div className="flex justify-between">
-                          <span className="text-gray-600 dark:text-gray-400">Importo:</span>
-                          <span className="font-semibold text-gray-900 dark:text-white">
-                            {candidate.cashflow.tipo === 'Entrata' ? '+' : '-'}€{(candidate.cashflow.importo || (candidate.invoice ? (candidate.invoice.flusso || 0) + (candidate.invoice.iva || 0) : 0)).toFixed(2)}
-                            {candidate.amountDiff > 0.01 && (
-                              <span className="ml-1 text-gray-500 dark:text-gray-400">
-                                (diff. €{candidate.amountDiff.toFixed(2)})
+                          {(candidate.cashflow.note || candidate.invoice?.note) && (
+                            <div className="flex justify-between">
+                              <span className="text-gray-600 dark:text-gray-400">Note:</span>
+                              <span className="text-gray-900 dark:text-white text-right max-w-[200px] truncate">
+                                {candidate.cashflow.note || candidate.invoice?.note}
                               </span>
-                            )}
-                          </span>
+                            </div>
+                          )}
+                          {candidate.invoice && (
+                            <div className="flex justify-between">
+                              <span className="text-gray-600 dark:text-gray-400">Progetto:</span>
+                              <span className="text-gray-900 dark:text-white text-right max-w-[200px] truncate">
+                                {candidate.invoice.nomeProgetto || candidate.invoice.spesa || 'N/A'}
+                              </span>
+                            </div>
+                          )}
                         </div>
-                        {(candidate.cashflow.note || candidate.invoice?.note) && (
-                          <div className="flex justify-between">
-                            <span className="text-gray-600 dark:text-gray-400">Note:</span>
-                            <span className="text-gray-900 dark:text-white text-right max-w-[200px] truncate">
-                              {candidate.cashflow.note || candidate.invoice?.note}
-                            </span>
-                          </div>
-                        )}
-                        {candidate.invoice && (
-                          <div className="flex justify-between">
-                            <span className="text-gray-600 dark:text-gray-400">Progetto:</span>
-                            <span className="text-gray-900 dark:text-white text-right max-w-[200px] truncate">
-                              {candidate.invoice.nomeProgetto || candidate.invoice.spesa || 'N/A'}
-                            </span>
-                          </div>
-                        )}
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onConfirmCashflow(candidate.cashflow.id);
+                          }}
+                          disabled={disabled}
+                          className="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 bg-green-600 text-white rounded-lg text-xs font-medium hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          <Check size={14} />
+                          Abbina a questo movimento
+                        </button>
                       </div>
                     ))}
                   </div>
@@ -2135,6 +2149,26 @@ export const Reconciliation: React.FC = () => {
     }
   };
 
+  // Confirm cashflow match
+  const handleConfirmCashflow = async (transactionId: string, cashflowId: string) => {
+    const tx = bankTransactions.find(t => t.id === transactionId);
+    if (!tx) return;
+
+    await updateBankTransaction(transactionId, {
+      matchStatus: 'matched',
+      matchedCashflowId: cashflowId,
+      matchReason: 'Abbinato manualmente'
+    });
+
+    // Update session counts
+    if (currentSession) {
+      await updateReconciliationSession(currentSession.id, {
+        matchedCount: currentSession.matchedCount + 1,
+        pendingCount: Math.max(0, currentSession.pendingCount - 1)
+      });
+    }
+  };
+
   // Ignore transaction
   const handleIgnore = async (transactionId: string) => {
     await updateBankTransaction(transactionId, {
@@ -2997,6 +3031,7 @@ export const Reconciliation: React.FC = () => {
                     cashflowRecords={cashflowRecords}
                     bankTransactions={bankTransactions}
                     onConfirm={(invoiceId) => handleConfirmMatch(tx.id, invoiceId)}
+                    onConfirmCashflow={(cashflowId) => handleConfirmCashflow(tx.id, cashflowId)}
                     onIgnore={() => handleIgnore(tx.id)}
                     onManualMatch={() => setManualMatchTransaction(tx)}
                     onUnmatch={() => handleUnmatch(tx.id)}
