@@ -336,49 +336,43 @@ const TransactionRow: React.FC<{
                   <div className="space-y-2">
                     {candidates.map((candidate, idx) => (
                       <div key={candidate.cashflow.id} className="bg-white dark:bg-dark-card rounded p-3 border border-yellow-200 dark:border-yellow-800">
-                        <div className="space-y-1 text-xs">
-                          <div className="flex justify-between items-center">
-                            <span className="text-gray-600 dark:text-gray-400">ID:</span>
-                            <span className="font-mono font-semibold text-gray-900 dark:text-white">{candidate.cashflow.id}</span>
+                        <div className="space-y-1 text-xs text-gray-900 dark:text-white">
+                          <div>
+                            <span className="font-medium text-gray-600 dark:text-gray-400">ID:</span>{' '}
+                            <span className="font-mono font-semibold">{candidate.cashflow.id}</span>
                           </div>
                           {candidate.cashflow.dataPagamento && (
-                            <div className="flex justify-between">
-                              <span className="text-gray-600 dark:text-gray-400">Data:</span>
-                              <span className="text-gray-900 dark:text-white">
-                                {candidate.cashflow.dataPagamento}
-                                {candidate.dateDiff > 0 && (
-                                  <span className="ml-1 text-gray-500 dark:text-gray-400">
-                                    ({Math.round(candidate.dateDiff)}gg diff.)
-                                  </span>
-                                )}
-                              </span>
-                            </div>
-                          )}
-                          <div className="flex justify-between">
-                            <span className="text-gray-600 dark:text-gray-400">Importo:</span>
-                            <span className="font-semibold text-gray-900 dark:text-white">
-                              {candidate.cashflow.tipo === 'Entrata' ? '+' : '-'}€{(candidate.cashflow.importo || (candidate.invoice ? (candidate.invoice.flusso || 0) + (candidate.invoice.iva || 0) : 0)).toFixed(2)}
-                              {candidate.amountDiff > 0.01 && (
+                            <div>
+                              <span className="font-medium text-gray-600 dark:text-gray-400">Data:</span>{' '}
+                              {candidate.cashflow.dataPagamento}
+                              {candidate.dateDiff > 0 && (
                                 <span className="ml-1 text-gray-500 dark:text-gray-400">
-                                  (diff. €{candidate.amountDiff.toFixed(2)})
+                                  ({Math.round(candidate.dateDiff)}gg diff.)
                                 </span>
                               )}
+                            </div>
+                          )}
+                          <div>
+                            <span className="font-medium text-gray-600 dark:text-gray-400">Importo:</span>{' '}
+                            <span className="font-semibold">
+                              {candidate.cashflow.tipo === 'Entrata' ? '+' : '-'}€{(candidate.cashflow.importo || (candidate.invoice ? (candidate.invoice.flusso || 0) + (candidate.invoice.iva || 0) : 0)).toFixed(2)}
                             </span>
+                            {candidate.amountDiff > 0.01 && (
+                              <span className="ml-1 text-gray-500 dark:text-gray-400">
+                                (diff. €{candidate.amountDiff.toFixed(2)})
+                              </span>
+                            )}
                           </div>
                           {(candidate.cashflow.note || candidate.invoice?.note) && (
-                            <div className="flex justify-between">
-                              <span className="text-gray-600 dark:text-gray-400">Note:</span>
-                              <span className="text-gray-900 dark:text-white text-right max-w-[200px] truncate">
-                                {candidate.cashflow.note || candidate.invoice?.note}
-                              </span>
+                            <div>
+                              <span className="font-medium text-gray-600 dark:text-gray-400">Note:</span>{' '}
+                              {candidate.cashflow.note || candidate.invoice?.note}
                             </div>
                           )}
                           {candidate.invoice && (
-                            <div className="flex justify-between">
-                              <span className="text-gray-600 dark:text-gray-400">Progetto:</span>
-                              <span className="text-gray-900 dark:text-white text-right max-w-[200px] truncate">
-                                {candidate.invoice.nomeProgetto || candidate.invoice.spesa || 'N/A'}
-                              </span>
+                            <div>
+                              <span className="font-medium text-gray-600 dark:text-gray-400">Progetto:</span>{' '}
+                              {candidate.invoice.nomeProgetto || candidate.invoice.spesa || 'N/A'}
                             </div>
                           )}
                         </div>
