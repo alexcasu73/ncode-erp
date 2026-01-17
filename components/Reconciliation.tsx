@@ -6,6 +6,12 @@ import { suggestMatch, quickMatch, type MatchSuggestion } from '../lib/reconcili
 import type { BankTransaction, ReconciliationSession, Invoice, CashflowRecord, CashflowWithInvoice, SideBySideRow, DifferenceReport } from '../types';
 import { formatCurrency } from '../lib/currency';
 
+// Categorie spesa
+const CATEGORIE_SPESA = ['Tools', 'Utenze', 'Affitto casa', 'Banca', 'Commercialista', 'Marketing', 'Intrattenimento', 'Generiche', 'Costi per servizi'];
+
+// Tipi spesa
+const TIPI_SPESA = ['Costi per servizi', 'Altri costi', 'Team'];
+
 // Format date for display
 const formatDate = (dateStr: string): string => {
   const date = new Date(dateStr);
@@ -725,23 +731,29 @@ const CreateInvoiceModal: React.FC<{
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Categoria Spesa</label>
-              <input
-                type="text"
+              <select
                 value={formData.spesa}
                 onChange={(e) => setFormData({ ...formData, spesa: e.target.value })}
-                className="w-full pl-4 pr-4 py-2 border border-gray-200 dark:border-dark-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 bg-white dark:bg-gray-800/30 text-dark dark:text-white placeholder-gray-400 dark:placeholder-gray-500"
-                placeholder="Es: Utenze, Tools..."
-              />
+                className="w-full pl-4 pr-12 py-2 border border-gray-200 dark:border-dark-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 bg-white dark:bg-gray-800/30 text-dark dark:text-white"
+              >
+                <option value="">Seleziona categoria...</option>
+                {CATEGORIE_SPESA.map(c => (
+                  <option key={c} value={c}>{c}</option>
+                ))}
+              </select>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Tipo Spesa</label>
-              <input
-                type="text"
+              <select
                 value={formData.tipoSpesa}
                 onChange={(e) => setFormData({ ...formData, tipoSpesa: e.target.value })}
-                className="w-full pl-4 pr-4 py-2 border border-gray-200 dark:border-dark-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 bg-white dark:bg-gray-800/30 text-dark dark:text-white placeholder-gray-400 dark:placeholder-gray-500"
-                placeholder="Es: Costi per servizi..."
-              />
+                className="w-full pl-4 pr-12 py-2 border border-gray-200 dark:border-dark-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 bg-white dark:bg-gray-800/30 text-dark dark:text-white"
+              >
+                <option value="">Seleziona tipo...</option>
+                {TIPI_SPESA.map(t => (
+                  <option key={t} value={t}>{t}</option>
+                ))}
+              </select>
             </div>
           </div>
 
