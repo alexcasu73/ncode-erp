@@ -1915,7 +1915,8 @@ export const Reconciliation: React.FC = () => {
         ignoredCount: ignoredCount,
         status: 'open',
         periodoDal: parsed.periodoDal,
-        periodoAl: parsed.periodoAl
+        periodoAl: parsed.periodoAl,
+        companyId: '00000000-0000-0000-0000-000000000001' // Ncode Studio
       };
 
       console.log('Adding session:', session);
@@ -1977,7 +1978,8 @@ export const Reconciliation: React.FC = () => {
           importo: tx.importo,
           tipo: tx.tipo,
           saldo: tx.saldo,
-          matchStatus: tx.hasErrors ? 'ignored' : 'pending'
+          matchStatus: tx.hasErrors ? 'ignored' : 'pending',
+          companyId: '00000000-0000-0000-0000-000000000001' // Ncode Studio
         };
 
         // Try automatic matching with AI (only if enabled, keys configured, and no errors)

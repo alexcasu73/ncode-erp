@@ -9,6 +9,7 @@ export enum DealStage {
 
 export interface AppSettings {
   id: string; // Always 'default' - single row
+  companyId?: string; // Company ID for multi-tenant
   defaultAiProvider: 'anthropic' | 'openai';
   anthropicApiKey: string;
   openaiApiKey: string;
@@ -32,6 +33,7 @@ export interface Customer {
 
 export interface Deal {
   id: string;
+  companyId?: string; // Company ID for multi-tenant
   title: string;
   value: number;
   stage: DealStage;
@@ -48,6 +50,7 @@ export type CategoriaSpesa = 'Tools' | 'Utenze' | 'Affitto casa' | 'Banca' | 'Co
 
 export interface Invoice {
   id: string;
+  companyId?: string; // Company ID for multi-tenant
   data: Date | string;
   dataScadenza?: Date | string; // Data scadenza pagamento (opzionale)
   mese: string;
@@ -79,6 +82,7 @@ export interface Transaction {
 // Record di cashflow che può fare riferimento a una fattura o essere standalone
 export interface CashflowRecord {
   id: string;
+  companyId?: string; // Company ID for multi-tenant
   invoiceId?: string; // Riferimento alla fattura (opzionale per movimenti standalone)
   dataPagamento?: string; // Data effettiva del pagamento
   importo?: number; // Importo (obbligatorio per standalone, opzionale se da fattura)
@@ -119,6 +123,7 @@ export interface NavItem {
 // Transazione bancaria importata dall'estratto conto
 export interface BankTransaction {
   id: string;
+  companyId?: string;        // Company ID for multi-tenant
   sessionId?: string;        // Riferimento alla sessione
   data: string;              // Data operazione (YYYY-MM-DD)
   dataValuta?: string;       // Data valuta
@@ -138,6 +143,7 @@ export interface BankTransaction {
 // Sessione di riconciliazione
 export interface ReconciliationSession {
   id: string;
+  companyId?: string;        // Company ID for multi-tenant
   fileName: string;
   uploadDate: string;
   periodo?: string;          // Es. "Gennaio 2025"
