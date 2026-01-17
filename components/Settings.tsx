@@ -13,7 +13,7 @@ const Settings: React.FC = () => {
   const [showOpenAIKey, setShowOpenAIKey] = useState(false);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
 
-  // Load settings from database on mount
+  // Load settings from database on mount ONCE
   useEffect(() => {
     const loadSettings = async () => {
       const settings = await getSettings();
@@ -27,7 +27,8 @@ const Settings: React.FC = () => {
       }
     };
     loadSettings();
-  }, [getSettings]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Empty dependency array - only run once on mount
 
   // Removed second useEffect to prevent conflicts with user input
 
