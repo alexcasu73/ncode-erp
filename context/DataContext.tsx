@@ -1093,17 +1093,39 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
             continue;
           }
 
-          // Check if notification already exists and is not dismissed
+          // Check if notification already exists and is not dismissed (any type)
           const { data: existing } = await supabase
             .from('invoice_notifications')
             .select('*')
             .eq('invoice_id', invoice.id)
-            .eq('tipo', tipo)
             .eq('dismissed', false)
-            .single();
+            .maybeSingle();
 
-          if (!existing) {
-            // Create notification
+          if (existing) {
+            // Notification exists - check if tipo needs to be updated
+            const existingNotif = snakeToCamel(existing) as InvoiceNotification;
+
+            if (existingNotif.tipo !== tipo) {
+              // Update notification tipo (e.g., from 'da_pagare' to 'scaduta')
+              console.log(`[Notifications] Updating notification for invoice ${invoice.id} from '${existingNotif.tipo}' to '${tipo}'`);
+
+              const { error: updateError } = await supabase
+                .from('invoice_notifications')
+                .update({ tipo })
+                .eq('id', existingNotif.id);
+
+              if (updateError) {
+                console.error('Error updating notification tipo:', updateError);
+              } else {
+                // Update local state
+                setInvoiceNotifications(prev =>
+                  prev.map(n => n.id === existingNotif.id ? { ...n, tipo } : n)
+                );
+                console.log(`[Notifications] Updated notification tipo to '${tipo}' for invoice ${invoice.id}`);
+              }
+            }
+          } else {
+            // Create new notification
             const notification: Omit<InvoiceNotification, 'id' | 'createdAt'> = {
               invoiceId: invoice.id,
               tipo,
@@ -1128,6 +1150,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
             } else if (data) {
               // Add to local state
               setInvoiceNotifications(prev => [...prev, snakeToCamel(data)]);
+              console.log(`[Notifications] Created notification for invoice ${invoice.id} - ${tipo}`);
             }
           }
         }
