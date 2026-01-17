@@ -689,6 +689,9 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const updateCashflowRecord = async (id: string, record: Partial<CashflowRecord>): Promise<boolean> => {
+    // Find the current cashflow record
+    const currentCashflow = cashflowRecords.find(cf => cf.id === id);
+
     if (!isSupabaseConfigured) {
       setCashflowRecords(prev => prev.map(cf => cf.id === id ? { ...cf, ...record } : cf));
       return true;
@@ -705,6 +708,33 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     setCashflowRecords(prev => prev.map(cf => cf.id === id ? { ...cf, ...record } : cf));
+
+    // If stato changed to 'Effettivo' and cashflow has an invoiceId, dismiss all notifications for that invoice
+    if (record.statoFatturazione === 'Effettivo' && currentCashflow?.invoiceId) {
+      console.log(`[Cashflow] Stato changed to 'Effettivo' for invoice ${currentCashflow.invoiceId}, dismissing notifications...`);
+
+      try {
+        // Dismiss all notifications for this invoice
+        const { error: dismissError } = await supabase
+          .from('invoice_notifications')
+          .update({ dismissed: true })
+          .eq('invoice_id', currentCashflow.invoiceId)
+          .eq('dismissed', false);
+
+        if (dismissError) {
+          console.error('Error dismissing notifications:', dismissError);
+        } else {
+          // Update local state
+          setInvoiceNotifications(prev =>
+            prev.filter(notif => notif.invoiceId !== currentCashflow.invoiceId)
+          );
+          console.log(`[Cashflow] Notifications dismissed for invoice ${currentCashflow.invoiceId}`);
+        }
+      } catch (err) {
+        console.error('Error in dismissing notifications:', err);
+      }
+    }
+
     return true;
   };
 
@@ -1030,6 +1060,17 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
 
         if (tipo) {
+          // Check if there's a cashflow with stato 'Effettivo' for this invoice
+          const cashflowEffettivo = cashflowRecords.find(
+            cf => cf.invoiceId === invoice.id && cf.statoFatturazione === 'Effettivo'
+          );
+
+          // Don't create notification if cashflow is already 'Effettivo' (paid)
+          if (cashflowEffettivo) {
+            console.log(`[Notifications] Skipping notification for invoice ${invoice.id} - cashflow is 'Effettivo'`);
+            continue;
+          }
+
           // Check if notification already exists and is not dismissed
           const { data: existing } = await supabase
             .from('invoice_notifications')
@@ -1072,7 +1113,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } catch (err) {
       console.error('Error in checkInvoiceDueDates:', err);
     }
-  }, [isSupabaseConfigured, invoices]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [isSupabaseConfigured, invoices, cashflowRecords]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Dismiss a notification
   const dismissNotification = async (id: string): Promise<boolean> => {
