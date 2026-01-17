@@ -1244,10 +1244,14 @@ export const Cashflow: React.FC = () => {
                 <label className="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">
                   Fattura di Riferimento *
                 </label>
+                {editingRecord && editingRecord.invoiceId && (
+                  <div className="mb-2 p-2 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg text-xs text-blue-700 dark:text-blue-300">
+                    💡 Puoi modificare il collegamento alla fattura selezionandone un'altra dal menu
+                  </div>
+                )}
 
                 {/* Filtri per ricerca fatture */}
-                {(!editingRecord || (editingRecord && !editingRecord.invoiceId)) && (
-                  <div className="mb-3 p-3 bg-gray-50 dark:bg-gray-800/30 rounded-lg space-y-2">
+                <div className="mb-3 p-3 bg-gray-50 dark:bg-gray-800/30 rounded-lg space-y-2">
                     {/* Campo ricerca */}
                     <div className="relative">
                       <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 dark:text-gray-400" size={18} />
@@ -1287,17 +1291,15 @@ export const Cashflow: React.FC = () => {
                     <div className="text-xs text-gray-500 dark:text-gray-400 text-center">
                       {invoicesDisponibili.length} {invoicesDisponibili.length === 1 ? 'fattura trovata' : 'fatture trovate'}
                     </div>
-                  </div>
-                )}
+                </div>
 
                 <select
                   value={formInvoiceId}
                   onChange={(e) => handleInvoiceChange(e.target.value)}
-                  disabled={editingRecord && !!editingRecord.invoiceId}
-                  className="w-full pl-4 pr-12 py-2 border border-gray-200 dark:border-dark-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 disabled:bg-gray-50 bg-white dark:bg-gray-800/30 text-dark dark:text-white"
+                  className="w-full pl-4 pr-12 py-2 border border-gray-200 dark:border-dark-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 bg-white dark:bg-gray-800/30 text-dark dark:text-white"
                 >
                   <option value="">Nessuna fattura (movimento standalone)</option>
-                  {(editingRecord && editingRecord.invoiceId ? invoices : invoicesDisponibili).map(inv => (
+                  {invoicesDisponibili.map(inv => (
                     <option key={inv.id} value={inv.id}>
                       {formatInvoiceNumber(inv.id, inv.anno)} | {formatInvoiceDate(inv.data)} | {inv.nomeProgetto || inv.spesa || 'N/A'} ({inv.tipo}) - {formatCurrency((inv.flusso || 0) + (inv.iva || 0))}
                     </option>
@@ -1431,8 +1433,7 @@ export const Cashflow: React.FC = () => {
                 </button>
                 <button
                   type="submit"
-                  disabled={!formInvoiceId}
-                  className="flex-1 pl-4 pr-12 py-2 bg-primary text-white rounded-lg hover:opacity-90 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex-1 pl-4 pr-12 py-2 bg-primary text-white rounded-lg hover:opacity-90 transition-all"
                 >
                   {editingRecord ? 'Salva Modifiche' : 'Aggiungi Movimento'}
                 </button>
