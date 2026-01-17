@@ -21,7 +21,9 @@ const Settings: React.FC = () => {
         setDefaultProvider(settings.defaultAiProvider);
         setAnthropicApiKey(settings.anthropicApiKey);
         setOpenaiApiKey(settings.openaiApiKey);
-        setNotificationRefreshInterval(settings.notificationRefreshInterval || 5);
+        // Cast to correct type
+        const interval = settings.notificationRefreshInterval || 5;
+        setNotificationRefreshInterval([1, 3, 5].includes(interval) ? interval as 1 | 3 | 5 : 5);
       }
     };
     loadSettings();
@@ -33,7 +35,9 @@ const Settings: React.FC = () => {
       setDefaultProvider(dbSettings.defaultAiProvider);
       setAnthropicApiKey(dbSettings.anthropicApiKey);
       setOpenaiApiKey(dbSettings.openaiApiKey);
-      setNotificationRefreshInterval(dbSettings.notificationRefreshInterval || 5);
+      // Cast to correct type
+      const interval = dbSettings.notificationRefreshInterval || 5;
+      setNotificationRefreshInterval([1, 3, 5].includes(interval) ? interval as 1 | 3 | 5 : 5);
     }
   }, [dbSettings]);
 
@@ -68,6 +72,11 @@ const Settings: React.FC = () => {
 
   const isAnthropicKeyValid = anthropicApiKey.length > 0;
   const isOpenAIKeyValid = openaiApiKey.length > 0;
+
+  const handleIntervalChange = (interval: 1 | 3 | 5) => {
+    console.log(`[Settings] Changing notification interval to ${interval} minutes`);
+    setNotificationRefreshInterval(interval);
+  };
 
   return (
     <div className="p-6 max-w-4xl mx-auto">
@@ -265,7 +274,8 @@ const Settings: React.FC = () => {
 
         <div className="grid grid-cols-3 gap-4">
           <button
-            onClick={() => setNotificationRefreshInterval(1)}
+            type="button"
+            onClick={() => handleIntervalChange(1)}
             className={`p-4 rounded-lg border-2 transition-all ${
               notificationRefreshInterval === 1
                 ? 'border-primary bg-primary/5 dark:bg-primary/10'
@@ -285,7 +295,8 @@ const Settings: React.FC = () => {
           </button>
 
           <button
-            onClick={() => setNotificationRefreshInterval(3)}
+            type="button"
+            onClick={() => handleIntervalChange(3)}
             className={`p-4 rounded-lg border-2 transition-all ${
               notificationRefreshInterval === 3
                 ? 'border-primary bg-primary/5 dark:bg-primary/10'
@@ -305,7 +316,8 @@ const Settings: React.FC = () => {
           </button>
 
           <button
-            onClick={() => setNotificationRefreshInterval(5)}
+            type="button"
+            onClick={() => handleIntervalChange(5)}
             className={`p-4 rounded-lg border-2 transition-all ${
               notificationRefreshInterval === 5
                 ? 'border-primary bg-primary/5 dark:bg-primary/10'
