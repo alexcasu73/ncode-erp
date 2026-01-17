@@ -35,7 +35,7 @@ const App: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col lg:flex-row min-h-screen bg-bg-light dark:bg-dark-bg font-sans text-dark dark:text-white overflow-hidden">
+    <div className="flex flex-col lg:flex-row h-screen bg-bg-light dark:bg-dark-bg font-sans text-dark dark:text-white overflow-hidden">
       {/* Mobile Sidebar Overlay */}
       {sidebarOpen && (
         <div
@@ -59,7 +59,7 @@ const App: React.FC = () => {
         />
       </div>
 
-      <div className="flex-1 flex flex-col h-screen overflow-hidden">
+      <div className="flex-1 flex flex-col overflow-hidden">
         {/* Top Bar */}
         <header className="h-24 flex items-center justify-between px-4 lg:px-8 bg-bg-light dark:bg-dark-bg flex-shrink-0 border-b border-gray-200 dark:border-dark-border">
           {/* Mobile menu button */}

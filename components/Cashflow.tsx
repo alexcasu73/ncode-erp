@@ -603,7 +603,7 @@ export const Cashflow: React.FC = () => {
         importo: Math.abs(importoValue), // Per standalone l'importo è sempre obbligatorio e positivo
         note: formNote || undefined,
         tipo: formTipoStandalone, // Usa il tipo selezionato nel form
-        statoFatturazione: 'Nessuno' // Movimenti standalone hanno sempre stato "Nessuno"
+        statoFatturazione: formStatoFatturazione // Usa lo stato selezionato nel form
       };
     }
 
@@ -1100,8 +1100,14 @@ export const Cashflow: React.FC = () => {
                         </span>
                       </td>
                       <td className="px-3 py-3 whitespace-nowrap">
-                        <span className="px-2 py-1 text-xs font-medium rounded-md text-white bg-gray-500">
-                          Nessuno
+                        <span className={`px-2 py-1 text-xs font-medium rounded-md text-white ${
+                          record.statoFatturazione === 'Effettivo'
+                            ? 'bg-secondary'
+                            : record.statoFatturazione === 'Stimato'
+                            ? 'bg-primary'
+                            : 'bg-gray-500'
+                        }`}>
+                          {record.statoFatturazione || 'Nessuno'}
                         </span>
                       </td>
                       <td className={`px-3 py-3 whitespace-nowrap text-sm font-bold text-right ${
@@ -1341,7 +1347,7 @@ export const Cashflow: React.FC = () => {
                   type="date"
                   value={formDataPagamento}
                   onChange={(e) => setFormDataPagamento(e.target.value)}
-                  className="w-full pl-4 pr-12 py-2 border border-gray-200 dark:border-dark-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 bg-white dark:bg-gray-800/30 text-dark dark:text-white"
+                  className="w-full pl-4 pr-4 py-2 border border-gray-200 dark:border-dark-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 bg-white dark:bg-gray-800/30 text-dark dark:text-white"
                 />
               </div>
 
@@ -1389,6 +1395,25 @@ export const Cashflow: React.FC = () => {
                 </div>
               )}
 
+              {/* Stato del Movimento */}
+              <div>
+                <label className="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">
+                  Stato del Movimento *
+                </label>
+                <select
+                  value={formStatoFatturazione}
+                  onChange={(e) => setFormStatoFatturazione(e.target.value as 'Stimato' | 'Effettivo' | 'Nessuno')}
+                  className="w-full pl-4 pr-12 py-2 border border-gray-200 dark:border-dark-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 bg-white dark:bg-gray-800/30 text-dark dark:text-white"
+                >
+                  <option value="Stimato">Stimato</option>
+                  <option value="Effettivo">Effettivo</option>
+                  <option value="Nessuno">Nessuno</option>
+                </select>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  Stato del flusso di cassa (indipendente dalla fattura collegata)
+                </p>
+              </div>
+
               {/* Note */}
               <div>
                 <label className="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">
@@ -1402,27 +1427,6 @@ export const Cashflow: React.FC = () => {
                   placeholder="Note aggiuntive sul movimento..."
                 />
               </div>
-
-              {/* Stato Fatturazione (solo per movimenti con fattura) */}
-              {formInvoiceId && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">
-                    Stato Fatturazione *
-                  </label>
-                  <select
-                    value={formStatoFatturazione}
-                    onChange={(e) => setFormStatoFatturazione(e.target.value as 'Stimato' | 'Effettivo' | 'Nessuno')}
-                    className="w-full pl-4 pr-12 py-2 border border-gray-200 dark:border-dark-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 bg-white dark:bg-gray-800/30 text-dark dark:text-white"
-                  >
-                    <option value="Stimato">Stimato</option>
-                    <option value="Effettivo">Effettivo</option>
-                    <option value="Nessuno">Nessuno</option>
-                  </select>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                    Modifica lo stato della fattura collegata
-                  </p>
-                </div>
-              )}
 
               {/* Actions */}
               <div className="flex gap-3 pt-4">

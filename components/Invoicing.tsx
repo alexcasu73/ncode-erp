@@ -467,7 +467,7 @@ export const Invoicing: React.FC = () => {
             <div className="border border-gray-200 dark:border-dark-border rounded-lg p-4 bg-gray-50/30 dark:bg-gray-800/10">
               <div className="flex items-center gap-2 mb-3">
                 <div className="w-3 h-3 bg-primary rounded-full"></div>
-                <h4 className="font-bold text-dark dark:text-white">Stimato (Previsto)</h4>
+                <h4 className="font-bold text-dark dark:text-white">Stimato</h4>
               </div>
               <div className="space-y-2">
                 <div className="flex justify-between">
@@ -943,7 +943,7 @@ const InvoiceModal: React.FC<InvoiceModalProps> = ({ invoice, deals, onClose, on
                 type="date"
                 value={formData.data ? new Date(formData.data).toISOString().split('T')[0] : ''}
                 onChange={(e) => updateField('data', e.target.value)}
-                className="w-full pl-4 pr-12 py-2 border border-gray-200 dark:border-dark-border rounded-lg focus:ring-2 focus:ring-primary focus:outline-none bg-white dark:bg-gray-800/30 text-dark dark:text-white"
+                className="w-full pl-4 pr-4 py-2 border border-gray-200 dark:border-dark-border rounded-lg focus:ring-2 focus:ring-primary focus:outline-none bg-white dark:bg-gray-800/30 text-dark dark:text-white"
                 required
               />
             </div>
@@ -968,7 +968,7 @@ const InvoiceModal: React.FC<InvoiceModalProps> = ({ invoice, deals, onClose, on
               type="date"
               value={formData.dataScadenza ? new Date(formData.dataScadenza).toISOString().split('T')[0] : ''}
               onChange={(e) => updateField('dataScadenza', e.target.value || undefined)}
-              className="w-full pl-4 pr-12 py-2 border border-gray-200 dark:border-dark-border rounded-lg focus:ring-2 focus:ring-primary focus:outline-none bg-white dark:bg-gray-800/30 text-dark dark:text-white"
+              className="w-full pl-4 pr-4 py-2 border border-gray-200 dark:border-dark-border rounded-lg focus:ring-2 focus:ring-primary focus:outline-none bg-white dark:bg-gray-800/30 text-dark dark:text-white"
             />
           </div>
 

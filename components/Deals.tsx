@@ -516,7 +516,7 @@ const DealModal: React.FC<DealModalProps> = ({ deal, preselectedStage, customers
                 type="date"
                 value={formData.expectedClose ? formData.expectedClose.split('T')[0] : ''}
                 onChange={(e) => updateField('expectedClose', e.target.value)}
-                className="w-full pl-4 pr-12 py-2 bg-gray-50 dark:bg-gray-800/30 border border-gray-200 dark:border-dark-border rounded-lg focus:ring-2 focus:ring-primary focus:outline-none text-dark dark:text-white"
+                className="w-full pl-4 pr-4 py-2 bg-gray-50 dark:bg-gray-800/30 border border-gray-200 dark:border-dark-border rounded-lg focus:ring-2 focus:ring-primary focus:outline-none text-dark dark:text-white"
               />
             </div>
           </div>
