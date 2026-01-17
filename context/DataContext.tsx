@@ -1069,10 +1069,16 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const invoicesWithDueDate = invoices.filter(inv => inv.dataScadenza);
 
       for (const invoice of invoicesWithDueDate) {
+        // Only check invoices in stato 'Effettivo' (confirmed invoices)
+        if (invoice.statoFatturazione !== 'Effettivo') {
+          console.log(`[Notifications] Skipping invoice ${invoice.id} - invoice stato is '${invoice.statoFatturazione}' (not Effettivo)`);
+          continue;
+        }
+
         // Check if this invoice has an associated cashflow
         const cashflow = cashflowRecords.find(cf => cf.invoiceId === invoice.id);
 
-        // Skip if no cashflow exists (only check invoices with cashflow)
+        // Skip if no cashflow exists
         if (!cashflow) {
           console.log(`[Notifications] Skipping invoice ${invoice.id} - no cashflow associated`);
           continue;
@@ -1084,8 +1090,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
           continue;
         }
 
-        // Only notify for invoices with cashflow in 'Previsto' or 'Stimato' state
-        console.log(`[Notifications] Checking invoice ${invoice.id} with cashflow stato '${cashflow.statoFatturazione}'`);
+        // Only notify for confirmed invoices (Effettivo) with unpaid cashflow (Previsto/Stimato)
+        console.log(`[Notifications] Checking invoice ${invoice.id} (stato: ${invoice.statoFatturazione}) with cashflow stato '${cashflow.statoFatturazione}'`);
 
         const dueDate = new Date(invoice.dataScadenza!);
         dueDate.setHours(0, 0, 0, 0);
