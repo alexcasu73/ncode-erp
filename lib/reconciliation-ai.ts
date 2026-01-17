@@ -152,29 +152,58 @@ export async function suggestMatch(
   console.log(`   Total cashflows in DB: ${cashflowRecords.length}`);
   console.log(`   → Filtered by tipo (${transaction.tipo}) + date (${transactionMonth + 1}/${transactionYear}): ${cashflowWithInvoices.length}`);
 
-  // Log all cashflows being sent to AI with their dates
-  console.log('\n📋 CASHFLOWS AVAILABLE FOR MATCHING:');
-  if (cashflowWithInvoices.length === 0) {
-    console.log('   ❌ NESSUN FLUSSO DI CASSA DISPONIBILE!');
-  } else {
-    cashflowWithInvoices.forEach(({ cf, invoice }) => {
-      const cfAmount = cf.importo || (invoice ? (invoice.flusso || 0) + (invoice.iva || 0) : 0);
-      const diff = Math.abs(cfAmount - Math.abs(transaction.importo));
-      const withinTolerance = diff <= 2.0;
+  // CRITICAL: Filter cashflows by amount (±2€) BEFORE sending to AI
+  // This prevents AI from selecting cashflows with wrong amounts
+  const transactionAmount = Math.abs(transaction.importo);
+  const cashflowsWithinTolerance = cashflowWithInvoices.filter(({ cf, invoice }) => {
+    const cfAmount = cf.importo || (invoice ? (invoice.flusso || 0) + (invoice.iva || 0) : 0);
+    const diff = Math.abs(cfAmount - transactionAmount);
+    return diff <= 2.0;
+  });
 
-      console.log(`   ${withinTolerance ? '✅' : '❌'} ${cf.id} | €${cfAmount.toFixed(2)} (diff: €${diff.toFixed(2)}) | ${cf.dataPagamento || 'NO DATE'}`);
+  console.log(`   → Filtered by amount (±2€): ${cashflowsWithinTolerance.length}`);
+
+  // Log all cashflows being sent to AI with their dates
+  console.log('\n📋 CASHFLOWS AVAILABLE FOR MATCHING (within ±2€ tolerance):');
+  if (cashflowsWithinTolerance.length === 0) {
+    console.log('   ❌ NESSUN FLUSSO DI CASSA CON IMPORTO COMPATIBILE!');
+  } else {
+    cashflowsWithinTolerance.forEach(({ cf, invoice }) => {
+      const cfAmount = cf.importo || (invoice ? (invoice.flusso || 0) + (invoice.iva || 0) : 0);
+      const diff = Math.abs(cfAmount - transactionAmount);
+
+      console.log(`   ✅ ${cf.id} | €${cfAmount.toFixed(2)} (diff: €${diff.toFixed(2)}) | ${cf.dataPagamento || 'NO DATE'}`);
       console.log(`      Note: "${cf.note || 'N/D'}" | Spesa: "${invoice?.spesa || 'N/D'}" | Categoria: "${cf.categoria || 'N/D'}"`);
     });
   }
 
-  // Check for exact amount match in cashflows
-  const exactAmountMatches = cashflowWithInvoices.filter(({ cf, invoice }) => {
+  // Log excluded cashflows for debugging
+  const excludedCashflows = cashflowWithInvoices.filter(({ cf, invoice }) => {
     const cfAmount = cf.importo || (invoice ? (invoice.flusso || 0) + (invoice.iva || 0) : 0);
-    const diff = Math.abs(cfAmount - Math.abs(transaction.importo));
+    const diff = Math.abs(cfAmount - transactionAmount);
+    return diff > 2.0;
+  });
+
+  if (excludedCashflows.length > 0) {
+    console.log('\n🚫 CASHFLOWS EXCLUDED (amount difference > 2€):');
+    excludedCashflows.slice(0, 5).forEach(({ cf, invoice }) => {
+      const cfAmount = cf.importo || (invoice ? (invoice.flusso || 0) + (invoice.iva || 0) : 0);
+      const diff = Math.abs(cfAmount - transactionAmount);
+      console.log(`   ❌ ${cf.id} | €${cfAmount.toFixed(2)} (diff: €${diff.toFixed(2)}) | Note: "${cf.note || 'N/D'}"`);
+    });
+    if (excludedCashflows.length > 5) {
+      console.log(`   ... and ${excludedCashflows.length - 5} more excluded`);
+    }
+  }
+
+  // Check for exact amount match in filtered cashflows
+  const exactAmountMatches = cashflowsWithinTolerance.filter(({ cf, invoice }) => {
+    const cfAmount = cf.importo || (invoice ? (invoice.flusso || 0) + (invoice.iva || 0) : 0);
+    const diff = Math.abs(cfAmount - transactionAmount);
     return diff <= 0.10;
   });
   if (exactAmountMatches.length > 0) {
-    console.log(`[AI] 🎯 Found ${exactAmountMatches.length} cashflow(s) with matching amount (±€0.10):`, exactAmountMatches.map(({ cf, invoice }) => ({
+    console.log(`[AI] 🎯 Found ${exactAmountMatches.length} cashflow(s) with exact amount match (±€0.10):`, exactAmountMatches.map(({ cf, invoice }) => ({
       id: cf.id,
       invoiceId: cf.invoiceId,
       importo: cf.importo || (invoice ? (invoice.flusso || 0) + (invoice.iva || 0) : 0),
@@ -182,32 +211,6 @@ export async function suggestMatch(
       descMovimento: cf.descrizione,
       noteFattura: invoice?.note,
       progetto: invoice?.nomeProgetto,
-      spesa: invoice?.spesa
-    })));
-  } else {
-    console.log(`[AI] ⚠️ NO cashflow found with matching amount €${Math.abs(transaction.importo)}. Available amounts:`,
-      cashflowWithInvoices.slice(0, 10).map(({ cf, invoice }) => ({
-        id: cf.id,
-        amount: cf.importo || (invoice ? (invoice.flusso || 0) + (invoice.iva || 0) : 0)
-      }))
-    );
-  }
-
-  // Check for ALL cashflows with amounts within ±1€ tolerance
-  const amountTolerance1Euro = cashflowWithInvoices.filter(({ cf, invoice }) => {
-    const cfAmount = cf.importo || (invoice ? (invoice.flusso || 0) + (invoice.iva || 0) : 0);
-    const diff = Math.abs(cfAmount - Math.abs(transaction.importo));
-    return diff <= 1.00;
-  });
-  if (amountTolerance1Euro.length > 0) {
-    console.log(`[AI] 📊 Found ${amountTolerance1Euro.length} cashflow(s) within ±€1 tolerance:`, amountTolerance1Euro.map(({ cf, invoice }) => ({
-      id: cf.id,
-      invoiceId: cf.invoiceId,
-      importo: cf.importo || (invoice ? (invoice.flusso || 0) + (invoice.iva || 0) : 0),
-      diff: Math.abs((cf.importo || (invoice ? (invoice.flusso || 0) + (invoice.iva || 0) : 0)) - Math.abs(transaction.importo)).toFixed(2),
-      note: cf.note,
-      categoria: cf.categoria,
-      descrizione: cf.descrizione,
       spesa: invoice?.spesa
     })));
   }
@@ -218,14 +221,14 @@ export async function suggestMatch(
     console.warn(`[AI] ⚠️ WARNING: Detected old-style cashflow IDs! Please RELOAD the page (F5) to get new progressive IDs from database.`);
   }
 
-  // If no invoices match the type, return no match
-  if (filteredInvoices.length === 0 && cashflowWithInvoices.length === 0) {
-    console.log(`[AI] No matching records found for tipo ${transaction.tipo}`);
+  // If no cashflows within tolerance, return no match immediately
+  if (cashflowsWithinTolerance.length === 0) {
+    console.log(`[AI] No cashflows within ±2€ tolerance found for €${transactionAmount.toFixed(2)}`);
     return {
       invoiceId: null,
       cashflowId: null,
       confidence: 0,
-      reason: `Nessuna ${transaction.tipo === 'Entrata' ? 'fattura di entrata' : 'fattura di uscita'} trovata nel sistema.`
+      reason: `Nessun movimento con importo compatibile (±2€) per €${transactionAmount.toFixed(2)} trovato.`
     };
   }
 
@@ -236,34 +239,22 @@ Sei un assistente per la riconciliazione bancaria. Trova il MOVIMENTO DI CASSA c
 TRANSAZIONE BANCARIA DA RICONCILIARE:
 ${formatBankTransaction(transaction)}
 
-MOVIMENTI DI CASSA DISPONIBILI (già filtrati per tipo ${transaction.tipo} e mese/anno):
-${cashflowWithInvoices.length > 0
-      ? cashflowWithInvoices.map(({ cf, invoice }) => formatCashflow(cf, invoice)).join('\n')
+MOVIMENTI DI CASSA DISPONIBILI (già filtrati per tipo ${transaction.tipo}, mese/anno, e importo ±2€):
+${cashflowsWithinTolerance.length > 0
+      ? cashflowsWithinTolerance.map(({ cf, invoice }) => formatCashflow(cf, invoice)).join('\n')
       : 'Nessun movimento registrato'}
 
-ALGORITMO DI RICONCILIAZIONE (segui ESATTAMENTE questi step):
+NOTA IMPORTANTE:
+I movimenti sono GIÀ FILTRATI per:
+- Tipo: ${transaction.tipo}
+- Mese/Anno: ${transactionMonth + 1}/${transactionYear}
+- Importo: ±2€ dalla transazione (€${transactionAmount.toFixed(2)})
 
-STEP 1 - FILTRA PER IMPORTO (OBBLIGATORIO - NON SALTARE):
-- I movimenti sono già filtrati per tipo (${transaction.tipo}) e mese/anno
-- CRITICAL: Per OGNI movimento, DEVI calcolare: differenza = |importo_transazione - importo_movimento|
-- Se differenza > 2€ → ❌ ESCLUDI IMMEDIATAMENTE quel movimento, NON considerarlo, passa al successivo
-- Se differenza ≤ 2€ → ✅ CONTINUA con STEP 2
+Tutti i movimenti che vedi hanno importo compatibile. Devi SOLO verificare la descrizione.
 
-IMPORTANTE: NON puoi scegliere un movimento solo perché la descrizione matcha.
-L'importo DEVE essere compatibile (≤2€ differenza) PRIMA di verificare la descrizione.
+ALGORITMO DI RICONCILIAZIONE:
 
-Esempio SBAGLIATO:
-- Transazione: €10.00 "ANTHROPIC"
-- Movimento CF-0114: €50.00 Note: "Anthropic"
-- ❌ SBAGLIATO: {"cashflowId": "CF-0114", "confidence": 95, "reason": "Match perfetto"}
-- ✅ CORRETTO: Escludere CF-0114 perché differenza €40 > €2
-
-Esempio CORRETTO:
-- Transazione: €10.00 "ANTHROPIC"
-- Movimento CF-0053: €10.50 Note: "Anthropic"
-- ✅ CORRETTO: {"cashflowId": "CF-0053", "confidence": 95, "reason": "Match: CF-0053 per €10.50 - 'Anthropic' trovato"}
-
-STEP 2 - VERIFICA DESCRIZIONE:
+STEP 1 - VERIFICA DESCRIZIONE:
 - Prendi la DESCRIZIONE della transazione (campo "Descrizione:")
 - Estrai le parole chiave significative (ignora articoli, preposizioni, caratteri speciali)
 - Confronta con TUTTI questi campi del movimento e della fattura collegata:
@@ -284,22 +275,22 @@ STEP 2 - VERIFICA DESCRIZIONE:
 
 DECISIONE FINALE:
 
-✅ SE IMPORTO OK (≤2€) E DESCRIZIONE MATCHA:
+✅ SE DESCRIZIONE MATCHA:
    → confidence = 90-95%
    → cashflowId = [ID del movimento]
-   → reason = "Match: movimento [ID] per €[importo] - [breve spiegazione]"
+   → reason = "Match: movimento [ID] per €[importo] - [breve spiegazione del match]"
    → RICONCILIA AUTOMATICAMENTE
 
-⚠️ SE IMPORTO OK (≤2€) MA DESCRIZIONE NON MATCHA:
-   → confidence = 40-60% (in base a quanto è vicino l'importo)
-   → cashflowId = [ID del movimento con importo più vicino]
+⚠️ SE DESCRIZIONE NON MATCHA MA C'È UN SOLO MOVIMENTO:
+   → confidence = 50-70% (importo compatibile ma descrizione incerta)
+   → cashflowId = [ID del movimento]
    → reason = "Importo compatibile (€[X]) ma descrizione non corrisponde - verifica manuale"
    → MOSTRA ALL'UTENTE PER VERIFICA
 
-❌ SE NESSUN MOVIMENTO CON IMPORTO ≤2€:
+❌ SE NESSUN MOVIMENTO NELLA LISTA:
    → confidence = 0
    → cashflowId = null, invoiceId = null
-   → reason = "Nessun movimento con importo compatibile (€[X]) trovato"
+   → reason = "Nessun movimento disponibile"
 
 FORMATO RISPOSTA OBBLIGATORIO:
 IMPORTANT: Your response must be ONLY the JSON object below. Do not write any text before or after the JSON.
@@ -330,7 +321,7 @@ ESEMPI DI RISPOSTE VALIDE (copia questo formato esatto):
     const selectedModel = model || 'claude-3-5-haiku-20241022';
     console.log('\n🤖 STEP 2: CALLING AI');
     console.log(`   Model: ${selectedModel}`);
-    console.log(`   Sending ${cashflowWithInvoices.length} cashflows for analysis...`);
+    console.log(`   Sending ${cashflowsWithinTolerance.length} cashflows (within ±2€ tolerance) for analysis...`);
 
     let text = '';
 
