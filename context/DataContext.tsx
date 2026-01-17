@@ -1004,7 +1004,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   // Check invoice due dates and create notifications
-  const checkInvoiceDueDates = useCallback(async (): Promise<void> => {
+  const checkInvoiceDueDates = useCallback(async () => {
     if (!isSupabaseConfigured) return;
 
     try {
@@ -1071,7 +1071,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } catch (err) {
       console.error('Error in checkInvoiceDueDates:', err);
     }
-  }, [isSupabaseConfigured, invoices]);
+  }, [isSupabaseConfigured, invoices]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Dismiss a notification
   const dismissNotification = async (id: string): Promise<boolean> => {
