@@ -2181,6 +2181,11 @@ export const Reconciliation: React.FC = () => {
     const tx = bankTransactions.find(t => t.id === transactionId);
     if (!tx) return;
 
+    // Update cashflow to Effettivo since it's been reconciled with a bank transaction
+    await updateCashflowRecord(cashflowId, {
+      statoFatturazione: 'Effettivo'
+    });
+
     await updateBankTransaction(transactionId, {
       matchStatus: 'matched',
       matchedCashflowId: cashflowId,
@@ -2662,7 +2667,8 @@ export const Reconciliation: React.FC = () => {
       await addCashflowRecord({
         invoiceId: newInvoice.id,
         dataPagamento: transaction.data,
-        note: `Movimento automatico da riconciliazione - ${transaction.descrizione || transaction.causale || ''}`
+        note: `Movimento automatico da riconciliazione - ${transaction.descrizione || transaction.causale || ''}`,
+        statoFatturazione: 'Effettivo' // Set to Effettivo since it's being created from a bank transaction
       });
 
       // Auto-match the transaction to the new invoice
@@ -2693,7 +2699,8 @@ export const Reconciliation: React.FC = () => {
       tipo: cashflowData.tipo,
       descrizione: cashflowData.descrizione,
       categoria: cashflowData.categoria,
-      note: cashflowData.note
+      note: cashflowData.note,
+      statoFatturazione: 'Effettivo' // Set to Effettivo since it's being created from a bank transaction
     });
     if (newCashflow) {
       // Auto-match the transaction to the new cashflow
