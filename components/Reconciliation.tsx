@@ -1222,9 +1222,10 @@ function generateDifferenceReport(
 interface UnmatchedViewProps {
   unmatchedBankTransactions: BankTransaction[];
   unmatchedCashflows: CashflowWithInvoice[];
+  onDeleteCashflow: (cashflowId: string, invoiceId?: string) => void;
 }
 
-const UnmatchedView: React.FC<UnmatchedViewProps> = ({ unmatchedBankTransactions, unmatchedCashflows }) => {
+const UnmatchedView: React.FC<UnmatchedViewProps> = ({ unmatchedBankTransactions, unmatchedCashflows, onDeleteCashflow }) => {
   const totalBankAmount = unmatchedBankTransactions.reduce((sum, tx) =>
     sum + (tx.tipo === 'Entrata' ? tx.importo : -tx.importo), 0
   );
@@ -1311,6 +1312,9 @@ const UnmatchedView: React.FC<UnmatchedViewProps> = ({ unmatchedBankTransactions
                       {cf.invoice && (
                         <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Da Fattura: {formatInvoiceId(cf.invoice.id, cf.invoice.anno)}</p>
                       )}
+                      {cf.note && (
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 italic">Note: {cf.note}</p>
+                      )}
                     </div>
                     <div className="text-right ml-4">
                       <span className={`text-lg font-semibold ${
@@ -1320,11 +1324,18 @@ const UnmatchedView: React.FC<UnmatchedViewProps> = ({ unmatchedBankTransactions
                       </span>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2 mt-2">
+                  <div className="flex items-center justify-between gap-2 mt-2">
                     <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-400">
                       <AlertCircle className="w-3 h-3 mr-1" />
                       Non abbinata
                     </span>
+                    <button
+                      onClick={() => onDeleteCashflow(cf.id, cf.invoiceId)}
+                      className="flex items-center gap-1 px-2 py-1 bg-red-600 text-white rounded text-xs font-medium hover:bg-red-700 transition-colors"
+                    >
+                      <Trash2 size={12} />
+                      Elimina
+                    </button>
                   </div>
                 </div>
               );
@@ -1653,7 +1664,7 @@ const ReportView: React.FC<ReportViewProps> = ({ report }) => {
 // ====== END COMPARISON VIEW COMPONENTS ======
 
 export const Reconciliation: React.FC = () => {
-  const { invoices, cashflowRecords, reconciliationSessions, bankTransactions, addReconciliationSession, addBankTransaction, updateBankTransaction, updateReconciliationSession, deleteBankTransaction, deleteReconciliationSession, clearAllReconciliationSessions, addInvoice, addCashflowRecord, aiProcessing, setAiProcessing, stopAiProcessing, refreshData } = useData();
+  const { invoices, cashflowRecords, reconciliationSessions, bankTransactions, addReconciliationSession, addBankTransaction, updateBankTransaction, updateReconciliationSession, deleteBankTransaction, deleteReconciliationSession, clearAllReconciliationSessions, addInvoice, addCashflowRecord, updateCashflowRecord, deleteCashflowRecord, deleteInvoice, aiProcessing, setAiProcessing, stopAiProcessing, refreshData } = useData();
 
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -1678,6 +1689,11 @@ export const Reconciliation: React.FC = () => {
     const saved = localStorage.getItem('reconciliation_aiMatchingEnabled');
     return saved === null ? false : saved === 'true'; // Default: DISABILITATA per sicurezza costi
   });
+  const [deleteConfirmDialog, setDeleteConfirmDialog] = useState<{
+    step: 'confirmDelete' | 'confirmInvoice';
+    cashflowId: string;
+    invoiceId?: string;
+  } | null>(null);
 
   // Check if AI keys are configured
   const checkAIKeysConfigured = () => {
@@ -2155,6 +2171,9 @@ export const Reconciliation: React.FC = () => {
         pendingCount: Math.max(0, currentSession.pendingCount - 1)
       });
     }
+
+    // Refresh data to update all views
+    await refreshData();
   };
 
   // Confirm cashflow match
@@ -2175,6 +2194,75 @@ export const Reconciliation: React.FC = () => {
         pendingCount: Math.max(0, currentSession.pendingCount - 1)
       });
     }
+
+    // Refresh data to update all views
+    await refreshData();
+  };
+
+  // Delete unmatched cashflow - Step 1: Ask to delete cashflow
+  const handleDeleteCashflow = (cashflowId: string, invoiceId?: string) => {
+    setDeleteConfirmDialog({
+      step: 'confirmDelete',
+      cashflowId,
+      invoiceId
+    });
+  };
+
+  // Step 2: User confirmed cashflow deletion, check if we need to ask about invoice
+  const confirmDeleteCashflow = () => {
+    if (!deleteConfirmDialog) return;
+
+    const { cashflowId, invoiceId } = deleteConfirmDialog;
+
+    // If there's an invoice, ask if they want to delete it too
+    if (invoiceId) {
+      setDeleteConfirmDialog({
+        step: 'confirmInvoice',
+        cashflowId,
+        invoiceId
+      });
+    } else {
+      // No invoice, delete directly
+      finalDeleteCashflow(cashflowId);
+    }
+  };
+
+  // Final deletion with or without invoice
+  const finalDeleteCashflow = async (cashflowId: string, deleteInvoiceToo?: boolean) => {
+    const invoiceId = deleteConfirmDialog?.invoiceId;
+    setDeleteConfirmDialog(null);
+
+    try {
+      // Step 1: If there's an invoice, first unlink it from the cashflow to avoid foreign key constraints
+      if (invoiceId) {
+        await updateCashflowRecord(cashflowId, { invoiceId: undefined });
+      }
+
+      // Step 2: Delete the cashflow
+      const cashflowDeleted = await deleteCashflowRecord(cashflowId);
+
+      if (!cashflowDeleted) {
+        setError('Errore durante l\'eliminazione del flusso di cassa');
+        return;
+      }
+
+      // Step 3: If user confirmed, delete the invoice too
+      if (deleteInvoiceToo && invoiceId) {
+        // Refresh to ensure the cashflow is fully deleted before deleting invoice
+        await refreshData();
+
+        const invoiceDeleted = await deleteInvoice(invoiceId);
+        if (!invoiceDeleted) {
+          setError('Flusso di cassa eliminato, ma errore durante l\'eliminazione della fattura');
+        }
+      }
+
+      // Final refresh to update the UI
+      await refreshData();
+    } catch (err) {
+      console.error('Error deleting cashflow:', err);
+      setError('Errore durante l\'eliminazione');
+    }
   };
 
   // Ignore transaction
@@ -2190,6 +2278,9 @@ export const Reconciliation: React.FC = () => {
         pendingCount: Math.max(0, currentSession.pendingCount - 1)
       });
     }
+
+    // Refresh data to update all views
+    await refreshData();
   };
 
   // Run AI analysis on single transaction
@@ -2246,6 +2337,9 @@ export const Reconciliation: React.FC = () => {
           pendingCount: Math.max(0, currentSession.pendingCount - 1)
         });
       }
+
+      // Refresh data to update all views
+      await refreshData();
     } catch (err) {
       console.error('AI matching error:', err);
       const errorMessage = err instanceof Error ? err.message : 'Errore sconosciuto';
@@ -2272,6 +2366,9 @@ export const Reconciliation: React.FC = () => {
     }
 
     setManualMatchTransaction(null);
+
+    // Refresh data to update all views
+    await refreshData();
   };
 
   // Unmatch transaction - remove matching and set back to pending
@@ -2296,6 +2393,9 @@ export const Reconciliation: React.FC = () => {
         pendingCount: currentSession.pendingCount + 1
       });
     }
+
+    // Refresh data to update all views
+    await refreshData();
   };
 
   // Run AI on all pending
@@ -2460,6 +2560,9 @@ export const Reconciliation: React.FC = () => {
         });
       }
       setSelectedIds(new Set());
+
+      // Refresh data to update all views
+      await refreshData();
     } finally {
       setIsDeleting(false);
     }
@@ -2474,6 +2577,9 @@ export const Reconciliation: React.FC = () => {
       await deleteReconciliationSession(currentSession.id);
       setSelectedSession(null);
       setSelectedIds(new Set());
+
+      // Refresh data to update all views
+      await refreshData();
     } finally {
       setIsDeleting(false);
     }
@@ -2487,6 +2593,9 @@ export const Reconciliation: React.FC = () => {
       await clearAllReconciliationSessions();
       setSelectedSession(null);
       setSelectedIds(new Set());
+
+      // Refresh data to update all views
+      await refreshData();
     } finally {
       setIsDeleting(false);
     }
@@ -2506,6 +2615,9 @@ export const Reconciliation: React.FC = () => {
           status: 'open',
           closedDate: undefined
         });
+
+        // Refresh data to update all views
+        await refreshData();
       } catch (err) {
         console.error('Error reopening session:', err);
         setError('Errore durante la riapertura della sessione');
@@ -2524,6 +2636,9 @@ export const Reconciliation: React.FC = () => {
         localStorage.removeItem('reconciliation_selectedSession');
         setSelectedSession(null);
         setSelectedIds(new Set());
+
+        // Refresh data to update all views
+        await refreshData();
       } catch (err) {
         console.error('Error closing session:', err);
         setError('Errore durante la chiusura della sessione');
@@ -2563,6 +2678,9 @@ export const Reconciliation: React.FC = () => {
           pendingCount: Math.max(0, currentSession.pendingCount - 1)
         });
       }
+
+      // Refresh data to update all views
+      await refreshData();
     }
     setCreateInvoiceTransaction(null);
   };
@@ -2591,6 +2709,9 @@ export const Reconciliation: React.FC = () => {
           pendingCount: Math.max(0, currentSession.pendingCount - 1)
         });
       }
+
+      // Refresh data to update all views
+      await refreshData();
     }
     setCreateCashflowTransaction(null);
   };
@@ -3060,6 +3181,7 @@ export const Reconciliation: React.FC = () => {
             <UnmatchedView
               unmatchedBankTransactions={unmatchedData.unmatchedBankTransactions}
               unmatchedCashflows={unmatchedData.unmatchedCashflows}
+              onDeleteCashflow={handleDeleteCashflow}
             />
           )}
 
@@ -3117,6 +3239,57 @@ export const Reconciliation: React.FC = () => {
           onSave={(cashflowData) => handleCreateCashflow(cashflowData, createCashflowTransaction)}
           onClose={() => setCreateCashflowTransaction(null)}
         />
+      )}
+
+      {/* Delete Confirmation Dialog */}
+      {deleteConfirmDialog && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white dark:bg-dark-card rounded-xl shadow-2xl p-6 max-w-md w-full mx-4">
+            {deleteConfirmDialog.step === 'confirmDelete' ? (
+              <>
+                <h3 className="text-lg font-semibold text-dark dark:text-white mb-3">Elimina flusso di cassa</h3>
+                <p className="text-sm text-gray-600 dark:text-gray-300 mb-6">
+                  Sei sicuro di voler eliminare questo flusso di cassa?
+                </p>
+                <div className="flex gap-3 justify-end">
+                  <button
+                    onClick={() => setDeleteConfirmDialog(null)}
+                    className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-dark dark:text-white rounded-lg hover:opacity-90 transition-all font-medium"
+                  >
+                    Annulla
+                  </button>
+                  <button
+                    onClick={confirmDeleteCashflow}
+                    className="px-4 py-2 bg-red-600 text-white rounded-lg hover:opacity-90 transition-all font-medium"
+                  >
+                    SI
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <h3 className="text-lg font-semibold text-dark dark:text-white mb-3">Elimina anche la fattura?</h3>
+                <p className="text-sm text-gray-600 dark:text-gray-300 mb-6">
+                  Questo flusso di cassa ha una fattura associata. Vuoi eliminare anche la fattura?
+                </p>
+                <div className="flex gap-3 justify-end">
+                  <button
+                    onClick={() => finalDeleteCashflow(deleteConfirmDialog.cashflowId, false)}
+                    className="px-4 py-2 bg-orange-600 text-white rounded-lg hover:opacity-90 transition-all font-medium"
+                  >
+                    NO
+                  </button>
+                  <button
+                    onClick={() => finalDeleteCashflow(deleteConfirmDialog.cashflowId, true)}
+                    className="px-4 py-2 bg-red-600 text-white rounded-lg hover:opacity-90 transition-all font-medium"
+                  >
+                    SI
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
       )}
     </div>
   );

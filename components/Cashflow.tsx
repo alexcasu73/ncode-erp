@@ -183,6 +183,11 @@ export const Cashflow: React.FC = () => {
     const saved = localStorage.getItem('cashflow_sortDirection');
     return (saved as SortDirection) || 'asc';
   });
+  const [deleteConfirmDialog, setDeleteConfirmDialog] = useState<{
+    type: 'single' | 'bulk';
+    id?: string;
+    count?: number;
+  } | null>(null);
 
   // Persist sorting to localStorage
   React.useEffect(() => {
@@ -644,10 +649,23 @@ export const Cashflow: React.FC = () => {
     closeModal();
   };
 
-  const handleDelete = async (id: string) => {
-    if (window.confirm('Sei sicuro di voler eliminare questo movimento?')) {
-      await deleteCashflowRecord(id);
+  const handleDelete = (id: string) => {
+    setDeleteConfirmDialog({ type: 'single', id });
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteConfirmDialog) return;
+
+    if (deleteConfirmDialog.type === 'single' && deleteConfirmDialog.id) {
+      await deleteCashflowRecord(deleteConfirmDialog.id);
+    } else if (deleteConfirmDialog.type === 'bulk') {
+      for (const id of selectedIds) {
+        await deleteCashflowRecord(id);
+      }
+      setSelectedIds(new Set());
     }
+
+    setDeleteConfirmDialog(null);
   };
 
   const toggleSelectAll = () => {
@@ -668,14 +686,9 @@ export const Cashflow: React.FC = () => {
     setSelectedIds(newSelected);
   };
 
-  const handleBulkDelete = async () => {
+  const handleBulkDelete = () => {
     if (selectedIds.size === 0) return;
-    if (confirm(`Sei sicuro di voler eliminare ${selectedIds.size} movimenti selezionati?`)) {
-      for (const id of selectedIds) {
-        await deleteCashflowRecord(id);
-      }
-      setSelectedIds(new Set());
-    }
+    setDeleteConfirmDialog({ type: 'bulk', count: selectedIds.size });
   };
 
   // Bank balance modal handlers
@@ -1542,6 +1555,36 @@ export const Cashflow: React.FC = () => {
                   Salva
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Dialog */}
+      {deleteConfirmDialog && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white dark:bg-dark-card rounded-xl shadow-2xl p-6 max-w-md w-full mx-4">
+            <h3 className="text-lg font-semibold text-dark dark:text-white mb-3">
+              {deleteConfirmDialog.type === 'single' ? 'Elimina movimento' : 'Elimina movimenti'}
+            </h3>
+            <p className="text-sm text-gray-600 dark:text-gray-300 mb-6">
+              {deleteConfirmDialog.type === 'single'
+                ? 'Sei sicuro di voler eliminare questo movimento?'
+                : `Sei sicuro di voler eliminare ${deleteConfirmDialog.count} movimenti selezionati?`}
+            </p>
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={() => setDeleteConfirmDialog(null)}
+                className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-dark dark:text-white rounded-lg hover:opacity-90 transition-all font-medium"
+              >
+                Annulla
+              </button>
+              <button
+                onClick={confirmDelete}
+                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:opacity-90 transition-all font-medium"
+              >
+                SI
+              </button>
             </div>
           </div>
         </div>

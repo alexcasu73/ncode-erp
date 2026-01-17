@@ -30,7 +30,7 @@ const formatInvoiceId = (id: string, anno: number): string => {
 };
 
 export const Invoicing: React.FC = () => {
-  const { invoices, deals, loading, addInvoice, updateInvoice, deleteInvoice } = useData();
+  const { invoices, deals, cashflowRecords, loading, addInvoice, updateInvoice, deleteInvoice } = useData();
   const [searchTerm, setSearchTerm] = useState('');
   const [filterTipo, setFilterTipo] = useState<'tutti' | 'Entrata' | 'Uscita'>(() => {
     const saved = localStorage.getItem('invoicing_filterTipo');
@@ -53,6 +53,10 @@ export const Invoicing: React.FC = () => {
   const [filterAnnoTabella, setFilterAnnoTabella] = useState<number | 'tutti'>(() => {
     const saved = localStorage.getItem('invoicing_filterAnnoTabella');
     return saved ? (saved === 'tutti' ? 'tutti' : parseInt(saved)) : 'tutti';
+  });
+  const [filterSenzaCashflow, setFilterSenzaCashflow] = useState<boolean>(() => {
+    const saved = localStorage.getItem('invoicing_filterSenzaCashflow');
+    return saved === 'true';
   });
   const [showModal, setShowModal] = useState(false);
   const [editingInvoice, setEditingInvoice] = useState<Invoice | null>(null);
@@ -83,6 +87,10 @@ export const Invoicing: React.FC = () => {
     localStorage.setItem('invoicing_filterAnnoTabella', String(filterAnnoTabella));
   }, [filterAnnoTabella]);
 
+  React.useEffect(() => {
+    localStorage.setItem('invoicing_filterSenzaCashflow', String(filterSenzaCashflow));
+  }, [filterSenzaCashflow]);
+
   // Reset tutti i filtri
   const resetAllFilters = () => {
     setFilterAnno('tutti');
@@ -93,6 +101,7 @@ export const Invoicing: React.FC = () => {
     setFilterStato('tutti');
     setFilterMeseTabella('tutti');
     setFilterAnnoTabella('tutti');
+    setFilterSenzaCashflow(false);
   };
 
   // Anni disponibili
@@ -126,6 +135,11 @@ export const Invoicing: React.FC = () => {
     const saved = localStorage.getItem('invoicing_sortDirection');
     return (saved as SortDirection) || 'desc';
   });
+  const [deleteConfirmDialog, setDeleteConfirmDialog] = useState<{
+    type: 'single' | 'bulk';
+    id?: string;
+    count?: number;
+  } | null>(null);
 
   // Persist sorting to localStorage
   React.useEffect(() => {
@@ -208,9 +222,13 @@ export const Invoicing: React.FC = () => {
       const matchesMeseTabella = filterMeseTabella === 'tutti' || inv.mese === filterMeseTabella;
       const matchesAnnoTabella = filterAnnoTabella === 'tutti' || inv.anno === filterAnnoTabella;
 
-      return matchesSearch && matchesTipo && matchesStato && matchesMeseTabella && matchesAnnoTabella;
+      // Filtra fatture senza cashflow associato
+      const hasCashflow = cashflowRecords.some(cf => cf.invoiceId === inv.id);
+      const matchesSenzaCashflow = !filterSenzaCashflow || !hasCashflow;
+
+      return matchesSearch && matchesTipo && matchesStato && matchesMeseTabella && matchesAnnoTabella && matchesSenzaCashflow;
     });
-  }, [invoices, searchTerm, filterTipo, filterStato, filterMeseTabella, filterAnnoTabella]);
+  }, [invoices, cashflowRecords, searchTerm, filterTipo, filterStato, filterMeseTabella, filterAnnoTabella, filterSenzaCashflow]);
 
   // Ordina fatture
   const sortedInvoices = useMemo(() => {
@@ -265,10 +283,23 @@ export const Invoicing: React.FC = () => {
     return <div className="flex items-center justify-center h-64">Caricamento...</div>;
   }
 
-  const handleDelete = async (id: string) => {
-    if (confirm('Sei sicuro di voler eliminare questa voce?')) {
-      await deleteInvoice(id);
+  const handleDelete = (id: string) => {
+    setDeleteConfirmDialog({ type: 'single', id });
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteConfirmDialog) return;
+
+    if (deleteConfirmDialog.type === 'single' && deleteConfirmDialog.id) {
+      await deleteInvoice(deleteConfirmDialog.id);
+    } else if (deleteConfirmDialog.type === 'bulk') {
+      for (const id of selectedIds) {
+        await deleteInvoice(id);
+      }
+      setSelectedIds(new Set());
     }
+
+    setDeleteConfirmDialog(null);
   };
 
   const toggleSelectAll = () => {
@@ -289,14 +320,9 @@ export const Invoicing: React.FC = () => {
     setSelectedIds(newSelected);
   };
 
-  const handleBulkDelete = async () => {
+  const handleBulkDelete = () => {
     if (selectedIds.size === 0) return;
-    if (confirm(`Sei sicuro di voler eliminare ${selectedIds.size} fatture selezionate?`)) {
-      for (const id of selectedIds) {
-        await deleteInvoice(id);
-      }
-      setSelectedIds(new Set());
-    }
+    setDeleteConfirmDialog({ type: 'bulk', count: selectedIds.size });
   };
 
   return (
@@ -588,6 +614,23 @@ export const Invoicing: React.FC = () => {
                 <option key={mese} value={mese}>{mese}</option>
               ))}
             </select>
+            {/* Filtro Senza Cashflow */}
+            <label className="inline-flex items-center gap-2 px-3 py-2 border border-gray-200 dark:border-dark-border rounded-lg bg-white dark:bg-gray-800/30 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors group">
+              <input
+                type="checkbox"
+                checked={filterSenzaCashflow}
+                onChange={(e) => setFilterSenzaCashflow(e.target.checked)}
+                className="sr-only peer"
+              />
+              <div className="relative w-4 h-4 bg-white dark:bg-gray-700 border-2 border-gray-300 dark:border-gray-600 rounded-md peer-checked:bg-primary peer-checked:border-primary transition-all duration-200 group-hover:border-primary/50 peer-focus:ring-2 peer-focus:ring-primary/20">
+                <Check
+                  size={12}
+                  className="absolute inset-0 m-auto text-white opacity-0 peer-checked:opacity-100 transition-opacity duration-200"
+                  strokeWidth={3}
+                />
+              </div>
+              <span className="text-sm text-dark dark:text-white whitespace-nowrap">Senza flusso</span>
+            </label>
           </div>
         </div>
       </div>
@@ -849,6 +892,36 @@ export const Invoicing: React.FC = () => {
             setShowModal(false);
           }}
         />
+      )}
+
+      {/* Delete Confirmation Dialog */}
+      {deleteConfirmDialog && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white dark:bg-dark-card rounded-xl shadow-2xl p-6 max-w-md w-full mx-4">
+            <h3 className="text-lg font-semibold text-dark dark:text-white mb-3">
+              {deleteConfirmDialog.type === 'single' ? 'Elimina fattura' : 'Elimina fatture'}
+            </h3>
+            <p className="text-sm text-gray-600 dark:text-gray-300 mb-6">
+              {deleteConfirmDialog.type === 'single'
+                ? 'Sei sicuro di voler eliminare questa fattura?'
+                : `Sei sicuro di voler eliminare ${deleteConfirmDialog.count} fatture selezionate?`}
+            </p>
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={() => setDeleteConfirmDialog(null)}
+                className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-dark dark:text-white rounded-lg hover:opacity-90 transition-all font-medium"
+              >
+                Annulla
+              </button>
+              <button
+                onClick={confirmDelete}
+                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:opacity-90 transition-all font-medium"
+              >
+                SI
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
