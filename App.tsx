@@ -16,8 +16,9 @@ import { useData } from './context/DataContext';
 const App: React.FC = () => {
   const [currentView, setCurrentView] = useState('dashboard');
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
   const { theme, toggleTheme } = useTheme();
-  const { aiProcessing, stopAiProcessing } = useData();
+  const { aiProcessing, stopAiProcessing, invoiceNotifications } = useData();
 
   const renderContent = () => {
     switch (currentView) {
@@ -88,9 +89,16 @@ const App: React.FC = () => {
             </button>
 
             {/* Notifications */}
-            <button className="relative w-10 h-10 bg-white dark:bg-dark-card rounded-lg flex items-center justify-center shadow-sm hover:bg-gray-50 dark:hover:bg-dark-border transition-colors">
+            <button
+              onClick={() => setNotificationsOpen(!notificationsOpen)}
+              className="relative w-10 h-10 bg-white dark:bg-dark-card rounded-lg flex items-center justify-center shadow-sm hover:bg-gray-50 dark:hover:bg-dark-border transition-colors"
+            >
               <Bell size={20} className="text-dark dark:text-white" />
-              <span className="absolute top-2 right-2.5 w-2 h-2 bg-red-500 rounded-full border border-white dark:border-dark-card"></span>
+              {invoiceNotifications.length > 0 && (
+                <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center border-2 border-white dark:border-dark-bg">
+                  {invoiceNotifications.length}
+                </span>
+              )}
             </button>
 
             {/* Profile */}
@@ -136,7 +144,10 @@ const App: React.FC = () => {
       </div>
 
       {/* Invoice Notifications - Fixed position */}
-      <InvoiceNotifications />
+      <InvoiceNotifications
+        isOpen={notificationsOpen}
+        onClose={() => setNotificationsOpen(false)}
+      />
     </div>
   );
 };
