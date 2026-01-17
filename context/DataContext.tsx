@@ -243,9 +243,6 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
           openaiApiKey: ''
         });
       }
-
-      // Check for due dates after loading invoices
-      setTimeout(() => checkInvoiceDueDates(), 1000);
     } catch (err: any) {
       console.error('Error fetching data:', err);
       setError(err.message || 'Error fetching data');
@@ -267,6 +264,27 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     fetchData();
   }, [fetchData]);
+
+  // Periodic check for invoice due dates (every 5 minutes)
+  useEffect(() => {
+    if (!isSupabaseConfigured) return;
+
+    // Initial check after 1 second
+    const initialTimer = setTimeout(() => {
+      checkInvoiceDueDates();
+    }, 1000);
+
+    // Set up interval for periodic checks (every 5 minutes)
+    const interval = setInterval(() => {
+      console.log('[Notifications] Periodic check for invoice due dates...');
+      checkInvoiceDueDates();
+    }, 5 * 60 * 1000); // 5 minutes
+
+    return () => {
+      clearTimeout(initialTimer);
+      clearInterval(interval);
+    };
+  }, [isSupabaseConfigured, checkInvoiceDueDates]);
 
   // Customer CRUD
   const addCustomer = async (customer: Omit<Customer, 'id'>): Promise<Customer | null> => {
@@ -436,6 +454,12 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     console.log('Invoice created:', data);
     const newInvoice = snakeToCamel(data) as Invoice;
     setInvoices(prev => [...prev, newInvoice]);
+
+    // Check if the new invoice has a due date and create notification if needed
+    if (newInvoice.dataScadenza) {
+      setTimeout(() => checkInvoiceDueDates(), 100);
+    }
+
     return newInvoice;
   };
 
@@ -456,6 +480,12 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     setInvoices(prev => prev.map(i => i.id === id ? { ...i, ...invoice } : i));
+
+    // Check if the updated invoice has a due date and create/update notification if needed
+    if (invoice.dataScadenza !== undefined) {
+      setTimeout(() => checkInvoiceDueDates(), 100);
+    }
+
     return true;
   };
 
@@ -974,7 +1004,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   // Check invoice due dates and create notifications
-  const checkInvoiceDueDates = async (): Promise<void> => {
+  const checkInvoiceDueDates = useCallback(async (): Promise<void> => {
     if (!isSupabaseConfigured) return;
 
     try {
@@ -1041,7 +1071,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } catch (err) {
       console.error('Error in checkInvoiceDueDates:', err);
     }
-  };
+  }, [isSupabaseConfigured, invoices]);
 
   // Dismiss a notification
   const dismissNotification = async (id: string): Promise<boolean> => {
