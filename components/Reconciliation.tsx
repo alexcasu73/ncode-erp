@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useRef } from 'react';
-import { Upload, FileCheck, AlertCircle, Check, X, RefreshCw, ChevronDown, ChevronUp, Search, Eye, Link2, Trash2, CheckSquare, Square, MinusSquare, FilePlus, PlusCircle, StopCircle } from 'lucide-react';
+import { Upload, FileCheck, AlertCircle, Check, X, RefreshCw, ChevronDown, ChevronUp, Search, Eye, Link2, Trash2, FilePlus, PlusCircle, StopCircle } from 'lucide-react';
 import { useData } from '../context/DataContext';
 import { parseBankStatementExcel, formatPeriodo, type ParsedBankStatement, type ParsedTransaction } from '../lib/excel-parser';
 import { suggestMatch, quickMatch, type MatchSuggestion } from '../lib/reconciliation-ai';
@@ -27,6 +27,7 @@ const TransactionRow: React.FC<{
   transaction: BankTransaction;
   invoices: Invoice[];
   cashflowRecords: CashflowRecord[];
+  bankTransactions: BankTransaction[];
   onConfirm: (invoiceId: string) => void;
   onIgnore: () => void;
   onManualMatch: () => void;
@@ -38,7 +39,7 @@ const TransactionRow: React.FC<{
   onCreateInvoice: () => void;
   onCreateCashflow: () => void;
   disabled?: boolean;
-}> = ({ transaction, invoices, cashflowRecords, onConfirm, onIgnore, onManualMatch, onUnmatch, onRunAI, isProcessing, isSelected, onToggleSelect, onCreateInvoice, onCreateCashflow, disabled = false }) => {
+}> = ({ transaction, invoices, cashflowRecords, bankTransactions, onConfirm, onIgnore, onManualMatch, onUnmatch, onRunAI, isProcessing, isSelected, onToggleSelect, onCreateInvoice, onCreateCashflow, disabled = false }) => {
   const [expanded, setExpanded] = useState(false);
 
   // Find matched cashflow first (priority)
@@ -111,17 +112,22 @@ const TransactionRow: React.FC<{
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4 flex-1">
             <div className="flex items-center justify-center w-8">
-              <button
-                onClick={(e) => { e.stopPropagation(); onToggleSelect(); }}
-                disabled={disabled}
-                className="text-gray-500 dark:text-gray-400 hover:text-dark dark:hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {isSelected ? (
-                  <CheckSquare size={16} className="text-primary" />
-                ) : (
-                  <Square size={16} />
-                )}
-              </button>
+              <label className="inline-flex items-center cursor-pointer group">
+                <input
+                  type="checkbox"
+                  checked={isSelected}
+                  onChange={(e) => { e.stopPropagation(); onToggleSelect(); }}
+                  disabled={disabled}
+                  className="sr-only peer"
+                />
+                <div className="relative w-4 h-4 bg-white dark:bg-gray-700 border-2 border-gray-300 dark:border-gray-600 rounded-md peer-checked:bg-primary peer-checked:border-primary transition-all duration-200 group-hover:border-primary/50 peer-focus:ring-2 peer-focus:ring-primary/20 peer-disabled:opacity-50 peer-disabled:cursor-not-allowed">
+                  <Check
+                    size={12}
+                    className="absolute inset-0 m-auto text-white opacity-0 peer-checked:opacity-100 transition-opacity duration-200"
+                    strokeWidth={3}
+                  />
+                </div>
+              </label>
             </div>
             <div className="w-24 text-sm text-gray-500 dark:text-gray-400">{formatDate(transaction.data)}</div>
             <div className="flex-1">
@@ -194,9 +200,7 @@ const TransactionRow: React.FC<{
               const suggestedCashflow = suggestedCashflowId ? cashflowRecords.find(cf => cf.id === suggestedCashflowId) : null;
               const suggestedInvoice = suggestedCashflow?.invoiceId ? invoices.find(inv => inv.id === suggestedCashflow.invoiceId) : null;
 
-              const showSuggestedCashflow = transaction.matchConfidence !== undefined &&
-                                           transaction.matchConfidence < 80 &&
-                                           suggestedCashflow;
+              const showSuggestedCashflow = transaction.matchStatus === 'pending' && suggestedCashflow;
 
               return (
                 <div className={`mb-4 p-3 rounded-lg ${style.container}`}>
@@ -255,6 +259,128 @@ const TransactionRow: React.FC<{
                         </div>
                       )}
                     </div>
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* Show possible cashflows for manual review when pending and no specific cashflow matched */}
+            {transaction.matchStatus === 'pending' && !matchedCashflow && !matchedInvoice && (() => {
+              // Skip if we already showed a suggested cashflow above
+              const cfIdMatch = transaction.matchReason?.match(/CF-\d+/i);
+              const alreadyShowedCashflow = cfIdMatch && cashflowRecords.find(cf => cf.id === cfIdMatch[0]);
+              if (alreadyShowedCashflow) return null;
+              // Find possible cashflow candidates based on amount and date
+              const txAmount = Math.abs(transaction.importo || 0);
+              const txDate = new Date(transaction.data);
+
+              // Get unmatched cashflows
+              const matchedCashflowIds = new Set(
+                bankTransactions
+                  .filter(tx => tx.matchedCashflowId && tx.matchStatus !== 'ignored')
+                  .map(tx => tx.matchedCashflowId!)
+              );
+
+              const matchedInvoiceIds = new Set(
+                bankTransactions
+                  .filter(tx => tx.matchedInvoiceId && tx.matchStatus !== 'ignored')
+                  .map(tx => tx.matchedInvoiceId!)
+              );
+
+              const unmatchedCashflows = cashflowRecords.filter(
+                cf => !matchedCashflowIds.has(cf.id) && (!cf.invoiceId || !matchedInvoiceIds.has(cf.invoiceId))
+              );
+
+              // Find candidates by amount similarity (within 10% or 10 euro)
+              const candidates = unmatchedCashflows
+                .map(cf => {
+                  const invoice = cf.invoiceId ? invoices.find(inv => inv.id === cf.invoiceId) : null;
+                  const cfAmount = cf.importo || (invoice ? (invoice.flusso || 0) + (invoice.iva || 0) : 0);
+                  const amountDiff = Math.abs(cfAmount - txAmount);
+                  const amountDiffPercent = (amountDiff / txAmount) * 100;
+
+                  // Date difference in days
+                  const cfDate = new Date(cf.dataPagamento);
+                  const dateDiff = Math.abs((cfDate.getTime() - txDate.getTime()) / (1000 * 60 * 60 * 24));
+
+                  return {
+                    cashflow: cf,
+                    invoice,
+                    amountDiff,
+                    amountDiffPercent,
+                    dateDiff,
+                    score: (amountDiffPercent < 1 ? 100 : 100 - amountDiffPercent) + (dateDiff < 3 ? 50 : 0)
+                  };
+                })
+                .filter(c => c.amountDiffPercent < 10 || c.amountDiff < 10)
+                .sort((a, b) => b.score - a.score)
+                .slice(0, 3); // Show top 3 candidates
+
+              if (candidates.length === 0) return null;
+
+              return (
+                <div className="mb-4 p-3 rounded-lg bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800">
+                  <div className="flex items-start gap-2 mb-3">
+                    <AlertCircle size={16} className="text-yellow-600 dark:text-yellow-400 mt-0.5 flex-shrink-0" />
+                    <div className="flex-1">
+                      <div className="text-sm font-semibold text-yellow-900 dark:text-yellow-300 mb-1">
+                        Verifica manuale richiesta
+                      </div>
+                      <div className="text-xs text-yellow-700 dark:text-yellow-400">
+                        {candidates.length === 1 ? 'Trovato 1 possibile movimento' : `Trovati ${candidates.length} possibili movimenti`} di cassa:
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    {candidates.map((candidate, idx) => (
+                      <div key={candidate.cashflow.id} className="bg-white dark:bg-dark-card rounded p-2 border border-yellow-200 dark:border-yellow-800 text-xs space-y-1">
+                        <div className="flex justify-between items-center">
+                          <span className="text-gray-600 dark:text-gray-400">ID:</span>
+                          <span className="font-mono font-semibold text-gray-900 dark:text-white">{candidate.cashflow.id}</span>
+                        </div>
+                        {candidate.cashflow.dataPagamento && (
+                          <div className="flex justify-between">
+                            <span className="text-gray-600 dark:text-gray-400">Data:</span>
+                            <span className="text-gray-900 dark:text-white">
+                              {candidate.cashflow.dataPagamento}
+                              {candidate.dateDiff > 0 && (
+                                <span className="ml-1 text-gray-500 dark:text-gray-400">
+                                  ({Math.round(candidate.dateDiff)}gg diff.)
+                                </span>
+                              )}
+                            </span>
+                          </div>
+                        )}
+                        <div className="flex justify-between">
+                          <span className="text-gray-600 dark:text-gray-400">Importo:</span>
+                          <span className="font-semibold text-gray-900 dark:text-white">
+                            {candidate.cashflow.tipo === 'Entrata' ? '+' : '-'}€{(candidate.cashflow.importo || (candidate.invoice ? (candidate.invoice.flusso || 0) + (candidate.invoice.iva || 0) : 0)).toFixed(2)}
+                            {candidate.amountDiff > 0.01 && (
+                              <span className="ml-1 text-gray-500 dark:text-gray-400">
+                                (diff. €{candidate.amountDiff.toFixed(2)})
+                              </span>
+                            )}
+                          </span>
+                        </div>
+                        {(candidate.cashflow.note || candidate.invoice?.note) && (
+                          <div className="flex justify-between">
+                            <span className="text-gray-600 dark:text-gray-400">Note:</span>
+                            <span className="text-gray-900 dark:text-white text-right max-w-[200px] truncate">
+                              {candidate.cashflow.note || candidate.invoice?.note}
+                            </span>
+                          </div>
+                        )}
+                        {candidate.invoice && (
+                          <div className="flex justify-between">
+                            <span className="text-gray-600 dark:text-gray-400">Progetto:</span>
+                            <span className="text-gray-900 dark:text-white text-right max-w-[200px] truncate">
+                              {candidate.invoice.nomeProgetto || candidate.invoice.spesa || 'N/A'}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    ))}
                   </div>
                 </div>
               );
@@ -1343,37 +1469,37 @@ const ReportView: React.FC<ReportViewProps> = ({ report }) => {
   return (
     <div className="space-y-6">
       {/* KPI Cards */}
-      <div className="grid grid-cols-3 gap-6">
-        <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg p-6 text-white">
-          <div className="flex items-center justify-between mb-2">
-            <h3 className="text-sm font-medium opacity-90">Percentuale Riconciliazione</h3>
-            <FileCheck className="w-5 h-5 opacity-75" />
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="bg-white dark:bg-dark-card p-5 rounded-xl border-l-4 border-accent shadow-sm">
+          <div className="flex items-center gap-2 mb-1">
+            <FileCheck size={16} className="text-accent" />
+            <h3 className="text-card-title">Percentuale Riconciliazione</h3>
           </div>
-          <p className="text-3xl font-bold">{report.reconciliationPercentage.toFixed(1)}%</p>
+          <p className="text-kpi-value text-dark dark:text-white">{report.reconciliationPercentage.toFixed(1)}%</p>
         </div>
 
-        <div className="bg-gradient-to-br from-green-500 to-green-600 rounded-lg p-6 text-white">
-          <div className="flex items-center justify-between mb-2">
-            <h3 className="text-sm font-medium opacity-90">Transazioni Abbinate</h3>
-            <Check className="w-5 h-5 opacity-75" />
+        <div className="bg-white dark:bg-dark-card p-5 rounded-xl border-l-4 border-secondary shadow-sm">
+          <div className="flex items-center gap-2 mb-1">
+            <Check size={16} className="text-secondary" />
+            <h3 className="text-card-title">Transazioni Abbinate</h3>
           </div>
-          <p className="text-3xl font-bold">{report.matchedCount}</p>
+          <p className="text-kpi-value text-dark dark:text-white">{report.matchedCount}</p>
         </div>
 
-        <div className="bg-gradient-to-br from-red-500 to-red-600 rounded-lg p-6 text-white">
-          <div className="flex items-center justify-between mb-2">
-            <h3 className="text-sm font-medium opacity-90">Voci Non Abbinate</h3>
-            <AlertCircle className="w-5 h-5 opacity-75" />
+        <div className="bg-white dark:bg-dark-card p-5 rounded-xl border-l-4 border-primary shadow-sm">
+          <div className="flex items-center gap-2 mb-1">
+            <AlertCircle size={16} className="text-primary" />
+            <h3 className="text-card-title">Voci Non Abbinate</h3>
           </div>
-          <p className="text-3xl font-bold">{report.unmatchedBankCount + report.unmatchedCashflowCount}</p>
-          <p className="text-xs opacity-75 mt-1">Banca: {report.unmatchedBankCount} | Cashflow: {report.unmatchedCashflowCount}</p>
+          <p className="text-kpi-value text-dark dark:text-white">{report.unmatchedBankCount + report.unmatchedCashflowCount}</p>
+          <p className="text-small mt-1">Banca: {report.unmatchedBankCount} | Cashflow: {report.unmatchedCashflowCount}</p>
         </div>
       </div>
 
       {/* Comparison Table */}
-      <div className="bg-white dark:bg-dark-card rounded-lg border border-gray-200 dark:border-dark-border overflow-hidden shadow-sm">
+      <div className="bg-white dark:bg-dark-card rounded-xl border border-gray-200 dark:border-dark-border overflow-hidden shadow-sm">
         <div className="px-6 py-4 border-b border-gray-200 dark:border-dark-border">
-          <h3 className="text-lg font-semibold text-dark dark:text-white">Confronto Totali</h3>
+          <h3 className="text-section-title text-dark dark:text-white">Confronto Totali</h3>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full">
@@ -1448,44 +1574,44 @@ const ReportView: React.FC<ReportViewProps> = ({ report }) => {
 
       {/* Anomalies Section */}
       {report.anomalies && report.anomalies.length > 0 && (
-        <div className="bg-red-50 rounded-lg border border-red-200 overflow-hidden">
-          <div className="px-6 py-4 border-b border-red-200 bg-red-100">
+        <div className="bg-white dark:bg-dark-card rounded-xl border-l-4 border-red-600 shadow-sm overflow-hidden">
+          <div className="px-6 py-4 border-b border-gray-200 dark:border-dark-border">
             <div className="flex items-center gap-2">
-              <AlertCircle className="w-5 h-5 text-red-600" />
-              <h3 className="text-lg font-semibold text-red-900">Anomalie Rilevate ({report.anomalies.length})</h3>
+              <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400" />
+              <h3 className="text-section-title text-dark dark:text-white">Anomalie Rilevate ({report.anomalies.length})</h3>
             </div>
-            <p className="text-sm text-red-700 mt-1">Discrepanze tra importi registrati e transazioni bancarie</p>
+            <p className="text-small mt-1">Discrepanze tra importi registrati e transazioni bancarie</p>
           </div>
           <div className="p-6">
             <div className="space-y-3">
               {report.anomalies.map((anomaly, idx) => (
-                <div key={idx} className="bg-white dark:bg-dark-card border border-red-200 dark:border-red-800 rounded-lg p-4">
+                <div key={idx} className="bg-gray-50 dark:bg-dark-bg rounded-lg p-4 border border-gray-200 dark:border-dark-border">
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-2">
                         <span className="font-semibold text-dark dark:text-white">
                           {formatInvoiceId(anomaly.invoice.id, anomaly.invoice.anno)}
                         </span>
-                        <span className="px-2 py-0.5 bg-red-100 text-red-700 text-xs font-semibold rounded-full">
+                        <span className="px-2 py-1 text-xs font-medium rounded-md text-white bg-red-600 dark:bg-red-500">
                           {anomaly.type === 'no_bank_transaction' ? 'Transazione Mancante' : 'Importo Discrepante'}
                         </span>
                       </div>
-                      <div className="text-sm text-gray-500 mb-1">
+                      <div className="text-sm text-gray-500 dark:text-gray-400 mb-1">
                         {anomaly.invoice.nomeProgetto || anomaly.invoice.spesa || 'N/A'}
                       </div>
-                      <div className="text-sm text-red-600 font-medium">
+                      <div className="text-sm text-red-600 dark:text-red-400 font-medium">
                         {anomaly.message}
                       </div>
                     </div>
                     <div className="text-right ml-4">
-                      <div className="text-xs text-gray-500 mb-1">Registrato</div>
-                      <div className="text-lg font-bold text-dark dark:text-white">
+                      <div className="text-small mb-1">Registrato</div>
+                      <div className="text-kpi-small text-dark dark:text-white">
                         {formatCurrency(anomaly.cashflowAmount)}
                       </div>
                       {anomaly.bankTransactionAmount !== undefined && (
                         <>
-                          <div className="text-xs text-gray-500 mt-2 mb-1">Banca</div>
-                          <div className="text-lg font-bold text-red-600">
+                          <div className="text-small mt-2 mb-1">Banca</div>
+                          <div className="text-kpi-small text-red-600 dark:text-red-400">
                             {formatCurrency(anomaly.bankTransactionAmount)}
                           </div>
                         </>
@@ -2767,13 +2893,21 @@ export const Reconciliation: React.FC = () => {
                 disabled={currentSession.status === 'closed' || aiProcessing.isProcessing || isUploading}
                 className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium bg-white dark:bg-dark-card border border-gray-200 dark:border-dark-border text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-dark-bg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {selectionState === 'all' ? (
-                  <CheckSquare size={16} className="text-primary" />
-                ) : selectionState === 'partial' ? (
-                  <MinusSquare size={16} className="text-primary" />
-                ) : (
-                  <Square size={16} />
-                )}
+                <div className={`relative w-4 h-4 bg-white dark:bg-gray-700 border-2 transition-all duration-200 rounded-md ${
+                  selectionState === 'all' || selectionState === 'partial'
+                    ? 'bg-primary border-primary'
+                    : 'border-gray-300 dark:border-gray-600'
+                }`}>
+                  {selectionState === 'all' ? (
+                    <Check
+                      size={12}
+                      className="absolute inset-0 m-auto text-white"
+                      strokeWidth={3}
+                    />
+                  ) : selectionState === 'partial' ? (
+                    <div className="absolute inset-x-1 top-1/2 -translate-y-1/2 h-0.5 bg-white rounded-full" />
+                  ) : null}
+                </div>
                 {selectionState === 'all' ? 'Deseleziona' : 'Seleziona tutti'}
               </button>
 
@@ -2861,6 +2995,7 @@ export const Reconciliation: React.FC = () => {
                     transaction={tx}
                     invoices={invoices}
                     cashflowRecords={cashflowRecords}
+                    bankTransactions={bankTransactions}
                     onConfirm={(invoiceId) => handleConfirmMatch(tx.id, invoiceId)}
                     onIgnore={() => handleIgnore(tx.id)}
                     onManualMatch={() => setManualMatchTransaction(tx)}
