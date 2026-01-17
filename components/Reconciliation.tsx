@@ -388,10 +388,10 @@ const TransactionRow: React.FC<{
                             onConfirmCashflow(candidate.cashflow.id);
                           }}
                           disabled={disabled}
-                          className="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 bg-green-600 text-white rounded-lg text-xs font-medium hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                          className="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 bg-green-600 text-white rounded-lg text-sm font-medium hover:opacity-90 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                           <Check size={14} />
-                          Abbina a questo movimento
+                          Abbina
                         </button>
                       </div>
                     ))}
