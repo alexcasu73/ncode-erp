@@ -8,10 +8,12 @@ import { Cashflow } from './components/Cashflow';
 import { FinancialStatement } from './components/FinancialStatement';
 import { Reconciliation } from './components/Reconciliation';
 import Settings from './components/Settings';
+import { Login } from './components/Login';
 import { InvoiceNotifications } from './components/InvoiceNotifications';
-import { Bell, User, Menu, X, Sun, Moon, RefreshCw } from 'lucide-react';
+import { Bell, User, Menu, X, Sun, Moon, RefreshCw, LogOut } from 'lucide-react';
 import { useTheme } from './context/ThemeContext';
 import { useData } from './context/DataContext';
+import { useAuth } from './context/AuthContext';
 
 const App: React.FC = () => {
   const [currentView, setCurrentView] = useState('dashboard');
@@ -19,6 +21,24 @@ const App: React.FC = () => {
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const { theme, toggleTheme } = useTheme();
   const { aiProcessing, stopAiProcessing, invoiceNotifications } = useData();
+  const { user, loading, signOut } = useAuth();
+
+  // Show loading state while checking authentication
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-bg-light dark:bg-dark-bg flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-600 dark:text-gray-400">Caricamento...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show login if not authenticated
+  if (!user) {
+    return <Login />;
+  }
 
   const renderContent = () => {
     switch (currentView) {
@@ -99,6 +119,16 @@ const App: React.FC = () => {
                   {invoiceNotifications.length}
                 </span>
               )}
+            </button>
+
+            {/* Logout */}
+            <button
+              onClick={signOut}
+              className="w-10 h-10 bg-white dark:bg-dark-card rounded-lg flex items-center justify-center shadow-sm hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+              aria-label="Logout"
+              title="Esci"
+            >
+              <LogOut size={20} className="text-dark dark:text-white" />
             </button>
 
             {/* Profile */}
