@@ -596,8 +596,11 @@ export const Cashflow: React.FC = () => {
     if (hasInvoice && invoice) {
       // Movimento con fattura
       const totaleInvoice = (invoice.flusso || 0) + (invoice.iva || 0);
-      // Salva importo solo se diverso dal totale fattura
-      const importoToSave = Math.abs(importoValue - totaleInvoice) < 0.01 ? undefined : importoValue;
+      // Quando si modifica un record esistente, salva sempre l'importo se fornito
+      // Quando si crea un nuovo record, salva undefined se uguale al totale fattura
+      const importoToSave = editingRecord
+        ? importoValue // Salva sempre quando in edit
+        : (Math.abs(importoValue - totaleInvoice) < 0.01 ? undefined : importoValue);
 
       recordData = {
         invoiceId: formInvoiceId,
