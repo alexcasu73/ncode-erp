@@ -1836,15 +1836,6 @@ export const Reconciliation: React.FC = () => {
           console.log(`🤖 Using AI model: ${modelInfo.name} (${modelInfo.id})`);
           const aiMatchResult = await suggestMatch(bankTx, invoices, availableCashflows, modelInfo.id);
 
-          // Check if user stopped processing after AI call - use ref
-          shouldStop = stopAIProcessingRef.current;
-          if (shouldStop) {
-            console.log(`⏹️ AI processing stopped by user after AI analysis`);
-            // Save the current transaction without matching before stopping
-            await addBankTransaction(bankTx);
-            break;
-          }
-
           console.log(`[AI Match Result]`, {
             confidence: aiMatchResult.confidence,
             cashflowId: aiMatchResult.cashflowId,
@@ -1936,23 +1927,17 @@ export const Reconciliation: React.FC = () => {
 
         // CRITICAL: Check if a fatal error occurred and stop immediately
         if (shouldStop) {
-          console.log(`⏹️ AI processing stopped (fatal error or user request), skipping remaining transactions`);
+          console.log(`⏹️ AI processing stopped (fatal error), skipping remaining transactions`);
           break;
         }
 
-        // Check again before saving
-        shouldStop = stopAIProcessingRef.current;
-        if (shouldStop) {
-          console.log(`⏹️ AI processing stopped by user, skipping remaining transactions`);
-          break;
-        }
-
+        // Save the transaction (even if user clicked stop - we need to save the current one)
         await addBankTransaction(bankTx);
 
-        // Check again after saving
+        // Check after saving if user wants to stop
         shouldStop = stopAIProcessingRef.current;
         if (shouldStop) {
-          console.log(`⏹️ AI processing stopped by user after saving transaction`);
+          console.log(`⏹️ AI processing stopped by user after saving transaction ${i + 1}`);
           break;
         }
 
