@@ -267,7 +267,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Periodic check for invoice due dates (every 5 minutes)
   useEffect(() => {
-    if (!isSupabaseConfigured) return;
+    if (!isSupabaseConfigured || invoices.length === 0) return;
 
     // Initial check after 1 second
     const initialTimer = setTimeout(() => {
@@ -284,7 +284,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       clearTimeout(initialTimer);
       clearInterval(interval);
     };
-  }, [isSupabaseConfigured, checkInvoiceDueDates]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isSupabaseConfigured, invoices.length]);
 
   // Customer CRUD
   const addCustomer = async (customer: Omit<Customer, 'id'>): Promise<Customer | null> => {
