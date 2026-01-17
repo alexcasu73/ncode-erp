@@ -289,7 +289,7 @@ DECISIONE FINALE:
 
 FORMATO RISPOSTA OBBLIGATORIO:
 IMPORTANT: Your response must be ONLY the JSON object below. Do not write any text before or after the JSON.
-Do not use markdown code blocks (```). Do not add explanations. Just the raw JSON object.
+Do not use markdown code blocks. Do not add explanations. Just the raw JSON object.
 
 CRITICAL:
 - "cashflowId" must be the EXACT ID from the cashflow (e.g., "CF-0289", never format it differently)
