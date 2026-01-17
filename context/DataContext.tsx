@@ -366,9 +366,14 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return newDeal;
     }
 
+    const dealWithCompany = {
+      ...deal,
+      companyId: '00000000-0000-0000-0000-000000000001' // Ncode Studio
+    };
+
     const { data, error } = await supabase
       .from('deals')
-      .insert(camelToSnake(deal))
+      .insert(camelToSnake(dealWithCompany))
       .select()
       .single();
 
@@ -434,7 +439,11 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return max;
     }, 0);
     const newId = `Fattura_${String(maxNum + 1).padStart(3, '0')}`;
-    const invoiceWithId = { ...invoice, id: newId };
+    const invoiceWithId = {
+      ...invoice,
+      id: newId,
+      companyId: '00000000-0000-0000-0000-000000000001' // Ncode Studio
+    };
 
     console.log('Adding invoice:', invoiceWithId);
 
@@ -763,7 +772,11 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return newRecord;
     }
 
-    const dataToInsert = camelToSnake(record);
+    const recordWithCompany = {
+      ...record,
+      companyId: '00000000-0000-0000-0000-000000000001' // Ncode Studio
+    };
+    const dataToInsert = camelToSnake(recordWithCompany);
     console.log('🔵 Inserting cashflow record into Supabase:', dataToInsert);
 
     const { data, error } = await supabase
@@ -1209,6 +1222,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         .from('settings')
         .upsert({
           id: 'default',
+          company_id: '00000000-0000-0000-0000-000000000001', // Ncode Studio
           ...camelToSnake(newSettings),
           updated_at: new Date().toISOString()
         });
