@@ -291,18 +291,22 @@ FORMATO RISPOSTA OBBLIGATORIO:
 IMPORTANT: Your response must be ONLY the JSON object below. Do not write any text before or after the JSON.
 Do not use markdown code blocks (```). Do not add explanations. Just the raw JSON object.
 
+CRITICAL:
+- "cashflowId" must be the EXACT ID from the cashflow (e.g., "CF-0289", never format it differently)
+- "invoiceId" must be the EXACT ID from "Fattura:" field (e.g., "Fattura_90", never use formatted numbers like "90/2026")
+- If no match, both IDs must be null
+
 {"invoiceId": null, "cashflowId": "CF-XXX o null", "confidence": numero_0_100, "reason": "spiegazione breve in italiano"}
 
 ESEMPI DI RISPOSTE VALIDE (copia questo formato esatto):
 
 ✅ Transazione: "ANTHROPIC +14152360599" €10.00 del 02/01/2026
-   Movimento: CF-0053 €10.00 del 05/01/2026 Note: "Anthropic"
-   → {"invoiceId": null, "cashflowId": "CF-0053", "confidence": 95, "reason": "Match perfetto: CF-0053 per €10.00 - 'Anthropic' trovato in note"}
+   Movimento: ID: CF-0053 | Fattura: Fattura_114 | €10.00 Note: "Anthropic"
+   → {"invoiceId": "Fattura_114", "cashflowId": "CF-0053", "confidence": 95, "reason": "Match perfetto: CF-0053 per €10.00 - 'Anthropic' trovato in note"}
 
 ⚠️ Transazione: "PAGAMENTO POS" €67.08 del 02/01/2026
-   Movimento: CF-0123 €67.08 del 03/01/2026 Note: "Verisure"
-   Movimento: CF-0124 €67.10 del 04/01/2026 Note: ""
-   → {"invoiceId": null, "cashflowId": "CF-0123", "confidence": 60, "reason": "Importo compatibile (€67.08) ma descrizione generica - verifica manuale"}
+   Movimento: ID: CF-0123 | Fattura: Fattura_89 | €67.08 Note: "Verisure"
+   → {"invoiceId": "Fattura_89", "cashflowId": "CF-0123", "confidence": 60, "reason": "Importo compatibile (€67.08) ma descrizione generica - verifica manuale"}
 
 ❌ Transazione: "Commissioni bancarie" €0.59 del 02/01/2026
    Movimenti disponibili: €10.00, €17.08, €50.00
@@ -396,6 +400,13 @@ ESEMPI DI RISPOSTE VALIDE (copia questo formato esatto):
           };
         } else {
           console.log(`   ✅ APPROVED: Difference within tolerance (≤2€)`);
+        }
+
+        // CRITICAL: Always use the invoiceId from the cashflow, not from AI response
+        // The AI sometimes returns formatted IDs like "90/2026" instead of "Fattura_90"
+        if (matchedCashflow.invoiceId) {
+          console.log(`   🔄 Correcting invoiceId: AI returned "${result.invoiceId}" but using cashflow's invoiceId "${matchedCashflow.invoiceId}"`);
+          result.invoiceId = matchedCashflow.invoiceId;
         }
       }
     } else {
