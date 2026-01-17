@@ -240,7 +240,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
           id: 'default',
           defaultAiProvider: 'anthropic',
           anthropicApiKey: '',
-          openaiApiKey: ''
+          openaiApiKey: '',
+          notificationRefreshInterval: 5
         });
       }
     } catch (err: any) {
@@ -265,27 +266,33 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     fetchData();
   }, [fetchData]);
 
-  // Periodic check for invoice due dates (every 5 minutes)
+  // Periodic check for invoice due dates
   useEffect(() => {
-    if (!isSupabaseConfigured || invoices.length === 0) return;
+    if (!isSupabaseConfigured || invoices.length === 0 || !settings) return;
+
+    // Get refresh interval from settings (default 5 minutes)
+    const refreshMinutes = settings.notificationRefreshInterval || 5;
+    const refreshMs = refreshMinutes * 60 * 1000;
+
+    console.log(`[Notifications] Setting up periodic check every ${refreshMinutes} minute(s)`);
 
     // Initial check after 1 second
     const initialTimer = setTimeout(() => {
       checkInvoiceDueDates();
     }, 1000);
 
-    // Set up interval for periodic checks (every 5 minutes)
+    // Set up interval for periodic checks
     const interval = setInterval(() => {
-      console.log('[Notifications] Periodic check for invoice due dates...');
+      console.log(`[Notifications] Periodic check for invoice due dates (every ${refreshMinutes} min)...`);
       checkInvoiceDueDates();
-    }, 5 * 60 * 1000); // 5 minutes
+    }, refreshMs);
 
     return () => {
       clearTimeout(initialTimer);
       clearInterval(interval);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isSupabaseConfigured, invoices.length]);
+  }, [isSupabaseConfigured, invoices.length, settings?.notificationRefreshInterval]);
 
   // Customer CRUD
   const addCustomer = async (customer: Omit<Customer, 'id'>): Promise<Customer | null> => {

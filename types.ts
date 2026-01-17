@@ -12,6 +12,7 @@ export interface AppSettings {
   defaultAiProvider: 'anthropic' | 'openai';
   anthropicApiKey: string;
   openaiApiKey: string;
+  notificationRefreshInterval: 1 | 3 | 5; // Intervallo refresh notifiche in minuti
   updatedAt?: string;
 }
 
