@@ -376,7 +376,7 @@ const TransactionRow: React.FC<{
                             </div>
                           )}
                         </div>
-                        <div className="mt-2 flex justify-end">
+                        <div className="mt-2 flex justify-start">
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
