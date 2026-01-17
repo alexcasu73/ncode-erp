@@ -75,7 +75,12 @@ const Settings: React.FC = () => {
 
   const handleIntervalChange = (interval: 1 | 3 | 5) => {
     console.log(`[Settings] Changing notification interval to ${interval} minutes`);
+    console.log(`[Settings] Current value before change:`, notificationRefreshInterval, typeof notificationRefreshInterval);
     setNotificationRefreshInterval(interval);
+    // Log dopo il set per vedere se cambia
+    setTimeout(() => {
+      console.log(`[Settings] New value after change:`, notificationRefreshInterval, typeof notificationRefreshInterval);
+    }, 100);
   };
 
   return (
@@ -277,7 +282,7 @@ const Settings: React.FC = () => {
             type="button"
             onClick={() => handleIntervalChange(1)}
             className={`p-4 rounded-lg border-2 transition-all ${
-              notificationRefreshInterval === 1
+              Number(notificationRefreshInterval) === 1
                 ? 'border-primary bg-primary/5 dark:bg-primary/10'
                 : 'border-gray-200 dark:border-dark-border hover:border-gray-300 dark:hover:border-gray-600'
             }`}
@@ -286,7 +291,7 @@ const Settings: React.FC = () => {
               <div className="text-2xl font-bold text-dark dark:text-white mb-1">1</div>
               <div className="text-sm text-gray-500 dark:text-gray-400">minuto</div>
             </div>
-            {notificationRefreshInterval === 1 && (
+            {Number(notificationRefreshInterval) === 1 && (
               <div className="flex items-center justify-center gap-1 text-primary text-sm font-medium mt-2">
                 <CheckCircle size={14} />
                 Attivo
@@ -298,7 +303,7 @@ const Settings: React.FC = () => {
             type="button"
             onClick={() => handleIntervalChange(3)}
             className={`p-4 rounded-lg border-2 transition-all ${
-              notificationRefreshInterval === 3
+              Number(notificationRefreshInterval) === 3
                 ? 'border-primary bg-primary/5 dark:bg-primary/10'
                 : 'border-gray-200 dark:border-dark-border hover:border-gray-300 dark:hover:border-gray-600'
             }`}
@@ -307,7 +312,7 @@ const Settings: React.FC = () => {
               <div className="text-2xl font-bold text-dark dark:text-white mb-1">3</div>
               <div className="text-sm text-gray-500 dark:text-gray-400">minuti</div>
             </div>
-            {notificationRefreshInterval === 3 && (
+            {Number(notificationRefreshInterval) === 3 && (
               <div className="flex items-center justify-center gap-1 text-primary text-sm font-medium mt-2">
                 <CheckCircle size={14} />
                 Attivo
@@ -319,7 +324,7 @@ const Settings: React.FC = () => {
             type="button"
             onClick={() => handleIntervalChange(5)}
             className={`p-4 rounded-lg border-2 transition-all ${
-              notificationRefreshInterval === 5
+              Number(notificationRefreshInterval) === 5
                 ? 'border-primary bg-primary/5 dark:bg-primary/10'
                 : 'border-gray-200 dark:border-dark-border hover:border-gray-300 dark:hover:border-gray-600'
             }`}
@@ -328,7 +333,7 @@ const Settings: React.FC = () => {
               <div className="text-2xl font-bold text-dark dark:text-white mb-1">5</div>
               <div className="text-sm text-gray-500 dark:text-gray-400">minuti</div>
             </div>
-            {notificationRefreshInterval === 5 && (
+            {Number(notificationRefreshInterval) === 5 && (
               <div className="flex items-center justify-center gap-1 text-primary text-sm font-medium mt-2">
                 <CheckCircle size={14} />
                 Attivo
