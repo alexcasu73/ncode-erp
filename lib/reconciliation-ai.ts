@@ -243,11 +243,25 @@ ${cashflowWithInvoices.length > 0
 
 ALGORITMO DI RICONCILIAZIONE (segui ESATTAMENTE questi step):
 
-STEP 1 - FILTRA PER IMPORTO:
+STEP 1 - FILTRA PER IMPORTO (OBBLIGATORIO - NON SALTARE):
 - I movimenti sono già filtrati per tipo (${transaction.tipo}) e mese/anno
-- Per ogni movimento, calcola: differenza = |importo_transazione - importo_movimento|
-- Se differenza > 2€ → ESCLUDI quel movimento, passa al successivo
-- Se differenza ≤ 2€ → CONTINUA con STEP 2
+- CRITICAL: Per OGNI movimento, DEVI calcolare: differenza = |importo_transazione - importo_movimento|
+- Se differenza > 2€ → ❌ ESCLUDI IMMEDIATAMENTE quel movimento, NON considerarlo, passa al successivo
+- Se differenza ≤ 2€ → ✅ CONTINUA con STEP 2
+
+IMPORTANTE: NON puoi scegliere un movimento solo perché la descrizione matcha.
+L'importo DEVE essere compatibile (≤2€ differenza) PRIMA di verificare la descrizione.
+
+Esempio SBAGLIATO:
+- Transazione: €10.00 "ANTHROPIC"
+- Movimento CF-0114: €50.00 Note: "Anthropic"
+- ❌ SBAGLIATO: {"cashflowId": "CF-0114", "confidence": 95, "reason": "Match perfetto"}
+- ✅ CORRETTO: Escludere CF-0114 perché differenza €40 > €2
+
+Esempio CORRETTO:
+- Transazione: €10.00 "ANTHROPIC"
+- Movimento CF-0053: €10.50 Note: "Anthropic"
+- ✅ CORRETTO: {"cashflowId": "CF-0053", "confidence": 95, "reason": "Match: CF-0053 per €10.50 - 'Anthropic' trovato"}
 
 STEP 2 - VERIFICA DESCRIZIONE:
 - Prendi la DESCRIZIONE della transazione (campo "Descrizione:")
@@ -337,7 +351,7 @@ ESEMPI DI RISPOSTE VALIDE (copia questo formato esatto):
       const response = await anthropic.messages.create({
         model: selectedModel,
         max_tokens: 500,
-        system: 'You are a precise JSON generator for bank reconciliation. You MUST respond with ONLY valid JSON. Do not include any explanatory text, markdown formatting, or backticks. Your entire response must be a single valid JSON object starting with { and ending with }.',
+        system: 'You are a precise JSON generator for bank reconciliation. CRITICAL RULES: 1) You MUST respond with ONLY valid JSON (no text, no markdown, no backticks). 2) You MUST filter by amount FIRST (difference ≤ 2€) BEFORE checking description. NEVER select a cashflow just because the description matches if the amount difference is > 2€. Your entire response must be a single valid JSON object starting with { and ending with }.',
         messages: [{ role: 'user', content: prompt }]
       });
       text = response.content[0].type === 'text' ? response.content[0].text : '';
