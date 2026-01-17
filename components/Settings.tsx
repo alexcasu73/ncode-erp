@@ -29,9 +29,10 @@ const Settings: React.FC = () => {
     loadSettings();
   }, [getSettings]);
 
-  // Also sync from context state when it changes
+  // Sync from context state only on initial load (not on every change to prevent overwriting user input)
   useEffect(() => {
-    if (dbSettings) {
+    if (dbSettings && !anthropicApiKey && !openaiApiKey) {
+      // Only sync if local state is empty (initial load)
       setDefaultProvider(dbSettings.defaultAiProvider);
       setAnthropicApiKey(dbSettings.anthropicApiKey);
       setOpenaiApiKey(dbSettings.openaiApiKey);
@@ -39,7 +40,7 @@ const Settings: React.FC = () => {
       const interval = dbSettings.notificationRefreshInterval || 5;
       setNotificationRefreshInterval([1, 3, 5].includes(interval) ? interval as 1 | 3 | 5 : 5);
     }
-  }, [dbSettings]);
+  }, [dbSettings, anthropicApiKey, openaiApiKey]);
 
   const handleSave = async () => {
     setSaveStatus('saving');
