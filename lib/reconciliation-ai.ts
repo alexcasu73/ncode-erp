@@ -103,7 +103,15 @@ export async function suggestMatch(
   const transactionMonth = transactionDate.getMonth(); // 0-11
   const transactionYear = transactionDate.getFullYear();
 
-  console.log(`[AI] Transaction date: ${transaction.data}, Month: ${transactionMonth + 1}, Year: ${transactionYear}`);
+  console.log('\n' + '='.repeat(100));
+  console.log('🔍 PROCESSING TRANSACTION');
+  console.log('='.repeat(100));
+  console.log(`📅 Data: ${transaction.data} (Mese: ${transactionMonth + 1}, Anno: ${transactionYear})`);
+  console.log(`💰 Importo: €${Math.abs(transaction.importo).toFixed(2)}`);
+  console.log(`📝 Tipo: ${transaction.tipo}`);
+  console.log(`📋 Descrizione: "${transaction.descrizione}"`);
+  console.log(`📌 Causale: "${transaction.causale || 'N/D'}"`);
+  console.log('-'.repeat(100));
 
   // Helper function to check if date is in same month/year
   const isSameMonthYear = (dateStr: string | Date): boolean => {
@@ -130,27 +138,32 @@ export async function suggestMatch(
     // Check date (same month/year) - USE ONLY CASHFLOW DATE
     // If dataPagamento is missing, include the cashflow anyway (don't filter it out)
     if (!cf.dataPagamento) {
-      console.log(`[AI] ⚠️ Cashflow ${cf.id} has no dataPagamento, including in results`);
+      console.log(`⚠️ Cashflow ${cf.id} has no dataPagamento, including in results`);
       return true; // Include cashflows without date
     }
     return isSameMonthYear(cf.dataPagamento);
   });
 
-  console.log(`[AI] Transaction tipo: ${transaction.tipo}, importo: €${transaction.importo}, descrizione: "${transaction.descrizione}"`);
-  console.log(`[AI] Filtering: Total invoices=${invoices.length} → Filtered (tipo+date)=${filteredInvoices.length}`);
-  console.log(`[AI] Filtering: Total cashflows=${cashflowRecords.length} → Filtered (tipo+date)=${cashflowWithInvoices.length}`);
+  console.log('\n📊 STEP 1: FILTERING');
+  console.log(`   Total invoices in DB: ${invoices.length}`);
+  console.log(`   → Filtered by tipo (${transaction.tipo}) + date (${transactionMonth + 1}/${transactionYear}): ${filteredInvoices.length}`);
+  console.log(`   Total cashflows in DB: ${cashflowRecords.length}`);
+  console.log(`   → Filtered by tipo (${transaction.tipo}) + date (${transactionMonth + 1}/${transactionYear}): ${cashflowWithInvoices.length}`);
 
   // Log all cashflows being sent to AI with their dates
-  console.log(`[AI] 📋 Cashflows being sent to AI (${cashflowWithInvoices.length}):`, cashflowWithInvoices.map(({ cf, invoice }) => {
-    const cfAmount = cf.importo || (invoice ? (invoice.flusso || 0) + (invoice.iva || 0) : 0);
-    return {
-      id: cf.id,
-      importo: cfAmount,
-      dataPagamento: cf.dataPagamento,
-      invoiceDate: invoice?.data,
-      tipo: cf.tipo || invoice?.tipo
-    };
-  }));
+  console.log('\n📋 CASHFLOWS AVAILABLE FOR MATCHING:');
+  if (cashflowWithInvoices.length === 0) {
+    console.log('   ❌ NESSUN FLUSSO DI CASSA DISPONIBILE!');
+  } else {
+    cashflowWithInvoices.forEach(({ cf, invoice }) => {
+      const cfAmount = cf.importo || (invoice ? (invoice.flusso || 0) + (invoice.iva || 0) : 0);
+      const diff = Math.abs(cfAmount - Math.abs(transaction.importo));
+      const withinTolerance = diff <= 2.0;
+
+      console.log(`   ${withinTolerance ? '✅' : '❌'} ${cf.id} | €${cfAmount.toFixed(2)} (diff: €${diff.toFixed(2)}) | ${cf.dataPagamento || 'NO DATE'}`);
+      console.log(`      Note: "${cf.note || 'N/D'}" | Spesa: "${invoice?.spesa || 'N/D'}" | Categoria: "${cf.categoria || 'N/D'}"`);
+    });
+  }
 
   // Check for exact amount match in cashflows
   const exactAmountMatches = cashflowWithInvoices.filter(({ cf, invoice }) => {
@@ -288,8 +301,9 @@ ESEMPI:
 
   try {
     const selectedModel = model || 'claude-3-5-haiku-20241022';
-    console.log(`[AI] 🤖 Using model: ${selectedModel}`);
-    console.log(`[AI] Sending prompt (first 1000 chars):`, prompt.substring(0, 1000) + '...');
+    console.log('\n🤖 STEP 2: CALLING AI');
+    console.log(`   Model: ${selectedModel}`);
+    console.log(`   Sending ${cashflowWithInvoices.length} cashflows for analysis...`);
 
     let text = '';
 
@@ -315,8 +329,6 @@ ESEMPI:
       text = response.content[0].type === 'text' ? response.content[0].text : '';
     }
 
-    console.log(`[AI] Raw response:`, text);
-
     // Clean potential markdown formatting
     const cleanedText = text
       .replace(/```json\n?/g, '')
@@ -324,22 +336,33 @@ ESEMPI:
       .trim();
 
     const result = JSON.parse(cleanedText);
-    console.log(`[AI] Parsed result:`, result);
+
+    console.log('\n🎯 STEP 3: AI RESPONSE');
+    console.log(`   Raw JSON: ${cleanedText}`);
+    console.log(`   ├─ cashflowId: ${result.cashflowId || 'null'}`);
+    console.log(`   ├─ invoiceId: ${result.invoiceId || 'null'}`);
+    console.log(`   ├─ confidence: ${result.confidence}%`);
+    console.log(`   └─ reason: "${result.reason}"`);
 
     // CRITICAL: Verify amount match before accepting AI suggestion
+    console.log('\n✅ STEP 4: VERIFICATION');
     if (result.cashflowId) {
       const matchedCashflow = cashflowRecords.find(cf => cf.id === result.cashflowId);
       if (matchedCashflow) {
         const invoice = matchedCashflow.invoiceId ? invoices.find(inv => inv.id === matchedCashflow.invoiceId) : null;
         const cashflowAmount = matchedCashflow.importo || (invoice ? (invoice.flusso || 0) + (invoice.iva || 0) : 0);
-        const transactionAmount = transaction.importo;
+        const transactionAmount = Math.abs(transaction.importo);
         const amountDiff = Math.abs(cashflowAmount - transactionAmount);
 
-        console.log(`[AI] 🔍 Verifying amount match: Transaction €${transactionAmount} vs Cashflow ${result.cashflowId} €${cashflowAmount} (diff: €${amountDiff.toFixed(2)})`);
+        console.log(`   Checking amount: €${transactionAmount.toFixed(2)} (transaction) vs €${cashflowAmount.toFixed(2)} (${result.cashflowId})`);
+        console.log(`   Difference: €${amountDiff.toFixed(2)}`);
 
         // If difference > 2€, REJECT the match regardless of AI confidence
         if (amountDiff > 2) {
-          console.warn(`[AI] ⚠️ REJECTED: Amount difference €${amountDiff.toFixed(2)} exceeds threshold (2€). AI suggestion overridden.`);
+          console.log(`   ❌ REJECTED: Difference exceeds 2€ threshold`);
+          console.log('\n' + '='.repeat(100));
+          console.log(`📍 FINAL RESULT: NO MATCH (amount mismatch)`);
+          console.log('='.repeat(100) + '\n');
           return {
             invoiceId: null,
             cashflowId: null,
@@ -347,17 +370,30 @@ ESEMPI:
             reason: `❌ Match respinto: importi non corrispondenti (transazione €${transactionAmount.toFixed(2)} vs movimento €${cashflowAmount.toFixed(2)}, diff €${amountDiff.toFixed(2)})`
           };
         } else {
-          console.log(`[AI] ✅ Amount verification passed (diff: €${amountDiff.toFixed(2)} ≤ 2€)`);
+          console.log(`   ✅ APPROVED: Difference within tolerance (≤2€)`);
         }
       }
+    } else {
+      console.log(`   No cashflow ID to verify`);
     }
 
-    return {
+    const finalResult = {
       invoiceId: result.invoiceId || null,
       cashflowId: result.cashflowId || null,
       confidence: Math.min(100, Math.max(0, Number(result.confidence) || 0)),
       reason: result.reason || 'Analisi completata'
     };
+
+    console.log('\n' + '='.repeat(100));
+    if (finalResult.cashflowId) {
+      console.log(`✅ FINAL RESULT: MATCHED with ${finalResult.cashflowId} (confidence: ${finalResult.confidence}%)`);
+    } else {
+      console.log(`❌ FINAL RESULT: NO MATCH (confidence: ${finalResult.confidence}%)`);
+    }
+    console.log(`   Reason: "${finalResult.reason}"`);
+    console.log('='.repeat(100) + '\n');
+
+    return finalResult;
   } catch (error) {
     console.error('Error in AI matching:', error);
     console.error('Error details:', JSON.stringify(error, null, 2));
