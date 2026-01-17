@@ -918,7 +918,7 @@ export const Cashflow: React.FC = () => {
       {/* Tabella Movimenti */}
       <div className="bg-white dark:bg-dark-card rounded-lg shadow-sm">
         <div className="overflow-x-auto">
-          <div className="min-w-[1200px]">
+          <div>
             {/* Header tabella con ricerca e filtri */}
             <div className="p-4 border-b border-gray-200 dark:border-dark-border flex gap-4 items-center justify-between">
               <h3 className="text-section-title text-dark dark:text-white whitespace-nowrap">Dettaglio Movimenti</h3>
@@ -1010,7 +1010,7 @@ export const Cashflow: React.FC = () => {
           <table className="w-full">
             <thead className="bg-gray-50 dark:bg-dark-bg">
               <tr className="text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                <th className="px-4 py-4 w-12">
+                <th className="px-3 py-4 w-10">
                   <div className="flex items-center justify-center">
                     <label className="inline-flex items-center cursor-pointer group">
                       <input
@@ -1029,28 +1029,28 @@ export const Cashflow: React.FC = () => {
                     </label>
                   </div>
                 </th>
-                <th className="px-6 py-4 whitespace-nowrap cursor-pointer hover:bg-gray-50 dark:bg-dark-bg min-w-[120px]" onClick={() => handleSort('mese')}>
-                  <div className="flex items-center gap-1">Data Pag. <SortIcon column="mese" /></div>
+                <th className="px-3 py-4 whitespace-nowrap cursor-pointer hover:bg-gray-50 dark:bg-dark-bg w-24" onClick={() => handleSort('mese')}>
+                  <div className="flex items-center gap-1">Data <SortIcon column="mese" /></div>
                 </th>
-                <th className="px-6 py-4 whitespace-nowrap min-w-[120px]">ID Fattura</th>
-                <th className="px-6 py-4 whitespace-nowrap cursor-pointer hover:bg-gray-50 dark:bg-dark-bg min-w-[150px]" onClick={() => handleSort('progetto')}>
+                <th className="px-3 py-4 whitespace-nowrap w-24">ID Fatt.</th>
+                <th className="px-3 py-4 cursor-pointer hover:bg-gray-50 dark:bg-dark-bg w-32" onClick={() => handleSort('progetto')}>
                   <div className="flex items-center gap-1">Progetto <SortIcon column="progetto" /></div>
                 </th>
-                <th className="px-6 py-4 whitespace-nowrap cursor-pointer hover:bg-gray-50 dark:bg-dark-bg min-w-[120px]" onClick={() => handleSort('spesa')}>
+                <th className="px-3 py-4 cursor-pointer hover:bg-gray-50 dark:bg-dark-bg w-28" onClick={() => handleSort('spesa')}>
                   <div className="flex items-center gap-1">Spesa <SortIcon column="spesa" /></div>
                 </th>
-                <th className="px-6 py-4 whitespace-nowrap min-w-[100px]">Tipo Spesa</th>
-                <th className="px-6 py-4 whitespace-nowrap min-w-[150px]">Note</th>
-                <th className="px-6 py-4 whitespace-nowrap cursor-pointer hover:bg-gray-50 dark:bg-dark-bg min-w-[100px]" onClick={() => handleSort('tipo')}>
+                <th className="px-3 py-4 w-24">Tipo Sp.</th>
+                <th className="px-3 py-4 w-32">Note</th>
+                <th className="px-3 py-4 whitespace-nowrap cursor-pointer hover:bg-gray-50 dark:bg-dark-bg w-20" onClick={() => handleSort('tipo')}>
                   <div className="flex items-center gap-1">Tipo <SortIcon column="tipo" /></div>
                 </th>
-                <th className="px-6 py-4 whitespace-nowrap cursor-pointer hover:bg-gray-50 dark:bg-dark-bg min-w-[100px]" onClick={() => handleSort('stato')}>
+                <th className="px-3 py-4 whitespace-nowrap cursor-pointer hover:bg-gray-50 dark:bg-dark-bg w-24" onClick={() => handleSort('stato')}>
                   <div className="flex items-center gap-1">Stato <SortIcon column="stato" /></div>
                 </th>
-                <th className="px-6 py-4 whitespace-nowrap text-right cursor-pointer hover:bg-gray-50 dark:bg-dark-bg min-w-[120px]" onClick={() => handleSort('totale')}>
+                <th className="px-3 py-4 whitespace-nowrap text-right cursor-pointer hover:bg-gray-50 dark:bg-dark-bg w-24" onClick={() => handleSort('totale')}>
                   <div className="flex items-center gap-1 justify-end">Totale <SortIcon column="totale" /></div>
                 </th>
-                <th className="px-6 py-4 whitespace-nowrap text-right min-w-[120px]">Azioni</th>
+                <th className="px-3 py-4 whitespace-nowrap text-right w-20">Azioni</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200 dark:divide-dark-border">
@@ -1063,7 +1063,7 @@ export const Cashflow: React.FC = () => {
                   const tipo = record.tipo || 'Entrata';
                   return (
                     <tr key={record.id} className="hover:bg-gray-50 dark:hover:bg-dark-bg transition-colors">
-                      <td className="px-4 py-4 whitespace-nowrap w-12">
+                      <td className="px-3 py-3">
                         <div className="flex items-center justify-center">
                           <label className="inline-flex items-center cursor-pointer group">
                             <input
@@ -1082,48 +1082,48 @@ export const Cashflow: React.FC = () => {
                           </label>
                         </div>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{formatDate(record.dataPagamento)}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-400 italic">
-                        Movimento Standalone
+                      <td className="px-3 py-3 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{formatDate(record.dataPagamento)}</td>
+                      <td className="px-3 py-3 whitespace-nowrap text-sm font-medium text-gray-400 italic">
+                        Standalone
                       </td>
-                      <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">-</td>
-                      <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">-</td>
-                      <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">-</td>
-                      <td className="px-6 py-4 text-sm text-gray-500 max-w-[200px] truncate" title={record.note}>{record.note || '-'}</td>
-                      <td className="px-6 py-4 whitespace-nowrap">
+                      <td className="px-3 py-3 text-sm text-gray-500 dark:text-gray-400 truncate max-w-[8rem]">-</td>
+                      <td className="px-3 py-3 text-sm text-gray-500 dark:text-gray-400 truncate max-w-[7rem]">-</td>
+                      <td className="px-3 py-3 text-sm text-gray-500 dark:text-gray-400 truncate max-w-[6rem]">-</td>
+                      <td className="px-3 py-3 text-sm text-gray-500 truncate max-w-[8rem]" title={record.note}>{record.note || '-'}</td>
+                      <td className="px-3 py-3 whitespace-nowrap">
                         <span className={`px-2 py-1 text-xs font-medium rounded-md text-white ${
                           tipo === 'Entrata'
                             ? 'bg-secondary'
                             : 'bg-red-600'
                         }`}>
-                          {tipo}
+                          {tipo === 'Entrata' ? 'E' : 'U'}
                         </span>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
+                      <td className="px-3 py-3 whitespace-nowrap">
                         <span className="px-2 py-1 text-xs font-medium rounded-md text-white bg-gray-500">
-                          Nessuno
+                          -
                         </span>
                       </td>
-                      <td className={`px-6 py-4 whitespace-nowrap text-sm font-bold text-right ${
+                      <td className={`px-3 py-3 whitespace-nowrap text-sm font-bold text-right ${
                         tipo === 'Entrata' ? 'text-green-600 dark:text-green-400' : 'text-orange-600 dark:text-orange-400'
                       }`}>
                         {tipo === 'Entrata' ? '+' : '-'}{formatCurrency(totale)}
                       </td>
-                      <td className="px-6 py-4 text-right">
-                        <div className="flex justify-end gap-2">
+                      <td className="px-3 py-3 text-right">
+                        <div className="flex justify-end gap-1">
                           <button
                             onClick={() => openEditModal(record)}
                             className="p-1 text-gray-500 hover:text-dark transition-colors"
-                            title="Modifica movimento standalone"
+                            title="Modifica"
                           >
-                            <Edit2 size={16} />
+                            <Edit2 size={14} />
                           </button>
                           <button
                             onClick={() => handleDelete(record.id)}
                             className="p-1 text-gray-500 hover:text-red-500 transition-colors"
-                            title="Elimina movimento standalone"
+                            title="Elimina"
                           >
-                            <Trash2 size={16} />
+                            <Trash2 size={14} />
                           </button>
                         </div>
                       </td>
@@ -1136,7 +1136,7 @@ export const Cashflow: React.FC = () => {
                 const isParziale = record.importo !== undefined && record.importo !== null && Math.abs(record.importo - totaleFattura) > 0.01;
                 return (
                   <tr key={record.id} className="hover:bg-gray-50 dark:hover:bg-dark-bg transition-colors">
-                    <td className="px-4 py-4 whitespace-nowrap w-12">
+                    <td className="px-3 py-3">
                       <div className="flex items-center justify-center">
                         <label className="inline-flex items-center cursor-pointer group">
                           <input
@@ -1155,24 +1155,24 @@ export const Cashflow: React.FC = () => {
                         </label>
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{formatDate(record.dataPagamento)}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-primary">
+                    <td className="px-3 py-3 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{formatDate(record.dataPagamento)}</td>
+                    <td className="px-3 py-3 whitespace-nowrap text-sm font-medium text-primary">
                       {formatInvoiceNumber(inv.id, inv.anno)}
                     </td>
-                    <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">{inv.nomeProgetto || '-'}</td>
-                    <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">{inv.spesa || '-'}</td>
-                    <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">{inv.tipoSpesa || '-'}</td>
-                    <td className="px-6 py-4 text-sm text-gray-500 max-w-[200px] truncate" title={record.note || inv.note}>{record.note || inv.note || '-'}</td>
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <td className="px-3 py-3 text-sm text-gray-500 dark:text-gray-400 truncate max-w-[8rem]" title={inv.nomeProgetto}>{inv.nomeProgetto || '-'}</td>
+                    <td className="px-3 py-3 text-sm text-gray-500 dark:text-gray-400 truncate max-w-[7rem]" title={inv.spesa}>{inv.spesa || '-'}</td>
+                    <td className="px-3 py-3 text-sm text-gray-500 dark:text-gray-400 truncate max-w-[6rem]" title={inv.tipoSpesa}>{inv.tipoSpesa || '-'}</td>
+                    <td className="px-3 py-3 text-sm text-gray-500 truncate max-w-[8rem]" title={record.note || inv.note}>{record.note || inv.note || '-'}</td>
+                    <td className="px-3 py-3 whitespace-nowrap">
                       <span className={`px-2 py-1 text-xs font-medium rounded-md text-white ${
                         inv.tipo === 'Entrata'
                           ? 'bg-secondary'
                           : 'bg-red-600'
                       }`}>
-                        {inv.tipo}
+                        {inv.tipo === 'Entrata' ? 'E' : 'U'}
                       </span>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <td className="px-3 py-3 whitespace-nowrap">
                       <span className={`px-2 py-1 text-xs font-medium rounded-md text-white ${
                         (record.statoFatturazione || inv.statoFatturazione) === 'Effettivo'
                           ? 'bg-secondary'
@@ -1180,10 +1180,10 @@ export const Cashflow: React.FC = () => {
                           ? 'bg-primary'
                           : 'bg-gray-500'
                       }`}>
-                        {record.statoFatturazione || inv.statoFatturazione}
+                        {(record.statoFatturazione || inv.statoFatturazione)?.substring(0, 3)}
                       </span>
                     </td>
-                    <td className={`px-6 py-4 whitespace-nowrap text-sm font-bold text-right ${
+                    <td className={`px-3 py-3 whitespace-nowrap text-sm font-bold text-right ${
                       inv.tipo === 'Entrata' ? 'text-green-600 dark:text-green-400' : 'text-orange-600 dark:text-orange-400'
                     }`}>
                       <div className="flex items-center justify-end gap-1">
@@ -1191,19 +1191,21 @@ export const Cashflow: React.FC = () => {
                         {inv.tipo === 'Entrata' ? '+' : '-'}{formatCurrency(totale)}
                       </div>
                     </td>
-                    <td className="px-6 py-4 text-right">
-                      <div className="flex justify-end gap-2">
+                    <td className="px-3 py-3 text-right">
+                      <div className="flex justify-end gap-1">
                         <button
                           onClick={() => openEditModal(record)}
                           className="p-1 text-gray-500 hover:text-dark transition-colors"
+                          title="Modifica"
                         >
-                          <Edit2 size={16} />
+                          <Edit2 size={14} />
                         </button>
                         <button
                           onClick={() => handleDelete(record.id)}
                           className="p-1 text-gray-500 hover:text-red-500 transition-colors"
+                          title="Elimina"
                         >
-                          <Trash2 size={16} />
+                          <Trash2 size={14} />
                         </button>
                       </div>
                     </td>
