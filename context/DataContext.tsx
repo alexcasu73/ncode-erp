@@ -742,6 +742,21 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     }
 
+    // If stato changed FROM 'Effettivo' to something else, re-check notifications for that invoice
+    if (
+      currentCashflow?.statoFatturazione === 'Effettivo' &&
+      record.statoFatturazione &&
+      record.statoFatturazione !== 'Effettivo' &&
+      currentCashflow?.invoiceId
+    ) {
+      console.log(`[Cashflow] Stato changed FROM 'Effettivo' to '${record.statoFatturazione}' for invoice ${currentCashflow.invoiceId}, re-checking notifications...`);
+
+      // Re-check invoice due dates after a short delay to ensure the update is reflected
+      setTimeout(() => {
+        checkInvoiceDueDates();
+      }, 500);
+    }
+
     return true;
   };
 
