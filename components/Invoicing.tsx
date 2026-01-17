@@ -50,6 +50,10 @@ export const Invoicing: React.FC = () => {
   const [filterMeseTabella, setFilterMeseTabella] = useState<string>(() => {
     return localStorage.getItem('invoicing_filterMeseTabella') || 'tutti';
   });
+  const [filterAnnoTabella, setFilterAnnoTabella] = useState<number | 'tutti'>(() => {
+    const saved = localStorage.getItem('invoicing_filterAnnoTabella');
+    return saved ? (saved === 'tutti' ? 'tutti' : parseInt(saved)) : 'tutti';
+  });
   const [showModal, setShowModal] = useState(false);
   const [editingInvoice, setEditingInvoice] = useState<Invoice | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -75,6 +79,10 @@ export const Invoicing: React.FC = () => {
     localStorage.setItem('invoicing_filterMeseTabella', filterMeseTabella);
   }, [filterMeseTabella]);
 
+  React.useEffect(() => {
+    localStorage.setItem('invoicing_filterAnnoTabella', String(filterAnnoTabella));
+  }, [filterAnnoTabella]);
+
   // Reset tutti i filtri
   const resetAllFilters = () => {
     setFilterAnno('tutti');
@@ -84,6 +92,7 @@ export const Invoicing: React.FC = () => {
     setFilterTipo('tutti');
     setFilterStato('tutti');
     setFilterMeseTabella('tutti');
+    setFilterAnnoTabella('tutti');
   };
 
   // Anni disponibili
@@ -197,10 +206,11 @@ export const Invoicing: React.FC = () => {
       const matchesStato = filterStato === 'tutti' || invoiceStatus === filterStato;
 
       const matchesMeseTabella = filterMeseTabella === 'tutti' || inv.mese === filterMeseTabella;
+      const matchesAnnoTabella = filterAnnoTabella === 'tutti' || inv.anno === filterAnnoTabella;
 
-      return matchesSearch && matchesTipo && matchesStato && matchesMeseTabella;
+      return matchesSearch && matchesTipo && matchesStato && matchesMeseTabella && matchesAnnoTabella;
     });
-  }, [invoices, searchTerm, filterTipo, filterStato, filterMeseTabella]);
+  }, [invoices, searchTerm, filterTipo, filterStato, filterMeseTabella, filterAnnoTabella]);
 
   // Ordina fatture
   const sortedInvoices = useMemo(() => {
@@ -521,46 +531,64 @@ export const Invoicing: React.FC = () => {
 
       {/* Filters */}
       <div className="bg-white dark:bg-dark-card rounded-lg p-4 shadow-sm border border-gray-200 dark:border-dark-border">
-        <div className="flex flex-wrap gap-4 items-center">
-          <div className="relative flex-1 min-w-[200px]">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 dark:text-gray-400" size={18} />
-            <input
-              type="text"
-              placeholder="Cerca per progetto, nota, categoria..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 bg-gray-50 dark:bg-gray-800/30 border-none rounded-lg focus:ring-2 focus:ring-primary focus:outline-none text-dark dark:text-white"
-            />
+        <div className="flex gap-4 items-center justify-between">
+          <h3 className="text-section-title text-dark dark:text-white whitespace-nowrap">Dettaglio Fatture</h3>
+          <div className="flex gap-3 items-center flex-nowrap">
+            {/* Ricerca */}
+            <div className="relative">
+              <Search size={16} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 dark:text-gray-400" />
+              <input
+                type="text"
+                placeholder="Cerca..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-9 pr-4 py-2 border border-gray-200 dark:border-dark-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 w-48 bg-white dark:bg-gray-800/30 text-dark dark:text-white"
+              />
+            </div>
+            {/* Filtro Tipo */}
+            <select
+              value={filterTipo}
+              onChange={(e) => setFilterTipo(e.target.value as any)}
+              className="pl-3 pr-8 py-2 border border-gray-200 dark:border-dark-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 bg-white dark:bg-gray-800/30 text-dark dark:text-white"
+            >
+              <option value="tutti">Tutti i tipi</option>
+              <option value="Entrata">Entrate</option>
+              <option value="Uscita">Uscite</option>
+            </select>
+            {/* Filtro Stato */}
+            <select
+              value={filterStato}
+              onChange={(e) => setFilterStato(e.target.value as any)}
+              className="pl-3 pr-8 py-2 border border-gray-200 dark:border-dark-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 bg-white dark:bg-gray-800/30 text-dark dark:text-white"
+            >
+              <option value="tutti">Tutti gli stati</option>
+              <option value="Stimato">Stimato</option>
+              <option value="Effettivo">Effettivo</option>
+              <option value="Nessuno">Nessuno</option>
+            </select>
+            {/* Filtro Anno */}
+            <select
+              value={filterAnnoTabella === 'tutti' ? 'tutti' : filterAnnoTabella}
+              onChange={(e) => setFilterAnnoTabella(e.target.value === 'tutti' ? 'tutti' : parseInt(e.target.value))}
+              className="pl-3 pr-8 py-2 border border-gray-200 dark:border-dark-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 bg-white dark:bg-gray-800/30 text-dark dark:text-white"
+            >
+              <option value="tutti">Tutti gli anni</option>
+              {anniDisponibili.map(anno => (
+                <option key={anno} value={anno}>{anno}</option>
+              ))}
+            </select>
+            {/* Filtro Mese */}
+            <select
+              value={filterMeseTabella}
+              onChange={(e) => setFilterMeseTabella(e.target.value)}
+              className="pl-3 pr-8 py-2 border border-gray-200 dark:border-dark-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 bg-white dark:bg-gray-800/30 text-dark dark:text-white"
+            >
+              <option value="tutti">Tutti i mesi</option>
+              {MESI.map(mese => (
+                <option key={mese} value={mese}>{mese}</option>
+              ))}
+            </select>
           </div>
-          <select
-            value={filterTipo}
-            onChange={(e) => setFilterTipo(e.target.value as any)}
-            className="pl-4 pr-12 py-2 bg-gray-50 dark:bg-gray-800/30 border-none rounded-lg focus:ring-2 focus:ring-primary focus:outline-none text-dark dark:text-white"
-          >
-            <option value="tutti">Tutti i tipi</option>
-            <option value="Entrata">Entrate</option>
-            <option value="Uscita">Uscite</option>
-          </select>
-          <select
-            value={filterStato}
-            onChange={(e) => setFilterStato(e.target.value as any)}
-            className="pl-4 pr-12 py-2 bg-gray-50 dark:bg-gray-800/30 border-none rounded-lg focus:ring-2 focus:ring-primary focus:outline-none text-dark dark:text-white"
-          >
-            <option value="tutti">Tutti gli stati</option>
-            <option value="Stimato">Stimato</option>
-            <option value="Effettivo">Effettivo</option>
-            <option value="Nessuno">Nessuno</option>
-          </select>
-          <select
-            value={filterMeseTabella}
-            onChange={(e) => setFilterMeseTabella(e.target.value)}
-            className="pl-4 pr-12 py-2 bg-gray-50 dark:bg-gray-800/30 border-none rounded-lg focus:ring-2 focus:ring-primary focus:outline-none text-dark dark:text-white"
-          >
-            <option value="tutti">Tutti i mesi</option>
-            {MESI.map(mese => (
-              <option key={mese} value={mese}>{mese}</option>
-            ))}
-          </select>
         </div>
       </div>
 
@@ -755,7 +783,7 @@ export const Invoicing: React.FC = () => {
                       </div>
                     )}
                   </td>
-                  <td className="px-6 py-4 text-sm text-gray-500 max-w-[200px] truncate">
+                  <td className="px-6 py-4 text-sm text-gray-500 max-w-[200px] truncate" data-tooltip={inv.note || undefined}>
                     {inv.note || '-'}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">

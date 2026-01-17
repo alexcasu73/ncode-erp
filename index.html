@@ -111,6 +111,40 @@
         cursor: pointer;
       }
 
+      /* Custom instant tooltips */
+      [data-tooltip]:not([data-tooltip=""]) {
+        position: relative;
+        --tooltip-x: 0px;
+        --tooltip-y: 0px;
+      }
+
+      [data-tooltip]:not([data-tooltip=""]):hover::after {
+        content: attr(data-tooltip);
+        position: fixed;
+        left: var(--tooltip-x);
+        top: var(--tooltip-y);
+        transform: translateX(-50%);
+        background: rgba(0, 0, 0, 0.95);
+        color: white;
+        padding: 8px 14px;
+        border-radius: 6px;
+        font-size: 13px;
+        z-index: 9999;
+        pointer-events: none;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        max-width: 300px;
+        word-wrap: break-word;
+        overflow-wrap: break-word;
+        white-space: normal;
+      }
+
+      /* Dark mode tooltip */
+      .dark [data-tooltip]:not([data-tooltip=""]):hover::after {
+        background: rgba(30, 41, 59, 0.98);
+        color: white;
+        border: 1px solid rgba(148, 163, 184, 0.2);
+      }
+
       /* Custom select dropdown arrow */
       select {
         appearance: none;
@@ -145,6 +179,18 @@
       document.addEventListener('focusin', function(e) {
         if (e.target.type === 'number') {
           e.target.select();
+        }
+      });
+
+      // Position tooltips near cursor
+      document.addEventListener('mousemove', function(e) {
+        const target = e.target.closest('[data-tooltip]');
+        if (target && target.dataset.tooltip) {
+          const computedStyle = window.getComputedStyle(target, '::after');
+          if (computedStyle.content !== 'none') {
+            target.style.setProperty('--tooltip-x', e.clientX + 'px');
+            target.style.setProperty('--tooltip-y', (e.clientY - 40) + 'px');
+          }
         }
       });
     </script>

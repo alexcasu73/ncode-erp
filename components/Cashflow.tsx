@@ -104,6 +104,10 @@ export const Cashflow: React.FC = () => {
   const [filterMeseTabella, setFilterMeseTabella] = useState<string>(() => {
     return localStorage.getItem('cashflow_filterMeseTabella') || 'tutti';
   });
+  const [filterAnnoTabella, setFilterAnnoTabella] = useState<number | 'tutti'>(() => {
+    const saved = localStorage.getItem('cashflow_filterAnnoTabella');
+    return saved ? (saved === 'tutti' ? 'tutti' : parseInt(saved)) : 'tutti';
+  });
   const [filterStatoTabella, setFilterStatoTabella] = useState<'tutti' | 'Stimato' | 'Effettivo' | 'Nessuno'>(() => {
     const saved = localStorage.getItem('cashflow_filterStatoTabella');
     return (saved as 'tutti' | 'Stimato' | 'Effettivo' | 'Nessuno') || 'tutti';
@@ -136,6 +140,10 @@ export const Cashflow: React.FC = () => {
   }, [filterMeseTabella]);
 
   React.useEffect(() => {
+    localStorage.setItem('cashflow_filterAnnoTabella', String(filterAnnoTabella));
+  }, [filterAnnoTabella]);
+
+  React.useEffect(() => {
     localStorage.setItem('cashflow_filterStatoTabella', filterStatoTabella);
   }, [filterStatoTabella]);
 
@@ -147,6 +155,7 @@ export const Cashflow: React.FC = () => {
     setSearchTerm('');
     setFilterTipo('tutti');
     setFilterMeseTabella('tutti');
+    setFilterAnnoTabella('tutti');
     setFilterStatoTabella('tutti');
   };
 
@@ -252,9 +261,10 @@ export const Cashflow: React.FC = () => {
           cf.note?.toLowerCase().includes(searchTerm.toLowerCase());
         const matchesTipo = filterTipo === 'tutti' || cf.tipo === filterTipo;
         const matchesMeseTabella = filterMeseTabella === 'tutti' || getMeseFromDate(cf.dataPagamento) === filterMeseTabella;
+        const matchesAnnoTabella = filterAnnoTabella === 'tutti' || getAnnoFromDate(cf.dataPagamento) === filterAnnoTabella;
         // Movimenti standalone non hanno stato fatturazione, considerali sempre "Nessuno"
         const matchesStatoTabella = filterStatoTabella === 'tutti' || filterStatoTabella === 'Nessuno';
-        return matchesSearch && matchesTipo && matchesMeseTabella && matchesStatoTabella;
+        return matchesSearch && matchesTipo && matchesMeseTabella && matchesAnnoTabella && matchesStatoTabella;
       }
 
       // Gestione movimenti con fattura
@@ -265,12 +275,13 @@ export const Cashflow: React.FC = () => {
         cf.note?.toLowerCase().includes(searchTerm.toLowerCase());
       const matchesTipo = filterTipo === 'tutti' || inv.tipo === filterTipo;
       const matchesMeseTabella = filterMeseTabella === 'tutti' || getMeseFromDate(cf.dataPagamento) === filterMeseTabella;
+      const matchesAnnoTabella = filterAnnoTabella === 'tutti' || getAnnoFromDate(cf.dataPagamento) === filterAnnoTabella;
       // Usa lo stato del cashflow record se presente, altrimenti della fattura
       const stato = cf.statoFatturazione || inv.statoFatturazione;
       const matchesStatoTabella = filterStatoTabella === 'tutti' || stato === filterStatoTabella;
-      return matchesSearch && matchesTipo && matchesMeseTabella && matchesStatoTabella;
+      return matchesSearch && matchesTipo && matchesMeseTabella && matchesAnnoTabella && matchesStatoTabella;
     });
-  }, [cashflowWithInvoices, searchTerm, filterTipo, filterMeseTabella, filterStatoTabella]);
+  }, [cashflowWithInvoices, searchTerm, filterTipo, filterMeseTabella, filterAnnoTabella, filterStatoTabella]);
 
   // Ordina records per tabella (ordinamento per mese usa data di pagamento)
   const sortedRecords = useMemo(() => {
@@ -944,6 +955,17 @@ export const Cashflow: React.FC = () => {
               <option value="Entrata">Entrate</option>
               <option value="Uscita">Uscite</option>
             </select>
+            {/* Filtro Anno */}
+            <select
+              value={filterAnnoTabella === 'tutti' ? 'tutti' : filterAnnoTabella}
+              onChange={(e) => setFilterAnnoTabella(e.target.value === 'tutti' ? 'tutti' : parseInt(e.target.value))}
+              className="pl-3 pr-8 py-2 border border-gray-200 dark:border-dark-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 bg-white dark:bg-gray-800/30 text-dark dark:text-white"
+            >
+              <option value="tutti">Tutti gli anni</option>
+              {anniDisponibili.map(anno => (
+                <option key={anno} value={anno}>{anno}</option>
+              ))}
+            </select>
             {/* Filtro Mese */}
             <select
               value={filterMeseTabella}
@@ -1033,14 +1055,13 @@ export const Cashflow: React.FC = () => {
                   <div className="flex items-center gap-1">Data <SortIcon column="mese" /></div>
                 </th>
                 <th className="px-3 py-4 whitespace-nowrap w-24">ID Fatt.</th>
-                <th className="px-3 py-4 cursor-pointer hover:bg-gray-50 dark:bg-dark-bg w-32" onClick={() => handleSort('progetto')}>
+                <th className="px-3 py-4 cursor-pointer hover:bg-gray-50 dark:bg-dark-bg w-40" onClick={() => handleSort('progetto')}>
                   <div className="flex items-center gap-1">Progetto <SortIcon column="progetto" /></div>
                 </th>
-                <th className="px-3 py-4 cursor-pointer hover:bg-gray-50 dark:bg-dark-bg w-28" onClick={() => handleSort('spesa')}>
+                <th className="px-3 py-4 cursor-pointer hover:bg-gray-50 dark:bg-dark-bg w-20" onClick={() => handleSort('spesa')}>
                   <div className="flex items-center gap-1">Spesa <SortIcon column="spesa" /></div>
                 </th>
-                <th className="px-3 py-4 w-24">Tipo Sp.</th>
-                <th className="px-3 py-4 w-32">Note</th>
+                <th className="px-3 py-4 w-48">Note</th>
                 <th className="px-3 py-4 whitespace-nowrap cursor-pointer hover:bg-gray-50 dark:bg-dark-bg w-28" onClick={() => handleSort('tipo')}>
                   <div className="flex items-center gap-1">Tipo <SortIcon column="tipo" /></div>
                 </th>
@@ -1086,10 +1107,8 @@ export const Cashflow: React.FC = () => {
                       <td className="px-3 py-3 whitespace-nowrap text-sm font-medium text-gray-400 italic">
                         Standalone
                       </td>
-                      <td className="px-3 py-3 text-sm text-gray-500 dark:text-gray-400 truncate max-w-[8rem]">-</td>
-                      <td className="px-3 py-3 text-sm text-gray-500 dark:text-gray-400 truncate max-w-[7rem]">-</td>
-                      <td className="px-3 py-3 text-sm text-gray-500 dark:text-gray-400 truncate max-w-[6rem]">-</td>
-                      <td className="px-3 py-3 text-sm text-gray-500 truncate max-w-[8rem]" title={record.note}>{record.note || '-'}</td>
+                      <td className="px-3 py-3 text-sm text-gray-500 dark:text-gray-400 truncate max-w-[5rem]">-</td>
+                      <td className="px-3 py-3 text-sm text-gray-500 dark:text-gray-400 truncate max-w-[12rem]" data-tooltip={record.note || undefined}>{record.note || '-'}</td>
                       <td className="px-3 py-3 whitespace-nowrap">
                         <span className={`px-2 py-1 text-xs font-medium rounded-md text-white ${
                           tipo === 'Entrata'
@@ -1165,10 +1184,9 @@ export const Cashflow: React.FC = () => {
                     <td className="px-3 py-3 whitespace-nowrap text-sm font-medium text-primary">
                       {formatInvoiceNumber(inv.id, inv.anno)}
                     </td>
-                    <td className="px-3 py-3 text-sm text-gray-500 dark:text-gray-400 truncate max-w-[8rem]" title={inv.nomeProgetto}>{inv.nomeProgetto || '-'}</td>
-                    <td className="px-3 py-3 text-sm text-gray-500 dark:text-gray-400 truncate max-w-[7rem]" title={inv.spesa}>{inv.spesa || '-'}</td>
-                    <td className="px-3 py-3 text-sm text-gray-500 dark:text-gray-400 truncate max-w-[6rem]" title={inv.tipoSpesa}>{inv.tipoSpesa || '-'}</td>
-                    <td className="px-3 py-3 text-sm text-gray-500 truncate max-w-[8rem]" title={record.note || inv.note}>{record.note || inv.note || '-'}</td>
+                    <td className="px-3 py-3 text-sm text-gray-500 dark:text-gray-400 truncate max-w-[10rem]" data-tooltip={inv.nomeProgetto || undefined}>{inv.nomeProgetto || '-'}</td>
+                    <td className="px-3 py-3 text-sm text-gray-500 dark:text-gray-400 truncate max-w-[5rem]" data-tooltip={inv.spesa && inv.tipoSpesa ? `${inv.spesa} - ${inv.tipoSpesa}` : inv.spesa || inv.tipoSpesa || undefined}>{inv.spesa || '-'}</td>
+                    <td className="px-3 py-3 text-sm text-gray-500 dark:text-gray-400 truncate max-w-[12rem]" data-tooltip={record.note || inv.note || undefined}>{record.note || inv.note || '-'}</td>
                     <td className="px-3 py-3 whitespace-nowrap">
                       <span className={`px-2 py-1 text-xs font-medium rounded-md text-white ${
                         inv.tipo === 'Entrata'
