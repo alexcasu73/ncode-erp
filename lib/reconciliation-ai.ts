@@ -229,7 +229,9 @@ export async function suggestMatch(
     };
   }
 
-  const prompt = `Sei un assistente per la riconciliazione bancaria. Trova il MOVIMENTO DI CASSA che corrisponde alla transazione bancaria.
+  const prompt = `CRITICAL: You must respond with ONLY valid JSON. No explanations, no markdown, no backticks, no additional text.
+
+Sei un assistente per la riconciliazione bancaria. Trova il MOVIMENTO DI CASSA che corrisponde alla transazione bancaria.
 
 TRANSAZIONE BANCARIA DA RICONCILIARE:
 ${formatBankTransaction(transaction)}
@@ -285,11 +287,13 @@ DECISIONE FINALE:
    → cashflowId = null, invoiceId = null
    → reason = "Nessun movimento con importo compatibile (€[X]) trovato"
 
-FORMATO RISPOSTA:
-Rispondi SOLO con JSON (senza markdown, senza backticks):
+FORMATO RISPOSTA OBBLIGATORIO:
+IMPORTANT: Your response must be ONLY the JSON object below. Do not write any text before or after the JSON.
+Do not use markdown code blocks (```). Do not add explanations. Just the raw JSON object.
+
 {"invoiceId": null, "cashflowId": "CF-XXX o null", "confidence": numero_0_100, "reason": "spiegazione breve in italiano"}
 
-ESEMPI:
+ESEMPI DI RISPOSTE VALIDE (copia questo formato esatto):
 
 ✅ Transazione: "ANTHROPIC +14152360599" €10.00 del 02/01/2026
    Movimento: CF-0053 €10.00 del 05/01/2026 Note: "Anthropic"
@@ -329,16 +333,32 @@ ESEMPI:
       const response = await anthropic.messages.create({
         model: selectedModel,
         max_tokens: 500,
+        system: 'You are a precise JSON generator for bank reconciliation. You MUST respond with ONLY valid JSON. Do not include any explanatory text, markdown formatting, or backticks. Your entire response must be a single valid JSON object starting with { and ending with }.',
         messages: [{ role: 'user', content: prompt }]
       });
       text = response.content[0].type === 'text' ? response.content[0].text : '';
     }
 
-    // Clean potential markdown formatting
-    const cleanedText = text
+    // Clean potential markdown formatting and extract JSON
+    let cleanedText = text
       .replace(/```json\n?/g, '')
       .replace(/```\n?/g, '')
       .trim();
+
+    // If response doesn't start with {, try to extract JSON from the text
+    if (!cleanedText.startsWith('{')) {
+      console.warn('[AI] Response does not start with {, attempting to extract JSON...');
+      console.warn('[AI] Raw response:', text.substring(0, 200));
+
+      // Try to find JSON object in the response
+      const jsonMatch = text.match(/\{[^]*\}/);
+      if (jsonMatch) {
+        cleanedText = jsonMatch[0];
+        console.log('[AI] Extracted JSON from response:', cleanedText.substring(0, 100));
+      } else {
+        throw new Error(`AI response is not valid JSON. Response starts with: "${text.substring(0, 50)}..."`);
+      }
+    }
 
     const result = JSON.parse(cleanedText);
 
