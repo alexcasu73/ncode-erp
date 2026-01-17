@@ -48,6 +48,7 @@ export type CategoriaSpesa = 'Tools' | 'Utenze' | 'Affitto casa' | 'Banca' | 'Co
 export interface Invoice {
   id: string;
   data: Date | string;
+  dataScadenza?: Date | string; // Data scadenza pagamento (opzionale)
   mese: string;
   anno: number;
   nomeProgetto: string;
@@ -155,6 +156,16 @@ export interface ReconciliationSession {
 // Cashflow con fattura join (per comparison views)
 export interface CashflowWithInvoice extends CashflowRecord {
   invoice?: Invoice;
+}
+
+// Notifica scadenza fattura
+export interface InvoiceNotification {
+  id: string;
+  invoiceId: string;
+  tipo: 'da_pagare' | 'scaduta'; // Da pagare (oggi) o Scaduta (passata)
+  dataScadenza: string;
+  createdAt: string;
+  dismissed: boolean; // Se l'utente ha cancellato la notifica
 }
 
 // Riga per vista affiancata

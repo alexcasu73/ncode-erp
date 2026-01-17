@@ -8,6 +8,7 @@ import { Cashflow } from './components/Cashflow';
 import { FinancialStatement } from './components/FinancialStatement';
 import { Reconciliation } from './components/Reconciliation';
 import Settings from './components/Settings';
+import { InvoiceNotifications } from './components/InvoiceNotifications';
 import { Bell, User, Menu, X, Sun, Moon, RefreshCw } from 'lucide-react';
 import { useTheme } from './context/ThemeContext';
 import { useData } from './context/DataContext';
@@ -133,6 +134,9 @@ const App: React.FC = () => {
            {renderContent()}
         </main>
       </div>
+
+      {/* Invoice Notifications - Fixed position */}
+      <InvoiceNotifications />
     </div>
   );
 };

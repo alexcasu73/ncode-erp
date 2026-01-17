@@ -961,6 +961,17 @@ const InvoiceModal: React.FC<InvoiceModalProps> = ({ invoice, deals, onClose, on
             </div>
           </div>
 
+          {/* Data Scadenza (opzionale) */}
+          <div>
+            <label className="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Data Scadenza (opzionale)</label>
+            <input
+              type="date"
+              value={formData.dataScadenza ? new Date(formData.dataScadenza).toISOString().split('T')[0] : ''}
+              onChange={(e) => updateField('dataScadenza', e.target.value || undefined)}
+              className="w-full pl-4 pr-12 py-2 border border-gray-200 dark:border-dark-border rounded-lg focus:ring-2 focus:ring-primary focus:outline-none bg-white dark:bg-gray-800/30 text-dark dark:text-white"
+            />
+          </div>
+
           {/* Progetto (per Entrate) o Categoria (per Uscite) */}
           {formData.tipo === 'Entrata' ? (
             <div>

@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
-import { Customer, Deal, Invoice, Transaction, FinancialItem, DealStage, CashflowRecord, BankBalance, BankTransaction, ReconciliationSession, AppSettings } from '../types';
+import { Customer, Deal, Invoice, Transaction, FinancialItem, DealStage, CashflowRecord, BankBalance, BankTransaction, ReconciliationSession, AppSettings, InvoiceNotification } from '../types';
 import {
   MOCK_CUSTOMERS,
   MOCK_DEALS,
@@ -62,6 +62,7 @@ interface DataContextType {
   reconciliationSessions: ReconciliationSession[];
   bankTransactions: BankTransaction[];
   settings: AppSettings | null;
+  invoiceNotifications: InvoiceNotification[];
 
   // Loading states
   loading: boolean;
@@ -122,6 +123,10 @@ interface DataContextType {
   getSettings: () => Promise<AppSettings | null>;
   updateSettings: (settings: Partial<Omit<AppSettings, 'id'>>) => Promise<boolean>;
 
+  // Invoice Notifications
+  checkInvoiceDueDates: () => Promise<void>; // Controlla scadenze e genera notifiche
+  dismissNotification: (id: string) => Promise<boolean>; // Cancella una notifica
+
   // Refresh
   refreshData: () => Promise<void>;
 }
@@ -147,6 +152,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [reconciliationSessions, setReconciliationSessions] = useState<ReconciliationSession[]>([]);
   const [bankTransactions, setBankTransactions] = useState<BankTransaction[]>([]);
   const [settings, setSettings] = useState<AppSettings | null>(null);
+  const [invoiceNotifications, setInvoiceNotifications] = useState<InvoiceNotification[]>([]);
 
   // AI Processing state - persists across component unmounts
   const [aiProcessing, setAiProcessingState] = useState<AIProcessingState>({
@@ -193,7 +199,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     try {
-      const [customersRes, dealsRes, invoicesRes, transactionsRes, financialItemsRes, cashflowRes, bankBalancesRes, reconciliationSessionsRes, bankTransactionsRes, settingsRes] = await Promise.all([
+      const [customersRes, dealsRes, invoicesRes, transactionsRes, financialItemsRes, cashflowRes, bankBalancesRes, reconciliationSessionsRes, bankTransactionsRes, settingsRes, notificationsRes] = await Promise.all([
         supabase.from('customers').select('*'),
         supabase.from('deals').select('*'),
         supabase.from('invoices').select('*'),
@@ -204,6 +210,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         supabase.from('reconciliation_sessions').select('*'),
         supabase.from('bank_transactions').select('*'),
         supabase.from('settings').select('*').eq('id', 'default').single(),
+        supabase.from('invoice_notifications').select('*').eq('dismissed', false),
       ]);
 
       if (customersRes.error) throw customersRes.error;
@@ -222,6 +229,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setBankBalances(snakeToCamel(bankBalancesRes.data || []));
       setReconciliationSessions(snakeToCamel(reconciliationSessionsRes.data || []));
       setBankTransactions(snakeToCamel(bankTransactionsRes.data || []));
+      setInvoiceNotifications(snakeToCamel(notificationsRes.data || []));
+
       // Settings - single row, may not exist yet
       if (settingsRes.data) {
         setSettings(snakeToCamel(settingsRes.data));
@@ -234,6 +243,9 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
           openaiApiKey: ''
         });
       }
+
+      // Check for due dates after loading invoices
+      setTimeout(() => checkInvoiceDueDates(), 1000);
     } catch (err: any) {
       console.error('Error fetching data:', err);
       setError(err.message || 'Error fetching data');
@@ -961,6 +973,100 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  // Check invoice due dates and create notifications
+  const checkInvoiceDueDates = async (): Promise<void> => {
+    if (!isSupabaseConfigured) return;
+
+    try {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const todayStr = today.toISOString().split('T')[0];
+
+      // Get all invoices with due dates
+      const invoicesWithDueDate = invoices.filter(inv => inv.dataScadenza);
+
+      for (const invoice of invoicesWithDueDate) {
+        const dueDate = new Date(invoice.dataScadenza!);
+        dueDate.setHours(0, 0, 0, 0);
+        const dueDateStr = dueDate.toISOString().split('T')[0];
+
+        let tipo: 'da_pagare' | 'scaduta' | null = null;
+
+        if (dueDateStr === todayStr) {
+          tipo = 'da_pagare';
+        } else if (dueDate < today) {
+          tipo = 'scaduta';
+        }
+
+        if (tipo) {
+          // Check if notification already exists and is not dismissed
+          const { data: existing } = await supabase
+            .from('invoice_notifications')
+            .select('*')
+            .eq('invoice_id', invoice.id)
+            .eq('tipo', tipo)
+            .eq('dismissed', false)
+            .single();
+
+          if (!existing) {
+            // Create notification
+            const notification: Omit<InvoiceNotification, 'id' | 'createdAt'> = {
+              invoiceId: invoice.id,
+              tipo,
+              dataScadenza: dueDateStr,
+              dismissed: false
+            };
+
+            const { data, error } = await supabase
+              .from('invoice_notifications')
+              .insert({
+                id: `notif_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+                invoice_id: notification.invoiceId,
+                tipo: notification.tipo,
+                data_scadenza: notification.dataScadenza,
+                dismissed: notification.dismissed
+              })
+              .select()
+              .single();
+
+            if (error) {
+              console.error('Error creating notification:', error);
+            } else if (data) {
+              // Add to local state
+              setInvoiceNotifications(prev => [...prev, snakeToCamel(data)]);
+            }
+          }
+        }
+      }
+    } catch (err) {
+      console.error('Error in checkInvoiceDueDates:', err);
+    }
+  };
+
+  // Dismiss a notification
+  const dismissNotification = async (id: string): Promise<boolean> => {
+    if (!isSupabaseConfigured) return false;
+
+    try {
+      const { error } = await supabase
+        .from('invoice_notifications')
+        .update({ dismissed: true })
+        .eq('id', id);
+
+      if (error) {
+        console.error('Error dismissing notification:', error);
+        return false;
+      }
+
+      // Update local state
+      setInvoiceNotifications(prev => prev.filter(n => n.id !== id));
+      return true;
+    } catch (err) {
+      console.error('Error in dismissNotification:', err);
+      return false;
+    }
+  };
+
   const value: DataContextType = {
     customers,
     deals,
@@ -1007,6 +1113,9 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     settings,
     getSettings,
     updateSettings,
+    invoiceNotifications,
+    checkInvoiceDueDates,
+    dismissNotification,
     refreshData: fetchData,
   };
 
