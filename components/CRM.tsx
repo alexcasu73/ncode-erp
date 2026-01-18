@@ -167,14 +167,15 @@ export const CRM: React.FC = () => {
 
       for (const customer of importedCustomers) {
         try {
-          // Check if ID already exists and generate a new one if needed
+          // Check if ID already exists and skip if it does
           let customerId = customer.id || `Cliente_${crypto.randomUUID()}`;
           const existingCustomer = customers.find(c => c.id === customerId);
 
           if (existingCustomer) {
-            // Generate unique ID
-            customerId = `Cliente_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-            console.log(`ID duplicato ${customer.id}, generato nuovo ID: ${customerId}`);
+            // Skip duplicate ID
+            errorCount++;
+            console.error(`ID duplicato ${customer.id}, riga saltata`);
+            continue;
           }
 
           await addCustomer({ ...customer, id: customerId } as Customer);

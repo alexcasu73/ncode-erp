@@ -356,14 +356,15 @@ export const Invoicing: React.FC = () => {
 
       for (const invoice of importedInvoices) {
         try {
-          // Check if ID already exists and generate a new one if needed
+          // Check if ID already exists and skip if it does
           let invoiceId = invoice.id || `Fattura_${crypto.randomUUID()}`;
           const existingInvoice = invoices.find(inv => inv.id === invoiceId);
 
           if (existingInvoice) {
-            // Generate unique ID
-            invoiceId = `Fattura_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-            console.log(`ID duplicato ${invoice.id}, generato nuovo ID: ${invoiceId}`);
+            // Skip duplicate ID
+            errorCount++;
+            console.error(`ID duplicato ${invoice.id}, riga saltata`);
+            continue;
           }
 
           await addInvoice({ ...invoice, id: invoiceId } as Invoice);

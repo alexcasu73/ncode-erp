@@ -767,14 +767,15 @@ export const Cashflow: React.FC = () => {
 
       for (const cashflow of importedCashflows) {
         try {
-          // Check if ID already exists and generate a new one if needed
+          // Check if ID already exists and skip if it does
           let cashflowId = cashflow.id || `CF-${crypto.randomUUID()}`;
           const existingCashflow = cashflowRecords.find(cf => cf.id === cashflowId);
 
           if (existingCashflow) {
-            // Generate unique ID
-            cashflowId = `CF-${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-            console.log(`ID duplicato ${cashflow.id}, generato nuovo ID: ${cashflowId}`);
+            // Skip duplicate ID
+            errorCount++;
+            console.error(`ID duplicato ${cashflow.id}, riga saltata`);
+            continue;
           }
 
           await addCashflowRecord({ ...cashflow, id: cashflowId } as CashflowRecord);
