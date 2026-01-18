@@ -10,6 +10,21 @@ interface EmailInvitation {
   role: string;
 }
 
+// Helper function to convert snake_case to camelCase
+const snakeToCamel = (obj: any): any => {
+  if (Array.isArray(obj)) {
+    return obj.map(snakeToCamel);
+  }
+  if (obj !== null && typeof obj === 'object') {
+    return Object.keys(obj).reduce((acc, key) => {
+      const camelKey = key.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
+      acc[camelKey] = snakeToCamel(obj[key]);
+      return acc;
+    }, {} as any);
+  }
+  return obj;
+};
+
 /**
  * Get email settings for the current company
  */
@@ -26,7 +41,8 @@ export async function getSmtpSettings(companyId: string): Promise<AppSettings | 
       return null;
     }
 
-    return data;
+    // Convert snake_case to camelCase
+    return snakeToCamel(data);
   } catch (err) {
     console.error('Unexpected error fetching email settings:', err);
     return null;
