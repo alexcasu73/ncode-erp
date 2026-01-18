@@ -8,9 +8,12 @@ import { Cashflow } from './components/Cashflow';
 import { FinancialStatement } from './components/FinancialStatement';
 import { Reconciliation } from './components/Reconciliation';
 import Settings from './components/Settings';
+import { UserManagement } from './components/UserManagement';
+import { Profile } from './components/Profile';
 import { Login } from './components/Login';
+import { Register } from './components/Register';
 import { InvoiceNotifications } from './components/InvoiceNotifications';
-import { Bell, User, Menu, X, Sun, Moon, RefreshCw, LogOut } from 'lucide-react';
+import { Bell, Menu, X, Sun, Moon, RefreshCw } from 'lucide-react';
 import { useTheme } from './context/ThemeContext';
 import { useData } from './context/DataContext';
 import { useAuth } from './context/AuthContext';
@@ -19,6 +22,7 @@ const App: React.FC = () => {
   const [currentView, setCurrentView] = useState('dashboard');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [authView, setAuthView] = useState<'login' | 'register'>('login');
   const { theme, toggleTheme } = useTheme();
   const { aiProcessing, stopAiProcessing, invoiceNotifications } = useData();
   const { user, loading, signOut } = useAuth();
@@ -35,9 +39,12 @@ const App: React.FC = () => {
     );
   }
 
-  // Show login if not authenticated
+  // Show login/register if not authenticated
   if (!user) {
-    return <Login />;
+    if (authView === 'register') {
+      return <Register onBackToLogin={() => setAuthView('login')} />;
+    }
+    return <Login onRegisterClick={() => setAuthView('register')} />;
   }
 
   const renderContent = () => {
@@ -49,6 +56,8 @@ const App: React.FC = () => {
       case 'cashflow': return <Cashflow />;
       case 'reconciliation': return <Reconciliation />;
       case 'financials': return <FinancialStatement />;
+      case 'users': return <UserManagement />;
+      case 'profile': return <Profile />;
       case 'settings': return <Settings />;
       default: return <Dashboard />;
     }
@@ -120,21 +129,6 @@ const App: React.FC = () => {
                 </span>
               )}
             </button>
-
-            {/* Logout */}
-            <button
-              onClick={signOut}
-              className="w-10 h-10 bg-white dark:bg-dark-card rounded-lg flex items-center justify-center shadow-sm hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
-              aria-label="Logout"
-              title="Esci"
-            >
-              <LogOut size={20} className="text-dark dark:text-white" />
-            </button>
-
-            {/* Profile */}
-            <button className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center shadow-sm overflow-hidden hover:opacity-90 transition-opacity">
-               <img src="https://picsum.photos/100/100?random=user" alt="Profile" className="w-full h-full object-cover" />
-            </button>
           </div>
         </header>
 
@@ -168,8 +162,10 @@ const App: React.FC = () => {
         )}
 
         {/* Main Content Area */}
-        <main className="flex-1 overflow-y-auto px-4 lg:px-8 py-4 lg:py-6">
-           {renderContent()}
+        <main className="flex-1 overflow-y-auto px-4 lg:px-8 pt-4 lg:pt-6 pb-6 min-h-0">
+          <div className="h-full">
+            {renderContent()}
+          </div>
         </main>
       </div>
 

@@ -47,15 +47,15 @@ export const FinancialStatement: React.FC = () => {
       return inv.anno === filterAnno && inv.statoFatturazione === filterStato;
     });
 
-    // Calcola Entrate (Valore della Produzione)
+    // Calcola Entrate (Valore della Produzione) - SOLO IMPONIBILE (senza IVA)
     const entrate = filteredInvoices
       .filter(inv => inv.tipo === 'Entrata')
-      .reduce((sum, inv) => sum + (inv.flusso || 0) + (inv.iva || 0), 0);
+      .reduce((sum, inv) => sum + (inv.flusso || 0), 0);
 
-    // Calcola Uscite (Costi della Produzione)
+    // Calcola Uscite (Costi della Produzione) - SOLO IMPONIBILE (senza IVA)
     const uscite = filteredInvoices
       .filter(inv => inv.tipo === 'Uscita')
-      .reduce((sum, inv) => sum + (inv.flusso || 0) + (inv.iva || 0), 0);
+      .reduce((sum, inv) => sum + (inv.flusso || 0), 0);
 
     const risultatoOperativo = entrate - uscite;
     const margine = entrate > 0 ? (risultatoOperativo / entrate) * 100 : 0;
@@ -342,9 +342,9 @@ export const FinancialStatement: React.FC = () => {
   };
 
   return (
-    <div ref={bilancioRef} className="space-y-6 animate-fade-in pb-8">
+    <div ref={bilancioRef} className="flex flex-col gap-6 h-full animate-fade-in">
       {/* Header */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 flex-shrink-0">
         <div>
           <h1 className="text-3xl font-bold text-dark dark:text-white">Bilancio</h1>
           <p className="text-gray-500 dark:text-gray-400 mt-1">Stato Patrimoniale e Conto Economico</p>
@@ -395,7 +395,7 @@ export const FinancialStatement: React.FC = () => {
       </div>
 
       {/* Tabs */}
-      <div className="flex p-1 bg-white dark:bg-dark-card rounded-lg w-fit border border-gray-200 dark:border-dark-border" shadow-sm>
+      <div className="flex p-1 bg-white dark:bg-dark-card rounded-lg w-fit border border-gray-200 dark:border-dark-border flex-shrink-0" shadow-sm>
         <button
           onClick={() => setActiveTab('balance')}
           className={`px-6 py-2 rounded-lg text-sm font-bold transition-all ${
@@ -418,7 +418,7 @@ export const FinancialStatement: React.FC = () => {
       {activeTab === 'balance' ? (
         <>
           {/* Balance Sheet KPI */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 flex-shrink-0">
             <div className="bg-white dark:bg-dark-card p-6 rounded-xl border-t-4 border-green-500" shadow-sm>
                 <div className="flex items-center gap-2 mb-2 text-gray-500 dark:text-gray-400">
                     <Building2 size={18} />
@@ -442,10 +442,10 @@ export const FinancialStatement: React.FC = () => {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 flex-1 min-h-0">
             {/* Attivo */}
-            <div className="bg-white dark:bg-dark-card rounded-xl overflow-hidden h-full" shadow-sm>
-              <div className="p-6 border-b border-gray-200 dark:border-dark-border bg-green-50/50 dark:bg-green-900/10 flex justify-between items-center">
+            <div className="bg-white dark:bg-dark-card rounded-xl overflow-hidden flex flex-col" shadow-sm>
+              <div className="p-6 border-b border-gray-200 dark:border-dark-border bg-green-50/50 dark:bg-green-900/10 flex justify-between items-center flex-shrink-0">
                 <h3 className="text-lg font-bold text-dark dark:text-white">Attivo</h3>
                 <button
                   onClick={() => {
@@ -463,7 +463,7 @@ export const FinancialStatement: React.FC = () => {
                   Aggiungi
                 </button>
               </div>
-              <div className="p-6">
+              <div className="p-6 flex-1 overflow-y-auto min-h-0">
                 <table className="w-full">
                   <tbody className="divide-y divide-gray-50 dark:divide-gray-800">
                     {assets.length === 0 ? (
@@ -510,8 +510,8 @@ export const FinancialStatement: React.FC = () => {
             </div>
 
             {/* Passivo */}
-            <div className="bg-white dark:bg-dark-card rounded-xl overflow-hidden h-full" shadow-sm>
-              <div className="p-6 border-b border-gray-200 dark:border-dark-border bg-red-50/50 dark:bg-red-900/10 flex justify-between items-center">
+            <div className="bg-white dark:bg-dark-card rounded-xl overflow-hidden flex flex-col" shadow-sm>
+              <div className="p-6 border-b border-gray-200 dark:border-dark-border bg-red-50/50 dark:bg-red-900/10 flex justify-between items-center flex-shrink-0">
                 <h3 className="text-lg font-bold text-dark dark:text-white">Passivo e Netto</h3>
                 <button
                   onClick={() => {
@@ -529,7 +529,7 @@ export const FinancialStatement: React.FC = () => {
                   Aggiungi
                 </button>
               </div>
-              <div className="p-6">
+              <div className="p-6 flex-1 overflow-y-auto min-h-0">
                 <table className="w-full">
                   <tbody className="divide-y divide-gray-50 dark:divide-gray-800">
                     {liabilities.length === 0 ? (
@@ -585,7 +585,7 @@ export const FinancialStatement: React.FC = () => {
       ) : (
         <>
         {/* Income Statement KPI */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 flex-shrink-0">
             <div className="bg-white dark:bg-dark-card p-6 rounded-xl border-l-4 border-green-500" shadow-sm>
                 <h3 className="text-gray-500 dark:text-gray-400 text-sm font-medium">Valore della Produzione (Entrate)</h3>
                 <p className="text-3xl font-bold text-dark dark:text-white mt-2">
@@ -607,14 +607,14 @@ export const FinancialStatement: React.FC = () => {
             </div>
           </div>
 
-          <div className="bg-white dark:bg-dark-card rounded-xl overflow-hidden" shadow-sm>
-             <div className="p-6 border-b border-gray-200 dark:border-dark-border flex justify-between items-center">
+          <div className="bg-white dark:bg-dark-card rounded-xl overflow-hidden flex-1 flex flex-col min-h-0" shadow-sm>
+             <div className="p-6 border-b border-gray-200 dark:border-dark-border flex justify-between items-center flex-shrink-0">
                  <h3 className="text-lg font-bold text-dark dark:text-white">Dettaglio Conto Economico - Anno {filterAnno}</h3>
                  <div className="text-xs text-gray-500 dark:text-gray-400">
                    Basato su fatture {filterStato.toLowerCase()}e
                  </div>
              </div>
-             <div className="p-6">
+             <div className="p-6 flex-1 overflow-y-auto min-h-0">
                 <table className="w-full">
                   <thead>
                     <tr className="text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider border-b border-gray-200 dark:border-dark-border">

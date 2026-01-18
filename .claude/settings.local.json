@@ -21,7 +21,17 @@
       "Bash(psql:*)",
       "Bash(docker system prune:*)",
       "Bash(docker restart:*)",
-      "Bash(docker logs:*)"
+      "Bash(docker logs:*)",
+      "Bash(docker exec:*)",
+      "Bash(git reset:*)",
+      "Bash(node scripts/test-multitenant.mjs:*)",
+      "Bash(docker rm:*)",
+      "Bash(python3:*)",
+      "Bash(pip3 install:*)",
+      "Bash(PGPASSWORD=postgres psql:*)",
+      "Bash(lsof:*)",
+      "Bash(xargs kill -9)",
+      "Bash(pkill:*)"
     ]
   }
 }

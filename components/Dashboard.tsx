@@ -167,7 +167,7 @@ export const Dashboard: React.FC = () => {
       ? ((currentCashBalance - lastCashBalance) / Math.abs(lastCashBalance)) * 100
       : currentCashBalance !== 0 ? 100 : 0;
 
-    // CLIENTI REALI (già cumulativi)
+    // CLIENTI REALI (totali)
     const totalCustomers = customers.length;
     const activeCustomers = customers.filter(c => c.status === 'active').length;
 
@@ -424,9 +424,9 @@ export const Dashboard: React.FC = () => {
   };
 
   return (
-    <div ref={dashboardRef} className="space-y-6 animate-fade-in pb-8">
+    <div ref={dashboardRef} className="flex flex-col gap-6 h-full animate-fade-in">
       {/* Header Section for Dashboard */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 flex-shrink-0">
         <div>
           <h1 className="text-page-title text-dark dark:text-white">Panoramica</h1>
           <p className="text-page-subtitle text-gray-500 dark:text-gray-400 mt-1">Informazioni dettagliate sulla tua attività</p>
@@ -453,11 +453,14 @@ export const Dashboard: React.FC = () => {
       </div>
 
       {/* KPI Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6 flex-shrink-0">
         {/* Revenue Card */}
         <div className="bg-white dark:bg-dark-card p-6 rounded-xl flex flex-col justify-between min-h-[180px] shadow-sm border border-gray-100 dark:border-dark-border">
           <div>
-            <h3 className="text-card-title text-gray-500 dark:text-gray-400">Fatturato Totale</h3>
+            <div className="flex items-center gap-2 mb-2">
+              <TrendingUp size={18} className="text-gray-500 dark:text-gray-400" />
+              <h3 className="text-card-title text-gray-500 dark:text-gray-400">Margine (Effettivo)</h3>
+            </div>
             <div className="flex items-center gap-3 mt-2">
               <span className={`text-kpi-value ${dashboardData.currentRevenue >= 0 ? 'text-secondary' : 'text-red-600'}`}>
                 {formatCurrency(dashboardData.currentRevenue)}
@@ -578,16 +581,16 @@ export const Dashboard: React.FC = () => {
       </div>
 
       {/* Andamento Mensile Fatturato */}
-      <div className="bg-white dark:bg-dark-card p-8 rounded-xl shadow-sm border border-gray-100 dark:border-dark-border">
-        <div className="flex justify-between items-center mb-8">
+      <div className="bg-white dark:bg-dark-card p-8 rounded-xl shadow-sm border border-gray-100 dark:border-dark-border flex-1 flex flex-col min-h-0">
+        <div className="flex justify-between items-center mb-8 flex-shrink-0">
           <h3 className="text-section-title text-dark dark:text-white">Andamento Mensile Fatturato</h3>
           <div className="text-sm text-gray-500 dark:text-gray-400">
             Anno {new Date().getFullYear()}
           </div>
         </div>
-        <div className="h-[400px] w-full">
+        <div className="w-full flex-1 min-h-0">
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={dashboardData.revenueChartData}>
+            <BarChart data={dashboardData.revenueChartData} margin={{ top: 10, right: 10, left: 10, bottom: 10 }}>
               <XAxis
                 dataKey="name"
                 axisLine={false}
@@ -608,7 +611,7 @@ export const Dashboard: React.FC = () => {
                 formatter={(value) => formatCurrency(Number(value))}
                 labelStyle={{ color: '#0EA5E9', fontWeight: 'bold' }}
               />
-              <Bar dataKey="value" fill="#0EA5E9" radius={[8, 8, 0, 0]} barSize={40} />
+              <Bar dataKey="value" fill="#0EA5E9" radius={[8, 8, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </div>

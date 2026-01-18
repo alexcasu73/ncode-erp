@@ -1,17 +1,22 @@
 import React, { useState } from 'react';
-import { LogIn } from 'lucide-react';
+import { LogIn, Building2 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
-export const Login: React.FC = () => {
+interface LoginProps {
+  onRegisterClick: () => void;
+}
+
+export const Login: React.FC<LoginProps> = ({ onRegisterClick }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const { signIn } = useAuth();
+  const { signIn, loginError, clearLoginError } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    clearLoginError(); // Clear persistent error from previous attempts
     setLoading(true);
 
     const { error: signInError } = await signIn(email, password);
@@ -42,10 +47,12 @@ export const Login: React.FC = () => {
 
           {/* Login Form */}
           <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Error Message */}
-            {error && (
+            {/* Error Message - Show persistent error OR local error */}
+            {(loginError || error) && (
               <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
-                <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
+                <p className="text-sm text-red-600 dark:text-red-400 font-medium">
+                  {loginError || error}
+                </p>
               </div>
             )}
 
@@ -63,7 +70,12 @@ export const Login: React.FC = () => {
                 required
                 autoComplete="email"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(e) => {
+                  setEmail(e.target.value);
+                  // Clear errors when user starts typing
+                  if (error) setError('');
+                  if (loginError) clearLoginError();
+                }}
                 className="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-dark-border bg-white dark:bg-dark-bg text-dark dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
                 placeholder="tuo@email.it"
               />
@@ -83,7 +95,12 @@ export const Login: React.FC = () => {
                 required
                 autoComplete="current-password"
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                onChange={(e) => {
+                  setPassword(e.target.value);
+                  // Clear errors when user starts typing
+                  if (error) setError('');
+                  if (loginError) clearLoginError();
+                }}
                 className="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-dark-border bg-white dark:bg-dark-bg text-dark dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
                 placeholder="••••••••"
               />
@@ -110,10 +127,23 @@ export const Login: React.FC = () => {
           </form>
 
           {/* Footer */}
-          <div className="mt-6 text-center">
-            <p className="text-sm text-gray-600 dark:text-gray-400">
-              Password dimenticata? Contatta l'amministratore
-            </p>
+          <div className="mt-6 space-y-3">
+            <div className="text-center">
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                Password dimenticata? Contatta l'amministratore
+              </p>
+            </div>
+
+            {/* Register Link */}
+            <div className="pt-4 border-t border-gray-200 dark:border-dark-border">
+              <button
+                onClick={onRegisterClick}
+                className="w-full text-sm text-gray-600 dark:text-gray-400 hover:text-primary dark:hover:text-primary transition-colors flex items-center justify-center gap-2 py-2"
+              >
+                <Building2 size={16} />
+                <span>Non hai un account? Registra la tua azienda</span>
+              </button>
+            </div>
           </div>
         </div>
 

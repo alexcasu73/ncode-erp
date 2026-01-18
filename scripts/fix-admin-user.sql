@@ -5,14 +5,16 @@
 -- a 500 error during login. Fix it.
 -- ============================================
 
--- Update the user to have empty string instead of NULL
+-- Update the user to have empty string instead of NULL for all token fields
 UPDATE auth.users
 SET
   confirmation_token = '',
   recovery_token = '',
   email_change_token_new = '',
   email_change_token_current = '',
-  reauthentication_token = ''
+  reauthentication_token = '',
+  email_change = '',
+  phone_change = ''
 WHERE email = 'alessandro.casu@ncodestudio.it';
 
 -- Verify the fix

@@ -1,9 +1,10 @@
 import { Deal, DealStage, Customer, Invoice, Transaction, FinancialItem } from './types';
-import { LayoutDashboard, Users, Briefcase, Receipt, PieChart, Wallet, BookOpen, FileCheck, Settings as SettingsIcon } from 'lucide-react';
+import { LayoutDashboard, Users, Briefcase, Receipt, PieChart, Wallet, BookOpen, FileCheck, Settings as SettingsIcon, UserCog, UserCircle } from 'lucide-react';
 
 export const APP_NAME = "Ncode ERP";
 
-export const NAV_ITEMS = [
+// Main navigation items (business functions)
+export const MAIN_NAV_ITEMS = [
   { id: 'dashboard', label: 'Panoramica', icon: LayoutDashboard },
   { id: 'crm', label: 'Clienti', icon: Users },
   { id: 'deals', label: 'Opportunità', icon: Briefcase },
@@ -11,8 +12,17 @@ export const NAV_ITEMS = [
   { id: 'cashflow', label: 'Flusso di Cassa', icon: Wallet },
   { id: 'reconciliation', label: 'Riconciliazione', icon: FileCheck },
   { id: 'financials', label: 'Bilancio', icon: BookOpen },
+];
+
+// Settings navigation items (system management)
+export const SETTINGS_NAV_ITEMS = [
+  { id: 'users', label: 'Utenti', icon: UserCog },
+  { id: 'profile', label: 'Profilo', icon: UserCircle },
   { id: 'settings', label: 'Impostazioni', icon: SettingsIcon },
 ];
+
+// Combined nav items for backward compatibility
+export const NAV_ITEMS = [...MAIN_NAV_ITEMS, ...SETTINGS_NAV_ITEMS];
 
 export const MOCK_CUSTOMERS: Customer[] = [
   {

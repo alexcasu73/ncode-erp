@@ -116,7 +116,7 @@ export const Invoicing: React.FC = () => {
     let filtered = invoices;
     // Applica filtri Anno e Mese dalla dashboard
     if (filterAnno !== 'tutti') {
-      filtered = filtered.filter(i => i.anno === filterAnno);
+      filtered = filtered.filter(i => i.anno == filterAnno);
     }
     if (filterMese !== 'tutti') {
       filtered = filtered.filter(i => i.mese === filterMese);
@@ -220,7 +220,8 @@ export const Invoicing: React.FC = () => {
       const matchesStato = filterStato === 'tutti' || invoiceStatus === filterStato;
 
       const matchesMeseTabella = filterMeseTabella === 'tutti' || inv.mese === filterMeseTabella;
-      const matchesAnnoTabella = filterAnnoTabella === 'tutti' || inv.anno === filterAnnoTabella;
+      // Use loose equality to handle potential type mismatches (number vs string)
+      const matchesAnnoTabella = filterAnnoTabella === 'tutti' || inv.anno == filterAnnoTabella;
 
       // Filtra fatture senza cashflow associato
       const hasCashflow = cashflowRecords.some(cf => cf.invoiceId === inv.id);

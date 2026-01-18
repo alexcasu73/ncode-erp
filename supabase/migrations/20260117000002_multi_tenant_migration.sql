@@ -99,13 +99,6 @@ CREATE INDEX IF NOT EXISTS idx_deals_company_id ON deals(company_id);
 ALTER TABLE settings
   ADD COLUMN IF NOT EXISTS company_id UUID REFERENCES companies(id) ON DELETE CASCADE;
 
--- Make the id column a compound key with company_id
--- First, drop the existing primary key
-ALTER TABLE settings DROP CONSTRAINT IF EXISTS settings_pkey;
-
--- Add new composite primary key
-ALTER TABLE settings ADD PRIMARY KEY (id, company_id);
-
 CREATE INDEX IF NOT EXISTS idx_settings_company_id ON settings(company_id);
 
 -- ============================================
@@ -158,6 +151,17 @@ WHERE company_id IS NULL;
 UPDATE settings
 SET company_id = '00000000-0000-0000-0000-000000000001'
 WHERE company_id IS NULL;
+
+-- ============================================
+-- STEP 6.5: Update settings table primary key
+-- ============================================
+
+-- Make the id column a compound key with company_id
+-- First, drop the existing primary key
+ALTER TABLE settings DROP CONSTRAINT IF EXISTS settings_pkey;
+
+-- Add new composite primary key
+ALTER TABLE settings ADD PRIMARY KEY (id, company_id);
 
 -- ============================================
 -- STEP 7: Make company_id NOT NULL

@@ -354,6 +354,27 @@ export const Cashflow: React.FC = () => {
     };
   }, [recordsForDashboard]);
 
+  // Calcola totali dei movimenti visualizzati (filtrati e ordinati)
+  const visualizedTotals = useMemo(() => {
+    const entrate = sortedRecords.filter(cf => {
+      const tipo = cf.invoice?.tipo || cf.tipo;
+      return tipo === 'Entrata';
+    });
+    const uscite = sortedRecords.filter(cf => {
+      const tipo = cf.invoice?.tipo || cf.tipo;
+      return tipo === 'Uscita';
+    });
+
+    const totaleEntrate = entrate.reduce((acc, cf) => acc + getImportoEffettivo(cf), 0);
+    const totaleUscite = uscite.reduce((acc, cf) => acc + getImportoEffettivo(cf), 0);
+
+    return {
+      entrate: totaleEntrate,
+      uscite: totaleUscite,
+      saldo: totaleEntrate - totaleUscite,
+    };
+  }, [sortedRecords]);
+
   // Saldo iniziale e saldo in banca per l'anno selezionato
   const currentBankBalance = useMemo(() => {
     if (filterAnno === 'tutti') return undefined;
@@ -1260,9 +1281,24 @@ export const Cashflow: React.FC = () => {
             </div>
           )}
 
-          {/* Footer con conteggio */}
-          <div className="p-4 border-t border-gray-200 bg-gray-50 dark:bg-gray-800/30 text-sm text-gray-500 dark:text-gray-400">
-            {sortedRecords.length} movimenti visualizzati
+          {/* Footer con conteggio e totali */}
+          <div className="p-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/30">
+            <div className="flex items-center justify-between gap-4 flex-wrap">
+              <span className="text-sm text-gray-500 dark:text-gray-400">
+                {sortedRecords.length} movimenti visualizzati
+              </span>
+              <div className="flex items-center gap-6 text-sm font-medium">
+                <span className="text-green-600 dark:text-green-400">
+                  Entrate: {formatCurrency(visualizedTotals.entrate)}
+                </span>
+                <span className="text-red-600 dark:text-red-400">
+                  Uscite: {formatCurrency(visualizedTotals.uscite)}
+                </span>
+                <span className={`font-semibold ${visualizedTotals.saldo >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                  Saldo: {formatCurrency(visualizedTotals.saldo)}
+                </span>
+              </div>
+            </div>
           </div>
           </div>
         </div>
@@ -1343,7 +1379,7 @@ export const Cashflow: React.FC = () => {
                   <option value="">Nessuna fattura (movimento standalone)</option>
                   {invoicesDisponibili.map(inv => (
                     <option key={inv.id} value={inv.id}>
-                      {formatInvoiceNumber(inv.id, inv.anno)} | {formatInvoiceDate(inv.data)} | {inv.nomeProgetto || inv.spesa || 'N/A'} ({inv.tipo}) - {formatCurrency((inv.flusso || 0) + (inv.iva || 0))}
+                      {formatInvoiceNumber(inv.id, inv.anno)} | {formatInvoiceDate(inv.data)} | {inv.nomeProgetto || inv.spesa || 'N/A'} ({inv.tipo}) - {formatCurrency((inv.flusso || 0) + (inv.iva || 0))}{inv.note ? ` | ${inv.note}` : ''}
                     </option>
                   ))}
                 </select>
