@@ -823,6 +823,56 @@ const Settings: React.FC = () => {
                   />
                 </div>
               </div>
+
+              {/* Test Google OAuth2 */}
+              <div className="border-t border-gray-200 dark:border-dark-border pt-4">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Testa Configurazione Google OAuth2
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    type="email"
+                    value={testEmail}
+                    onChange={(e) => setTestEmail(e.target.value)}
+                    placeholder="Email di test"
+                    className="flex-1 px-4 py-2 rounded-lg border border-gray-300 dark:border-dark-border bg-white dark:bg-dark-bg text-dark dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleTestSmtp}
+                    disabled={testingSmtp || !testEmail}
+                    className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {testingSmtp ? (
+                      <>
+                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                        Invio...
+                      </>
+                    ) : (
+                      <>
+                        <Send size={16} />
+                        Invia Test
+                      </>
+                    )}
+                  </button>
+                </div>
+
+                {smtpTestResult && (
+                  <div className={`mt-3 p-3 rounded-lg border ${
+                    smtpTestResult.success
+                      ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800'
+                      : 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800'
+                  }`}>
+                    <p className={`text-sm ${
+                      smtpTestResult.success
+                        ? 'text-green-800 dark:text-green-200'
+                        : 'text-red-800 dark:text-red-200'
+                    }`}>
+                      {smtpTestResult.message}
+                    </p>
+                  </div>
+                )}
+              </div>
             </div>
           )}
         </div>
