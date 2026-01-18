@@ -14,6 +14,15 @@ export interface AppSettings {
   anthropicApiKey: string;
   openaiApiKey: string;
   notificationRefreshInterval: 1 | 3 | 5; // Intervallo refresh notifiche in minuti
+  // SMTP Settings for email invitations
+  smtpEnabled?: boolean;
+  smtpHost?: string; // es. smtp.gmail.com
+  smtpPort?: number; // es. 587 o 465
+  smtpSecure?: boolean; // true per porta 465, false per 587
+  smtpUser?: string; // email mittente
+  smtpPassword?: string; // password o app password
+  smtpFromName?: string; // nome mittente
+  smtpFromEmail?: string; // email mittente
   updatedAt?: string;
 }
 

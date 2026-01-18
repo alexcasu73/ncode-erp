@@ -1,9 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { Save, Eye, EyeOff, Key, AlertCircle, CheckCircle, Sparkles, Bell } from 'lucide-react';
+import { Save, Eye, EyeOff, Key, AlertCircle, CheckCircle, Sparkles, Bell, Mail, Send } from 'lucide-react';
 import { useData } from '../context/DataContext';
+import { testSmtpConfiguration } from '../lib/email';
+import { useAuth } from '../context/AuthContext';
 
 const Settings: React.FC = () => {
   const { settings: dbSettings, updateSettings, getSettings } = useData();
+  const { companyId } = useAuth();
 
   const [defaultProvider, setDefaultProvider] = useState<'anthropic' | 'openai'>('anthropic');
   const [anthropicApiKey, setAnthropicApiKey] = useState('');
@@ -12,6 +15,20 @@ const Settings: React.FC = () => {
   const [showAnthropicKey, setShowAnthropicKey] = useState(false);
   const [showOpenAIKey, setShowOpenAIKey] = useState(false);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+
+  // SMTP Settings
+  const [smtpEnabled, setSmtpEnabled] = useState(false);
+  const [smtpHost, setSmtpHost] = useState('smtp.gmail.com');
+  const [smtpPort, setSmtpPort] = useState(587);
+  const [smtpSecure, setSmtpSecure] = useState(false);
+  const [smtpUser, setSmtpUser] = useState('');
+  const [smtpPassword, setSmtpPassword] = useState('');
+  const [smtpFromName, setSmtpFromName] = useState('');
+  const [smtpFromEmail, setSmtpFromEmail] = useState('');
+  const [showSmtpPassword, setShowSmtpPassword] = useState(false);
+  const [testingSmtp, setTestingSmtp] = useState(false);
+  const [testEmail, setTestEmail] = useState('');
+  const [smtpTestResult, setSmtpTestResult] = useState<{ success: boolean; message: string } | null>(null);
 
   // Load settings from database on mount ONCE
   useEffect(() => {
@@ -24,6 +41,16 @@ const Settings: React.FC = () => {
         // Cast to correct type
         const interval = settings.notificationRefreshInterval || 5;
         setNotificationRefreshInterval([1, 3, 5].includes(interval) ? interval as 1 | 3 | 5 : 5);
+
+        // Load SMTP settings
+        setSmtpEnabled(settings.smtpEnabled || false);
+        setSmtpHost(settings.smtpHost || 'smtp.gmail.com');
+        setSmtpPort(settings.smtpPort || 587);
+        setSmtpSecure(settings.smtpSecure || false);
+        setSmtpUser(settings.smtpUser || '');
+        setSmtpPassword(settings.smtpPassword || '');
+        setSmtpFromName(settings.smtpFromName || '');
+        setSmtpFromEmail(settings.smtpFromEmail || '');
       }
     };
     loadSettings();
@@ -44,7 +71,15 @@ const Settings: React.FC = () => {
         defaultAiProvider: defaultProvider,
         anthropicApiKey,
         openaiApiKey,
-        notificationRefreshInterval
+        notificationRefreshInterval,
+        smtpEnabled,
+        smtpHost,
+        smtpPort,
+        smtpSecure,
+        smtpUser,
+        smtpPassword,
+        smtpFromName,
+        smtpFromEmail,
       });
 
       if (success) {
@@ -63,6 +98,28 @@ const Settings: React.FC = () => {
       console.error('Error saving settings:', err);
       setSaveStatus('error');
       setTimeout(() => setSaveStatus('idle'), 2000);
+    }
+  };
+
+  const handleTestSmtp = async () => {
+    if (!testEmail) {
+      setSmtpTestResult({ success: false, message: 'Inserisci un\'email di test' });
+      return;
+    }
+
+    setTestingSmtp(true);
+    setSmtpTestResult(null);
+
+    try {
+      const result = await testSmtpConfiguration(companyId!, testEmail);
+      setSmtpTestResult({
+        success: result.success,
+        message: result.success ? 'Email di test inviata con successo!' : result.error || 'Errore invio email'
+      });
+    } catch (err: any) {
+      setSmtpTestResult({ success: false, message: err.message || 'Errore imprevisto' });
+    } finally {
+      setTestingSmtp(false);
     }
   };
 
@@ -338,6 +395,202 @@ const Settings: React.FC = () => {
         <div className="mt-4 text-xs text-gray-500 dark:text-gray-400">
           Il sistema controllerà automaticamente le scadenze delle fatture ogni {notificationRefreshInterval} {notificationRefreshInterval === 1 ? 'minuto' : 'minuti'}
         </div>
+      </div>
+
+      {/* SMTP Configuration for Email Invitations */}
+      <div className="bg-white dark:bg-dark-card rounded-lg border border-gray-200 dark:border-dark-border p-6 mb-6 shadow-sm">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h2 className="text-xl font-semibold text-dark dark:text-white flex items-center gap-2">
+              <Mail size={20} />
+              Configurazione Email (SMTP)
+            </h2>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+              Configura SMTP per inviare inviti via email ai nuovi utenti
+            </p>
+          </div>
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={smtpEnabled}
+              onChange={(e) => setSmtpEnabled(e.target.checked)}
+              className="w-5 h-5 text-primary rounded focus:ring-2 focus:ring-primary"
+            />
+            <span className="text-sm font-medium text-dark dark:text-white">
+              {smtpEnabled ? 'Abilitato' : 'Disabilitato'}
+            </span>
+          </label>
+        </div>
+
+        {smtpEnabled && (
+          <div className="space-y-4">
+            {/* Gmail Quick Setup */}
+            <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+              <h3 className="font-semibold text-blue-900 dark:text-blue-300 mb-2">📧 Configurazione Gmail</h3>
+              <ol className="text-sm text-blue-800 dark:text-blue-200 space-y-1 list-decimal list-inside">
+                <li>Abilita la verifica in due passaggi su Gmail</li>
+                <li>Vai su <a href="https://myaccount.google.com/apppasswords" target="_blank" rel="noopener noreferrer" className="underline">myaccount.google.com/apppasswords</a></li>
+                <li>Crea una "Password per l'app" per "Mail"</li>
+                <li>Usa la password generata nel campo "Password SMTP" qui sotto</li>
+              </ol>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              {/* SMTP Host */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Host SMTP
+                </label>
+                <input
+                  type="text"
+                  value={smtpHost}
+                  onChange={(e) => setSmtpHost(e.target.value)}
+                  placeholder="smtp.gmail.com"
+                  className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-dark-border bg-white dark:bg-dark-bg text-dark dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
+                />
+              </div>
+
+              {/* SMTP Port */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Porta
+                </label>
+                <select
+                  value={smtpPort}
+                  onChange={(e) => {
+                    const port = parseInt(e.target.value);
+                    setSmtpPort(port);
+                    setSmtpSecure(port === 465);
+                  }}
+                  className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-dark-border bg-white dark:bg-dark-bg text-dark dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
+                >
+                  <option value="587">587 (TLS/STARTTLS)</option>
+                  <option value="465">465 (SSL)</option>
+                  <option value="25">25 (non crittografato)</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              {/* SMTP User */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Username / Email
+                </label>
+                <input
+                  type="email"
+                  value={smtpUser}
+                  onChange={(e) => setSmtpUser(e.target.value)}
+                  placeholder="tuoemail@gmail.com"
+                  className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-dark-border bg-white dark:bg-dark-bg text-dark dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
+                />
+              </div>
+
+              {/* SMTP Password */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Password SMTP
+                </label>
+                <div className="relative">
+                  <input
+                    type={showSmtpPassword ? 'text' : 'password'}
+                    value={smtpPassword}
+                    onChange={(e) => setSmtpPassword(e.target.value)}
+                    placeholder="Password app Gmail"
+                    className="w-full px-4 pr-12 py-2 rounded-lg border border-gray-300 dark:border-dark-border bg-white dark:bg-dark-bg text-dark dark:text-white focus:outline-none focus:ring-2 focus:ring-primary font-mono text-sm"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowSmtpPassword(!showSmtpPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400 hover:text-dark dark:hover:text-white"
+                  >
+                    {showSmtpPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              {/* From Name */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Nome Mittente
+                </label>
+                <input
+                  type="text"
+                  value={smtpFromName}
+                  onChange={(e) => setSmtpFromName(e.target.value)}
+                  placeholder="Ncode ERP"
+                  className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-dark-border bg-white dark:bg-dark-bg text-dark dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
+                />
+              </div>
+
+              {/* From Email */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Email Mittente
+                </label>
+                <input
+                  type="email"
+                  value={smtpFromEmail}
+                  onChange={(e) => setSmtpFromEmail(e.target.value)}
+                  placeholder="noreply@tuodominio.com"
+                  className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-dark-border bg-white dark:bg-dark-bg text-dark dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
+                />
+              </div>
+            </div>
+
+            {/* Test SMTP */}
+            <div className="border-t border-gray-200 dark:border-dark-border pt-4">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Testa Configurazione SMTP
+              </label>
+              <div className="flex gap-2">
+                <input
+                  type="email"
+                  value={testEmail}
+                  onChange={(e) => setTestEmail(e.target.value)}
+                  placeholder="Email di test"
+                  className="flex-1 px-4 py-2 rounded-lg border border-gray-300 dark:border-dark-border bg-white dark:bg-dark-bg text-dark dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
+                />
+                <button
+                  type="button"
+                  onClick={handleTestSmtp}
+                  disabled={testingSmtp || !testEmail}
+                  className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {testingSmtp ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                      Invio...
+                    </>
+                  ) : (
+                    <>
+                      <Send size={16} />
+                      Invia Test
+                    </>
+                  )}
+                </button>
+              </div>
+
+              {smtpTestResult && (
+                <div className={`mt-3 p-3 rounded-lg border ${
+                  smtpTestResult.success
+                    ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800'
+                    : 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800'
+                }`}>
+                  <p className={`text-sm ${
+                    smtpTestResult.success
+                      ? 'text-green-800 dark:text-green-200'
+                      : 'text-red-800 dark:text-red-200'
+                  }`}>
+                    {smtpTestResult.message}
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Warning if no key configured */}
