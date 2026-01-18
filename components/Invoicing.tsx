@@ -1,8 +1,9 @@
 import React, { useState, useMemo } from 'react';
 import { useData } from '../context/DataContext';
 import { Invoice, Deal, DealStage } from '../types';
-import { Plus, Download, Filter, ArrowUpCircle, ArrowDownCircle, Search, Calendar, Eye, Edit2, Trash2, X, Check, ChevronUp, ChevronDown, ChevronsUpDown, RotateCcw } from 'lucide-react';
+import { Plus, Download, Upload, Filter, ArrowUpCircle, ArrowDownCircle, Search, Calendar, Eye, Edit2, Trash2, X, Check, ChevronUp, ChevronDown, ChevronsUpDown, RotateCcw } from 'lucide-react';
 import { formatCurrency } from '../lib/currency';
+import { exportInvoicesToExcel, importInvoicesFromExcel } from '../lib/import-export';
 
 // Mesi italiani
 const MESI = ['Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno', 'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre'];
@@ -61,6 +62,8 @@ export const Invoicing: React.FC = () => {
   const [showModal, setShowModal] = useState(false);
   const [editingInvoice, setEditingInvoice] = useState<Invoice | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [importing, setImporting] = useState(false);
+  const [importErrors, setImportErrors] = useState<string[]>([]);
 
   // Persist filters to localStorage
   React.useEffect(() => {
@@ -326,6 +329,46 @@ export const Invoicing: React.FC = () => {
     setDeleteConfirmDialog({ type: 'bulk', count: selectedIds.size });
   };
 
+  // Export invoices to Excel
+  const handleExport = () => {
+    const dataToExport = filteredInvoices.length > 0 ? filteredInvoices : invoices;
+    exportInvoicesToExcel(dataToExport, `fatture_${new Date().toISOString().split('T')[0]}.xlsx`);
+  };
+
+  // Import invoices from Excel
+  const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setImporting(true);
+    setImportErrors([]);
+
+    try {
+      const { invoices: importedInvoices, errors } = await importInvoicesFromExcel(file);
+
+      if (errors.length > 0) {
+        setImportErrors(errors);
+      }
+
+      // Add imported invoices to database
+      for (const invoice of importedInvoices) {
+        await addInvoice(invoice as Invoice);
+      }
+
+      alert(`Import completato! ${importedInvoices.length} fatture importate${errors.length > 0 ? ` con ${errors.length} errori` : ''}.`);
+
+      if (errors.length > 0) {
+        console.error('Import errors:', errors);
+      }
+    } catch (err) {
+      alert(`Errore durante l'import: ${err instanceof Error ? err.message : 'errore sconosciuto'}`);
+    } finally {
+      setImporting(false);
+      // Reset input
+      e.target.value = '';
+    }
+  };
+
   return (
     <div className="space-y-6 animate-fade-in pb-8">
       {/* Header */}
@@ -334,13 +377,40 @@ export const Invoicing: React.FC = () => {
           <h1 className="text-page-title text-dark dark:text-white">Fatturazione</h1>
           <p className="text-page-subtitle mt-1">Gestione entrate e uscite</p>
         </div>
-        <button
-          onClick={() => { setEditingInvoice(null); setShowModal(true); }}
-          className="bg-primary text-white px-6 py-2 rounded-lg font-medium hover:opacity-90 transition-all flex items-center gap-2 shadow-sm"
-        >
-          <Plus size={18} />
-          Nuova Voce
-        </button>
+        <div className="flex items-center gap-2">
+          {/* Export Button */}
+          <button
+            onClick={handleExport}
+            disabled={invoices.length === 0}
+            className="bg-white dark:bg-dark-card border border-gray-300 dark:border-dark-border text-dark dark:text-white px-4 py-2 rounded-lg font-medium hover:bg-gray-50 dark:hover:bg-gray-800 transition-all flex items-center gap-2 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+            title="Esporta in Excel"
+          >
+            <Download size={18} />
+            <span className="hidden sm:inline">Esporta</span>
+          </button>
+
+          {/* Import Button */}
+          <label className="bg-white dark:bg-dark-card border border-gray-300 dark:border-dark-border text-dark dark:text-white px-4 py-2 rounded-lg font-medium hover:bg-gray-50 dark:hover:bg-gray-800 transition-all flex items-center gap-2 shadow-sm cursor-pointer">
+            <Upload size={18} />
+            <span className="hidden sm:inline">{importing ? 'Importando...' : 'Importa'}</span>
+            <input
+              type="file"
+              accept=".xlsx,.xls"
+              onChange={handleImport}
+              disabled={importing}
+              className="hidden"
+            />
+          </label>
+
+          {/* Add New Button */}
+          <button
+            onClick={() => { setEditingInvoice(null); setShowModal(true); }}
+            className="bg-primary text-white px-6 py-2 rounded-lg font-medium hover:opacity-90 transition-all flex items-center gap-2 shadow-sm"
+          >
+            <Plus size={18} />
+            <span className="hidden sm:inline">Nuova Voce</span>
+          </button>
+        </div>
       </div>
 
       {/* Selettore Anno e Toggle Vista Stato */}

@@ -1,8 +1,9 @@
 import React, { useState, useMemo, useRef } from 'react';
 import { useData } from '../context/DataContext';
 import { Customer } from '../types';
-import { Search, Plus, Filter, Mail, Phone, MapPin, Edit2, Trash2, X, Check, Building2, ChevronUp, ChevronDown, ChevronsUpDown, Upload, Image as ImageIcon } from 'lucide-react';
+import { Search, Plus, Filter, Mail, Phone, MapPin, Edit2, Trash2, X, Check, Building2, ChevronUp, ChevronDown, ChevronsUpDown, Upload, Download, Image as ImageIcon } from 'lucide-react';
 import { formatCurrency } from '../lib/currency';
+import { exportCustomersToExcel, importCustomersFromExcel } from '../lib/import-export';
 
 export const CRM: React.FC = () => {
   const { customers, loading, addCustomer, updateCustomer, deleteCustomer } = useData();
@@ -11,6 +12,8 @@ export const CRM: React.FC = () => {
   const [showModal, setShowModal] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [importing, setImporting] = useState(false);
+  const [importErrors, setImportErrors] = useState<string[]>([]);
 
   // Sorting state
   type SortColumn = 'name' | 'company' | 'status' | 'revenue';
@@ -137,6 +140,46 @@ export const CRM: React.FC = () => {
     }
   };
 
+  // Export customers to Excel
+  const handleExport = () => {
+    const dataToExport = sortedCustomers.length > 0 ? sortedCustomers : customers;
+    exportCustomersToExcel(dataToExport, `clienti_${new Date().toISOString().split('T')[0]}.xlsx`);
+  };
+
+  // Import customers from Excel
+  const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setImporting(true);
+    setImportErrors([]);
+
+    try {
+      const { customers: importedCustomers, errors } = await importCustomersFromExcel(file);
+
+      if (errors.length > 0) {
+        setImportErrors(errors);
+      }
+
+      // Add imported customers to database
+      for (const customer of importedCustomers) {
+        await addCustomer(customer as Customer);
+      }
+
+      alert(`Import completato! ${importedCustomers.length} clienti importati${errors.length > 0 ? ` con ${errors.length} errori` : ''}.`);
+
+      if (errors.length > 0) {
+        console.error('Import errors:', errors);
+      }
+    } catch (err) {
+      alert(`Errore durante l'import: ${err instanceof Error ? err.message : 'errore sconosciuto'}`);
+    } finally {
+      setImporting(false);
+      // Reset input
+      e.target.value = '';
+    }
+  };
+
   return (
     <div className="space-y-6 animate-fade-in pb-8">
       {/* Header */}
@@ -145,13 +188,40 @@ export const CRM: React.FC = () => {
           <h1 className="text-page-title text-dark dark:text-white">Clienti</h1>
           <p className="text-page-subtitle mt-1">Gestisci le relazioni con i clienti</p>
         </div>
-        <button
-          onClick={() => { setEditingCustomer(null); setShowModal(true); }}
-          className="bg-primary text-white px-6 py-2 rounded-lg font-medium hover:opacity-90 transition-all flex items-center gap-2 shadow-sm"
-        >
-          <Plus size={18} />
-          Aggiungi Cliente
-        </button>
+        <div className="flex items-center gap-2">
+          {/* Export Button */}
+          <button
+            onClick={handleExport}
+            disabled={customers.length === 0}
+            className="bg-white dark:bg-dark-card border border-gray-300 dark:border-dark-border text-dark dark:text-white px-4 py-2 rounded-lg font-medium hover:bg-gray-50 dark:hover:bg-gray-800 transition-all flex items-center gap-2 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+            title="Esporta in Excel"
+          >
+            <Download size={18} />
+            <span className="hidden sm:inline">Esporta</span>
+          </button>
+
+          {/* Import Button */}
+          <label className="bg-white dark:bg-dark-card border border-gray-300 dark:border-dark-border text-dark dark:text-white px-4 py-2 rounded-lg font-medium hover:bg-gray-50 dark:hover:bg-gray-800 transition-all flex items-center gap-2 shadow-sm cursor-pointer">
+            <Upload size={18} />
+            <span className="hidden sm:inline">{importing ? 'Importando...' : 'Importa'}</span>
+            <input
+              type="file"
+              accept=".xlsx,.xls"
+              onChange={handleImport}
+              disabled={importing}
+              className="hidden"
+            />
+          </label>
+
+          {/* Add New Button */}
+          <button
+            onClick={() => { setEditingCustomer(null); setShowModal(true); }}
+            className="bg-primary text-white px-6 py-2 rounded-lg font-medium hover:opacity-90 transition-all flex items-center gap-2 shadow-sm"
+          >
+            <Plus size={18} />
+            <span className="hidden sm:inline">Aggiungi Cliente</span>
+          </button>
+        </div>
       </div>
 
       {/* KPI Cards */}

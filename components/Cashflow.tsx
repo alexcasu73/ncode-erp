@@ -2,8 +2,9 @@ import React, { useState, useMemo } from 'react';
 import { XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, BarChart, Bar } from 'recharts';
 import { useData } from '../context/DataContext';
 import { CashflowRecord, Invoice } from '../types';
-import { Plus, ArrowUpCircle, ArrowDownCircle, Calendar, Search, ChevronUp, ChevronDown, ChevronsUpDown, X, Edit2, Trash2, Wallet, Settings, RotateCcw, Check } from 'lucide-react';
+import { Plus, ArrowUpCircle, ArrowDownCircle, Calendar, Search, ChevronUp, ChevronDown, ChevronsUpDown, X, Edit2, Trash2, Wallet, Settings, RotateCcw, Check, Download, Upload } from 'lucide-react';
 import { formatCurrency } from '../lib/currency';
+import { exportCashflowToExcel, importCashflowFromExcel } from '../lib/import-export';
 
 // Mesi italiani abbreviati
 const MESI_ABR = ['Gen', 'Feb', 'Mar', 'Apr', 'Mag', 'Giu', 'Lug', 'Ago', 'Set', 'Ott', 'Nov', 'Dic'];
@@ -117,6 +118,8 @@ export const Cashflow: React.FC = () => {
   const [showBankBalanceModal, setShowBankBalanceModal] = useState(false);
   const [bankBalanceInput, setBankBalanceInput] = useState<string>('');
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [importing, setImporting] = useState(false);
+  const [importErrors, setImportErrors] = useState<string[]>([]);
 
   // Persist filters to localStorage
   React.useEffect(() => {
@@ -737,6 +740,46 @@ export const Cashflow: React.FC = () => {
     return invoices.find(inv => inv.id === formInvoiceId);
   }, [formInvoiceId, invoices]);
 
+  // Export cashflows to Excel
+  const handleExport = () => {
+    const dataToExport = filteredRecords.length > 0 ? filteredRecords : cashflowRecords;
+    exportCashflowToExcel(dataToExport, `flussi-cassa_${new Date().toISOString().split('T')[0]}.xlsx`);
+  };
+
+  // Import cashflows from Excel
+  const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setImporting(true);
+    setImportErrors([]);
+
+    try {
+      const { cashflows: importedCashflows, errors } = await importCashflowFromExcel(file);
+
+      if (errors.length > 0) {
+        setImportErrors(errors);
+      }
+
+      // Add imported cashflows to database
+      for (const cashflow of importedCashflows) {
+        await addCashflowRecord(cashflow as CashflowRecord);
+      }
+
+      alert(`Import completato! ${importedCashflows.length} flussi di cassa importati${errors.length > 0 ? ` con ${errors.length} errori` : ''}.`);
+
+      if (errors.length > 0) {
+        console.error('Import errors:', errors);
+      }
+    } catch (err) {
+      alert(`Errore durante l'import: ${err instanceof Error ? err.message : 'errore sconosciuto'}`);
+    } finally {
+      setImporting(false);
+      // Reset input
+      e.target.value = '';
+    }
+  };
+
   if (loading) {
     return <div className="flex items-center justify-center h-64">Caricamento...</div>;
   }
@@ -749,13 +792,40 @@ export const Cashflow: React.FC = () => {
           <h1 className="text-page-title text-dark dark:text-white">Flusso di Cassa</h1>
           <p className="text-page-subtitle text-gray-500 dark:text-gray-400 mt-1">Monitora entrate, uscite e liquidità</p>
         </div>
-        <button
-          onClick={openNewModal}
-          className="bg-primary text-white px-6 py-2 rounded-lg font-medium hover:opacity-90 transition-all flex items-center gap-2 shadow-sm"
-        >
-          <Plus size={18} />
-          Aggiungi Movimento
-        </button>
+        <div className="flex items-center gap-2">
+          {/* Export Button */}
+          <button
+            onClick={handleExport}
+            disabled={cashflowRecords.length === 0}
+            className="bg-white dark:bg-dark-card border border-gray-300 dark:border-dark-border text-dark dark:text-white px-4 py-2 rounded-lg font-medium hover:bg-gray-50 dark:hover:bg-gray-800 transition-all flex items-center gap-2 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+            title="Esporta in Excel"
+          >
+            <Download size={18} />
+            <span className="hidden sm:inline">Esporta</span>
+          </button>
+
+          {/* Import Button */}
+          <label className="bg-white dark:bg-dark-card border border-gray-300 dark:border-dark-border text-dark dark:text-white px-4 py-2 rounded-lg font-medium hover:bg-gray-50 dark:hover:bg-gray-800 transition-all flex items-center gap-2 shadow-sm cursor-pointer">
+            <Upload size={18} />
+            <span className="hidden sm:inline">{importing ? 'Importando...' : 'Importa'}</span>
+            <input
+              type="file"
+              accept=".xlsx,.xls"
+              onChange={handleImport}
+              disabled={importing}
+              className="hidden"
+            />
+          </label>
+
+          {/* Add New Button */}
+          <button
+            onClick={openNewModal}
+            className="bg-primary text-white px-6 py-2 rounded-lg font-medium hover:opacity-90 transition-all flex items-center gap-2 shadow-sm"
+          >
+            <Plus size={18} />
+            <span className="hidden sm:inline">Aggiungi Movimento</span>
+          </button>
+        </div>
       </div>
 
       {/* Filtri Anno e Stato */}
