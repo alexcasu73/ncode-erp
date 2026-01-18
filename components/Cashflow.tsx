@@ -773,7 +773,7 @@ export const Cashflow: React.FC = () => {
 
   // Export cashflows to Excel
   const handleExport = () => {
-    const dataToExport = filteredRecords.length > 0 ? filteredRecords : cashflowRecords;
+    const dataToExport = sortedRecords.length > 0 ? sortedRecords : cashflowRecords;
     exportCashflowToExcel(dataToExport, `flussi-cassa_${new Date().toISOString().split('T')[0]}.xlsx`);
   };
 
