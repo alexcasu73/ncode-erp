@@ -336,7 +336,18 @@ export async function sendInvitationEmail(
 
     if (error) {
       console.error('Error sending email:', error);
-      return { success: false, error: error.message || 'Errore invio email' };
+
+      // Provide more helpful error message
+      let errorMessage = error.message || 'Errore invio email';
+
+      if (errorMessage.includes('FunctionsRelayError') || errorMessage.includes('non-2xx')) {
+        errorMessage = 'Edge Function non disponibile. Per testare l\'invio email:\n\n' +
+          '1. Deploy su Supabase Cloud: supabase functions deploy send-email\n' +
+          '2. Oppure avvia localmente: supabase functions serve\n\n' +
+          'L\'invio email funzionerà in produzione dopo il deploy.';
+      }
+
+      return { success: false, error: errorMessage };
     }
 
     return { success: true };

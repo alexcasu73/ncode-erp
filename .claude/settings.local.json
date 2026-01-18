@@ -32,7 +32,9 @@
       "Bash(lsof:*)",
       "Bash(xargs kill -9)",
       "Bash(pkill:*)",
-      "Bash(find:*)"
+      "Bash(find:*)",
+      "Bash(docker ps:*)",
+      "Bash(supabase functions serve:*)"
     ]
   }
 }
