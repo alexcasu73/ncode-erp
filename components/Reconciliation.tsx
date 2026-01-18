@@ -2066,47 +2066,13 @@ export const Reconciliation: React.FC = () => {
       // Select session immediately so transactions appear as they're added
       setSelectedSession(sessionId);
 
-      // Check if AI keys are configured before starting AI processing
-      const canUseAI = aiMatchingEnabled && aiKeysConfigured;
+      // Import all bank transactions WITHOUT AI processing
+      // User will trigger AI analysis manually with "Analizza Tutti con AI" button
+      console.log(`📊 Importing ${parsed.transactions.length} transactions...`);
 
-      if (aiMatchingEnabled && !aiKeysConfigured) {
-        setError('⚠️ AI Matching è abilitato ma le API keys non sono configurate. Le transazioni verranno importate senza matching automatico. Configura le chiavi nelle Impostazioni.');
-      }
-
-      // Create bank transactions with AI matching (if enabled AND keys configured)
-      if (canUseAI) {
-        setAiProcessing({
-          isProcessing: true,
-          sessionId,
-          current: 0,
-          total: parsed.transactions.length,
-          shouldStop: false
-        });
-        stopAIProcessingRef.current = false; // Reset ref
-        setIsStoppingAI(false);
-      }
-      let matchedCount = 0;
-
-      // Track matched cashflows to prevent duplicates
-      const matchedCashflowIds = new Set<string>();
-
-      let shouldStop = false;
-
-      for (let i = 0; i < parsed.transactions.length && !shouldStop; i++) {
-        // Check if user wants to stop - use ref for most up-to-date value
-        shouldStop = stopAIProcessingRef.current;
-        if (shouldStop) {
-          console.log(`⏹️⏹️⏹️ AI processing STOPPED by user at ${i}/${parsed.transactions.length}`);
-          console.log(`Breaking out of loop NOW`);
-          break;
-        }
-
+      for (let i = 0; i < parsed.transactions.length; i++) {
         const tx = parsed.transactions[i];
-        console.log(`📊 Processing transaction ${i + 1}/${parsed.transactions.length} ${canUseAI ? 'with AI' : 'without AI'}`);
-        if (canUseAI) {
-          // Only update progress, don't touch other fields
-          setAiProcessing({ current: i + 1 });
-        }
+        console.log(`📊 Importing transaction ${i + 1}/${parsed.transactions.length}`);
 
         const bankTx: BankTransaction = {
           id: crypto.randomUUID(),
@@ -2122,194 +2088,16 @@ export const Reconciliation: React.FC = () => {
           companyId: '00000000-0000-0000-0000-000000000001' // Ncode Studio
         };
 
-        // Try automatic matching with AI (only if enabled, keys configured, and no errors)
-        if (canUseAI && !tx.hasErrors) {
-        try {
-          console.log(`[AI Match ${i+1}/${parsed.transactions.length}] Analyzing transaction:`, {
-            descrizione: tx.descrizione,
-            importo: tx.importo,
-            tipo: tx.tipo,
-            data: tx.data
-          });
-          console.log(`Available invoices: ${invoices.length}, cashflow records: ${cashflowRecords.length}`);
-          console.log(`Sample cashflow IDs:`, cashflowRecords.slice(0, 5).map(cf => cf.id));
-
-          // Filter out cashflows already used in this batch
-          const availableCashflows = cashflowRecords.filter(cf => !matchedCashflowIds.has(cf.id));
-          console.log(`Available cashflows after filtering used ones: ${availableCashflows.length}/${cashflowRecords.length}`);
-
-          const modelInfo = getAiModelInfo(selectedAiModel);
-          console.log(`🤖 Using AI model: ${modelInfo.name} (${modelInfo.id})`);
-          const aiMatchResult = await suggestMatch(bankTx, invoices, availableCashflows, modelInfo.id);
-
-          console.log(`[AI Match Result]`, {
-            confidence: aiMatchResult.confidence,
-            cashflowId: aiMatchResult.cashflowId,
-            invoiceId: aiMatchResult.invoiceId,
-            reason: aiMatchResult.reason
-          });
-
-          // Show why it's not auto-matching
-          if (aiMatchResult.confidence < 80) {
-            console.log(`⚠️ Not auto-matching: confidence ${aiMatchResult.confidence}% is below threshold (80%)`);
-            console.log(`Reason: "${aiMatchResult.reason}"`);
-          } else if (!aiMatchResult.cashflowId && !aiMatchResult.invoiceId) {
-            console.log(`⚠️ Not auto-matching: AI didn't find any match (both cashflowId and invoiceId are null)`);
-            console.log(`Reason: "${aiMatchResult.reason}"`);
-          }
-
-          // ALWAYS save AI confidence and reason (even if confidence is low)
-          bankTx.matchConfidence = aiMatchResult.confidence;
-          bankTx.matchReason = aiMatchResult.reason;
-
-          // Auto-match if confidence is high enough
-          if (aiMatchResult.confidence >= 80) {
-            if (aiMatchResult.cashflowId) {
-              // Check if this cashflow is already matched to prevent duplicates
-              if (matchedCashflowIds.has(aiMatchResult.cashflowId)) {
-                console.log(`⚠️ Cashflow ${aiMatchResult.cashflowId} already matched to another transaction, leaving as pending`);
-                bankTx.matchReason = `${aiMatchResult.reason} (Movimento già abbinato ad altra transazione)`;
-              } else {
-                // Verify cashflow exists
-                const cashflowExists = cashflowRecords.some(cf => cf.id === aiMatchResult.cashflowId);
-                console.log(`Cashflow ${aiMatchResult.cashflowId} exists: ${cashflowExists}`);
-                if (!cashflowExists) {
-                  console.error(`❌ AI returned cashflow ID ${aiMatchResult.cashflowId} but it doesn't exist in database!`);
-                  console.log(`Available cashflow IDs for tipo ${tx.tipo}:`, cashflowRecords.filter(cf => {
-                    const invoice = invoices.find(inv => inv.id === cf.invoiceId);
-                    return (cf.tipo || invoice?.tipo) === tx.tipo;
-                  }).slice(0, 5).map(cf => cf.id));
-                }
-                if (cashflowExists) {
-                  bankTx.matchedCashflowId = aiMatchResult.cashflowId;
-                  bankTx.matchedInvoiceId = aiMatchResult.invoiceId || undefined;
-                  bankTx.matchStatus = 'matched';
-                  matchedCount++;
-                  matchedCashflowIds.add(aiMatchResult.cashflowId);
-                  console.log(`✅ Transaction matched to cashflow ${aiMatchResult.cashflowId}`);
-
-                  // Get the cashflow to check if it has an invoice
-                  const matchedCashflow = cashflowRecords.find(cf => cf.id === aiMatchResult.cashflowId);
-
-                  // Update cashflow: set to Effettivo and update notes with transaction description
-                  console.log(`🔄 [File Upload] Updating cashflow ${aiMatchResult.cashflowId}...`);
-                  await updateCashflowRecord(aiMatchResult.cashflowId, {
-                    statoFatturazione: 'Effettivo',
-                    note: tx.descrizione || tx.causale || ''
-                  });
-                  console.log(`✅ [File Upload] Cashflow ${aiMatchResult.cashflowId} updated to Effettivo with transaction description`);
-
-                  // Update invoice notes if cashflow has an invoice
-                  if (matchedCashflow?.invoiceId) {
-                    console.log(`🔄 [File Upload] Updating invoice ${matchedCashflow.invoiceId} notes...`);
-                    await updateInvoice(matchedCashflow.invoiceId, {
-                      note: tx.descrizione || tx.causale || ''
-                    });
-                    console.log(`✅ [File Upload] Invoice ${matchedCashflow.invoiceId} notes updated`);
-                  }
-                }
-              }
-            } else if (aiMatchResult.invoiceId) {
-              // Fallback to invoice-only match
-              const invoiceExists = invoices.some(inv => inv.id === aiMatchResult.invoiceId);
-              console.log(`Invoice ${aiMatchResult.invoiceId} exists: ${invoiceExists}`);
-              if (invoiceExists) {
-                bankTx.matchedInvoiceId = aiMatchResult.invoiceId;
-                bankTx.matchStatus = 'matched';
-                matchedCount++;
-                console.log(`✅ Transaction matched to invoice ${aiMatchResult.invoiceId}`);
-              }
-            }
-          } else {
-            console.log(`⚠️ Confidence too low (${aiMatchResult.confidence}%), not auto-matching but saving reason`);
-          }
-        } catch (aiError) {
-          console.error('❌ AI matching error for transaction:', tx.id, aiError);
-          const errorMessage = aiError instanceof Error ? aiError.message : 'Errore sconosciuto';
-
-          // Check if this is a FATAL error that should stop processing
-          const isFatalError = errorMessage.toLowerCase().includes('crediti') ||
-                              errorMessage.toLowerCase().includes('credit') ||
-                              errorMessage.toLowerCase().includes('payment') ||
-                              errorMessage.toLowerCase().includes('api key') ||
-                              errorMessage.toLowerCase().includes('authentication') ||
-                              errorMessage.toLowerCase().includes('unauthorized');
-
-          if (isFatalError) {
-            console.error('❌ FATAL ERROR - Stopping AI processing');
-            setError(`🛑 ERRORE CRITICO - Elaborazione interrotta: ${errorMessage}`);
-            // Stop processing immediately for fatal errors
-            shouldStop = true;
-            break;
-          } else {
-            // For non-fatal errors (timeout, network glitches), show warning but continue
-            setError(`⚠️ Errore AI durante l'elaborazione della transazione ${i + 1}: ${errorMessage}`);
-            // Continue without matching if AI fails
-          }
-        }
-        } else {
-          console.log(`⏭️ AI matching disabled, skipping AI analysis for transaction ${i + 1}`);
-        }
-
-        // CRITICAL: Check if a fatal error occurred and stop immediately
-        if (shouldStop) {
-          console.log(`⏹️ AI processing stopped (fatal error), skipping remaining transactions`);
-          break;
-        }
-
-        // Save the transaction (even if user clicked stop - we need to save the current one)
+        // Save the transaction without AI processing
         await addBankTransaction(bankTx);
-
-        // Check after saving if user wants to stop
-        shouldStop = stopAIProcessingRef.current;
-        if (shouldStop) {
-          console.log(`⏹️ AI processing stopped by user after saving transaction ${i + 1}`);
-          break;
-        }
-
-        // Small delay to avoid rate limiting
-        if (i < parsed.transactions.length - 1) {
-          await new Promise(resolve => setTimeout(resolve, 200));
-          // Check one more time after delay - use ref
-          shouldStop = stopAIProcessingRef.current;
-        }
       }
 
-      // Final check to ensure we stopped
-      if (shouldStop) {
-        console.log(`🛑 Loop exited due to user stop request`);
-      }
-
-      console.log(`✅ Loop completed. Matched: ${matchedCount}, Total: ${parsed.transactions.length}`);
-      console.log(`Was stopped by user? ${stopAIProcessingRef.current}`);
-
-      // Update session with final counts
-      await updateReconciliationSession(sessionId, {
-        matchedCount,
-        pendingCount: parsed.transactions.length - matchedCount
-      });
-
-      setAiProcessing({
-        isProcessing: false,
-        sessionId: null,
-        current: 0,
-        total: 0,
-        shouldStop: false
-      });
-      setIsStoppingAI(false);
+      console.log(`✅ Import completed. Total: ${parsed.transactions.length} transactions (${pendingCount} pending, ${ignoredCount} ignored)`);
     } catch (err) {
       console.error('Upload error:', err);
       setError(err instanceof Error ? err.message : 'Errore nel caricamento del file');
     } finally {
       setIsUploading(false);
-      setAiProcessing({
-        isProcessing: false,
-        sessionId: null,
-        current: 0,
-        total: 0,
-        shouldStop: false
-      });
-      setIsStoppingAI(false);
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }
@@ -2343,10 +2131,24 @@ export const Reconciliation: React.FC = () => {
     const tx = bankTransactions.find(t => t.id === transactionId);
     if (!tx) return;
 
-    // Update cashflow to Effettivo since it's been reconciled with a bank transaction
+    // Find the cashflow to check if it has an invoice
+    const matchedCashflow = cashflowRecords.find(cf => cf.id === cashflowId);
+
+    // Update cashflow to Effettivo and update notes with transaction description
     await updateCashflowRecord(cashflowId, {
-      statoFatturazione: 'Effettivo'
+      statoFatturazione: 'Effettivo',
+      note: tx.descrizione || tx.causale || ''
     });
+    console.log(`[Manual Match] ✅ Cashflow ${cashflowId} updated to Effettivo with transaction description`);
+
+    // Update invoice notes if cashflow has an invoice
+    if (matchedCashflow?.invoiceId) {
+      console.log(`[Manual Match] 🔄 Updating invoice ${matchedCashflow.invoiceId} notes...`);
+      await updateInvoice(matchedCashflow.invoiceId, {
+        note: tx.descrizione || tx.causale || ''
+      });
+      console.log(`[Manual Match] ✅ Invoice ${matchedCashflow.invoiceId} notes updated`);
+    }
 
     await updateBankTransaction(transactionId, {
       matchStatus: 'matched',
@@ -2575,6 +2377,27 @@ export const Reconciliation: React.FC = () => {
 
   // Manual match
   const handleManualMatch = async (transactionId: string, invoiceId: string) => {
+    const tx = bankTransactions.find(t => t.id === transactionId);
+    if (!tx) return;
+
+    // Update invoice notes with transaction description
+    console.log(`[Manual Match] 🔄 Updating invoice ${invoiceId} notes...`);
+    await updateInvoice(invoiceId, {
+      note: tx.descrizione || tx.causale || ''
+    });
+    console.log(`[Manual Match] ✅ Invoice ${invoiceId} notes updated`);
+
+    // Find cashflow linked to this invoice and update it
+    const matchedCashflow = cashflowRecords.find(cf => cf.invoiceId === invoiceId);
+    if (matchedCashflow) {
+      console.log(`[Manual Match] 🔄 Updating cashflow ${matchedCashflow.id} linked to invoice...`);
+      await updateCashflowRecord(matchedCashflow.id, {
+        statoFatturazione: 'Effettivo',
+        note: tx.descrizione || tx.causale || ''
+      });
+      console.log(`[Manual Match] ✅ Cashflow ${matchedCashflow.id} updated to Effettivo with transaction description`);
+    }
+
     await updateBankTransaction(transactionId, {
       matchStatus: 'manual',
       matchedInvoiceId: invoiceId,
@@ -2582,7 +2405,6 @@ export const Reconciliation: React.FC = () => {
     });
 
     if (currentSession) {
-      const tx = bankTransactions.find(t => t.id === transactionId);
       if (tx?.matchStatus === 'pending') {
         await updateReconciliationSession(currentSession.id, {
           matchedCount: currentSession.matchedCount + 1,
