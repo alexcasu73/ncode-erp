@@ -16,42 +16,37 @@ function getAISettings() {
   return null;
 }
 
-// Initialize Anthropic client (lazy)
-let anthropicClient: Anthropic | null = null;
+// Initialize Anthropic client (always fresh to pick up updated keys)
 function getAnthropicClient(): Anthropic {
-  if (!anthropicClient) {
-    const settings = getAISettings();
-    const apiKey = settings?.anthropicApiKey || import.meta.env.VITE_ANTHROPIC_API_KEY;
+  const settings = getAISettings();
 
-    if (!apiKey) {
-      throw new Error('🔑 API Key Anthropic non configurata. Vai su Impostazioni per configurarla.');
-    }
+  // SECURITY: Only use API key from database/localStorage
+  // NEVER use import.meta.env.VITE_* as it exposes keys in the client bundle!
+  const apiKey = settings?.anthropicApiKey;
 
-    anthropicClient = new Anthropic({
-      apiKey,
-      dangerouslyAllowBrowser: true
-    });
+  if (!apiKey) {
+    throw new Error('🔑 API Key Anthropic non configurata. Vai su Impostazioni per configurarla.');
   }
-  return anthropicClient;
+
+  return new Anthropic({
+    apiKey,
+    dangerouslyAllowBrowser: true  // ⚠️ Still a risk - consider using backend proxy
+  });
 }
 
-// Initialize OpenAI client (lazy)
-let openaiClient: OpenAI | null = null;
+// Initialize OpenAI client (always fresh to pick up updated keys)
 function getOpenAIClient(): OpenAI {
-  if (!openaiClient) {
-    const settings = getAISettings();
-    const apiKey = settings?.openaiApiKey;
+  const settings = getAISettings();
+  const apiKey = settings?.openaiApiKey;
 
-    if (!apiKey) {
-      throw new Error('🔑 API Key OpenAI non configurata. Vai su Impostazioni per configurarla.');
-    }
-
-    openaiClient = new OpenAI({
-      apiKey,
-      dangerouslyAllowBrowser: true
-    });
+  if (!apiKey) {
+    throw new Error('🔑 API Key OpenAI non configurata. Vai su Impostazioni per configurarla.');
   }
-  return openaiClient;
+
+  return new OpenAI({
+    apiKey,
+    dangerouslyAllowBrowser: true
+  });
 }
 
 export interface MatchSuggestion {
@@ -152,27 +147,94 @@ export async function suggestMatch(
   console.log(`   Total cashflows in DB: ${cashflowRecords.length}`);
   console.log(`   → Filtered by tipo (${transaction.tipo}) + date (${transactionMonth + 1}/${transactionYear}): ${cashflowWithInvoices.length}`);
 
-  // CRITICAL: Filter cashflows by amount (±2€) BEFORE sending to AI
-  // This prevents AI from selecting cashflows with wrong amounts
+  // CRITICAL: Filter cashflows by EXACT amount BEFORE sending to AI
+  // This prevents AI from selecting cashflows with wrong amounts - imports MUST be IDENTICAL
   const transactionAmount = Math.abs(transaction.importo);
   const cashflowsWithinTolerance = cashflowWithInvoices.filter(({ cf, invoice }) => {
     const cfAmount = cf.importo || (invoice ? (invoice.flusso || 0) + (invoice.iva || 0) : 0);
-    const diff = Math.abs(cfAmount - transactionAmount);
-    return diff <= 2.0;
+    return cfAmount === transactionAmount; // ZERO tolerance - must be EXACTLY equal
   });
 
-  console.log(`   → Filtered by amount (±2€): ${cashflowsWithinTolerance.length}`);
+  console.log(`   → Filtered by EXACT amount (ZERO tolerance): ${cashflowsWithinTolerance.length}`);
+
+  // STEP 2: FILTER cashflows by checking if their notes appear in transaction description
+  const description = (transaction.descrizione || '').toLowerCase();
+
+  console.log(`\n🔍 STEP 2: DESCRIPTION MATCHING`);
+  console.log(`   Transaction description: "${transaction.descrizione}"`);
+
+  let cashflowsMatchingService = cashflowsWithinTolerance;
+  if (description) {
+    cashflowsMatchingService = cashflowsWithinTolerance.filter(({ cf, invoice }) => {
+      // Extract significant words from cashflow notes (>3 chars, alphabetic)
+      const noteMovimento = (cf.note || '').toLowerCase();
+      const noteFattura = (invoice?.note || '').toLowerCase();
+
+      const allNotes = [noteMovimento, noteFattura].filter(Boolean).join(' ');
+
+      // Extract words from notes (>3 chars, only alphabetic)
+      const noteWords = allNotes
+        .split(/[\s*]+/)
+        .filter(w => w.length > 3 && /^[a-z]+$/i.test(w));
+
+      if (noteWords.length === 0) {
+        console.log(`   ⚠️ ${cf.id}: No significant words in notes`);
+        return false;
+      }
+
+      // Check if ANY word from notes appears in transaction description
+      for (const word of noteWords) {
+        if (description.includes(word)) {
+          console.log(`   ✅ ${cf.id}: Word "${word}" from notes found in transaction description`);
+          return true;
+        }
+      }
+
+      console.log(`   ❌ ${cf.id}: No words from notes [${noteWords.join(', ')}] found in transaction`);
+      return false;
+    });
+
+    console.log(`   → Cashflows with matching descriptions: ${cashflowsMatchingService.length}`);
+
+    // If NO cashflows match, return immediately with confidence=0%
+    if (cashflowsMatchingService.length === 0) {
+      const availableServices = cashflowsWithinTolerance
+        .map(({ cf, invoice }) => {
+          const noteMovimento = cf.note || '';
+          const noteFattura = invoice?.note || '';
+          return noteMovimento || noteFattura || '(nessuna nota)';
+        })
+        .filter((v, i, a) => a.indexOf(v) === i) // unique
+        .slice(0, 3)
+        .join(', ');
+
+      console.log(`\n❌ NO MATCH: Nessuna nota dei movimenti trovata nella descrizione della transazione`);
+      console.log(`   Servizi disponibili nei movimenti da €${transactionAmount.toFixed(2)}: ${availableServices}`);
+      console.log('\n' + '='.repeat(100));
+      console.log(`❌ FINAL RESULT: NO MATCH (description mismatch)`);
+      console.log('='.repeat(100) + '\n');
+
+      return {
+        invoiceId: null,
+        cashflowId: null,
+        confidence: 0,
+        reason: `Nessuna corrispondenza trovata (movimenti disponibili: ${availableServices})`
+      };
+    }
+  }
+
+  // Use the filtered cashflows for the rest of the process
+  const cashflowsToSendToAI = cashflowsMatchingService;
 
   // Log all cashflows being sent to AI with their dates
-  console.log('\n📋 CASHFLOWS AVAILABLE FOR MATCHING (within ±2€ tolerance):');
-  if (cashflowsWithinTolerance.length === 0) {
-    console.log('   ❌ NESSUN FLUSSO DI CASSA CON IMPORTO COMPATIBILE!');
+  console.log('\n📋 CASHFLOWS AVAILABLE FOR MATCHING (after all filters):');
+  if (cashflowsToSendToAI.length === 0) {
+    console.log('   ❌ NESSUN FLUSSO DI CASSA DISPONIBILE DOPO I FILTRI!');
   } else {
-    cashflowsWithinTolerance.forEach(({ cf, invoice }) => {
+    cashflowsToSendToAI.forEach(({ cf, invoice }) => {
       const cfAmount = cf.importo || (invoice ? (invoice.flusso || 0) + (invoice.iva || 0) : 0);
-      const diff = Math.abs(cfAmount - transactionAmount);
 
-      console.log(`   ✅ ${cf.id} | €${cfAmount.toFixed(2)} (diff: €${diff.toFixed(2)}) | ${cf.dataPagamento || 'NO DATE'}`);
+      console.log(`   ✅ ${cf.id} | €${cfAmount.toFixed(2)} (EXACT MATCH) | ${cf.dataPagamento || 'NO DATE'}`);
       console.log(`      Note: "${cf.note || 'N/D'}" | Spesa: "${invoice?.spesa || 'N/D'}" | Categoria: "${cf.categoria || 'N/D'}"`);
     });
   }
@@ -180,12 +242,11 @@ export async function suggestMatch(
   // Log excluded cashflows for debugging
   const excludedCashflows = cashflowWithInvoices.filter(({ cf, invoice }) => {
     const cfAmount = cf.importo || (invoice ? (invoice.flusso || 0) + (invoice.iva || 0) : 0);
-    const diff = Math.abs(cfAmount - transactionAmount);
-    return diff > 2.0;
+    return cfAmount !== transactionAmount;
   });
 
   if (excludedCashflows.length > 0) {
-    console.log('\n🚫 CASHFLOWS EXCLUDED (amount difference > 2€):');
+    console.log('\n🚫 CASHFLOWS EXCLUDED (amount not exactly equal):');
     excludedCashflows.slice(0, 5).forEach(({ cf, invoice }) => {
       const cfAmount = cf.importo || (invoice ? (invoice.flusso || 0) + (invoice.iva || 0) : 0);
       const diff = Math.abs(cfAmount - transactionAmount);
@@ -196,14 +257,9 @@ export async function suggestMatch(
     }
   }
 
-  // Check for exact amount match in filtered cashflows
-  const exactAmountMatches = cashflowsWithinTolerance.filter(({ cf, invoice }) => {
-    const cfAmount = cf.importo || (invoice ? (invoice.flusso || 0) + (invoice.iva || 0) : 0);
-    const diff = Math.abs(cfAmount - transactionAmount);
-    return diff <= 0.10;
-  });
-  if (exactAmountMatches.length > 0) {
-    console.log(`[AI] 🎯 Found ${exactAmountMatches.length} cashflow(s) with exact amount match (±€0.10):`, exactAmountMatches.map(({ cf, invoice }) => ({
+  // All cashflows in cashflowsToSendToAI have EXACT amount match AND service name match
+  if (cashflowsToSendToAI.length > 0) {
+    console.log(`[AI] 🎯 Found ${cashflowsToSendToAI.length} cashflow(s) matching all criteria:`, cashflowsToSendToAI.map(({ cf, invoice }) => ({
       id: cf.id,
       invoiceId: cf.invoiceId,
       importo: cf.importo || (invoice ? (invoice.flusso || 0) + (invoice.iva || 0) : 0),
@@ -221,14 +277,14 @@ export async function suggestMatch(
     console.warn(`[AI] ⚠️ WARNING: Detected old-style cashflow IDs! Please RELOAD the page (F5) to get new progressive IDs from database.`);
   }
 
-  // If no cashflows within tolerance, return no match immediately
-  if (cashflowsWithinTolerance.length === 0) {
-    console.log(`[AI] No cashflows within ±2€ tolerance found for €${transactionAmount.toFixed(2)}`);
+  // If no cashflows after all filters, return no match immediately
+  if (cashflowsToSendToAI.length === 0) {
+    console.log(`[AI] No cashflows matching all criteria`);
     return {
       invoiceId: null,
       cashflowId: null,
       confidence: 0,
-      reason: `Nessun movimento con importo compatibile (±2€) per €${transactionAmount.toFixed(2)} trovato.`
+      reason: `Nessun movimento disponibile dopo i filtri.`
     };
   }
 
@@ -239,58 +295,169 @@ Sei un assistente per la riconciliazione bancaria. Trova il MOVIMENTO DI CASSA c
 TRANSAZIONE BANCARIA DA RICONCILIARE:
 ${formatBankTransaction(transaction)}
 
-MOVIMENTI DI CASSA DISPONIBILI (già filtrati per tipo ${transaction.tipo}, mese/anno, e importo ±2€):
-${cashflowsWithinTolerance.length > 0
-      ? cashflowsWithinTolerance.map(({ cf, invoice }) => formatCashflow(cf, invoice)).join('\n')
+MOVIMENTI DI CASSA DISPONIBILI (già filtrati per tipo ${transaction.tipo}, mese/anno, importo IDENTICO e corrispondenza descrizione):
+${cashflowsToSendToAI.length > 0
+      ? cashflowsToSendToAI.map(({ cf, invoice }) => formatCashflow(cf, invoice)).join('\n')
       : 'Nessun movimento registrato'}
 
 NOTA IMPORTANTE:
 I movimenti sono GIÀ FILTRATI per:
 - Tipo: ${transaction.tipo}
 - Mese/Anno: ${transactionMonth + 1}/${transactionYear}
-- Importo: ±2€ dalla transazione (€${transactionAmount.toFixed(2)})
+- Importo: IDENTICO alla transazione (€${transactionAmount.toFixed(2)})
+- Descrizione: le parole delle note del movimento appaiono nella descrizione della transazione
 
-Tutti i movimenti che vedi hanno importo compatibile. Devi SOLO verificare la descrizione.
+Tutti i movimenti che vedi hanno già superato i filtri di importo e descrizione. Devi SOLO scegliere quello più appropriato in base al contesto.
 
 ALGORITMO DI RICONCILIAZIONE:
 
-STEP 1 - VERIFICA DESCRIZIONE:
-- Prendi la DESCRIZIONE della transazione (campo "Descrizione:")
-- Estrai le parole chiave significative (ignora articoli, preposizioni, caratteri speciali)
-- Confronta con TUTTI questi campi del movimento e della fattura collegata:
-  * Note Movimento (campo "Note Movimento:")
-  * Descrizione Movimento (campo "Desc Movimento:")
-  * Note Fattura (campo "Note Fattura:")
-  * Spesa (campo "Spesa:" - dalla fattura collegata)
-  * Tipo Spesa (campo "Tipo Spesa:" - dalla fattura collegata)
-  * Categoria (campo "Categoria:")
+STEP 1 - VERIFICA DESCRIZIONE (PRIORITÀ MASSIMA):
+- **IGNORA COMPLETAMENTE** il campo "Causale:" (es: "PAGAMENTO TRAMITE POS", "COMMISSIONI/SPESE", ecc.)
+- Guarda SOLO il campo "Descrizione:" della transazione
+- Cerca la pattern "C /O [NOME SERVIZIO]" o il nome dell'azienda nella descrizione
+- Estrai il NOME DEL SERVIZIO/AZIENDA (es: ANTHROPIC, FIGMA, CHATGPT, GOOGLE, VERISURE)
+- **IGNORA** parole generiche come: tools, costi, servizi, spese, pagamento, pos, carta, usa, italy, debit, visa
 
-- Matching FLESSIBILE: ignora maiuscole/minuscole, punteggiatura, caratteri speciali
-- Cerca parole chiave comuni o concetti simili
-- Esempi di match validi:
-  * "ANTHROPIC +14152360599" vs Note Fattura: "Anthropic" → ✅ MATCH
-  * "VERISURE ITALY SRL" vs Spesa: "Verisure" → ✅ MATCH
-  * "GOOGLE WORKSPACE" vs Note Movimento: "Google" → ✅ MATCH
-  * "Paypal servizi online" vs Tipo Spesa: "Costi per servizi" → ✅ MATCH
+ESEMPI DI ESTRAZIONE:
+- Descrizione: "POS CARTA CA DEBIT VISA N. ****0428 DEL 13/01/26 ORE 15:26 C /O FIGMA +14158905404 USA"
+  → Servizio estratto: "FIGMA" (trovato dopo "C /O")
+- Descrizione: "POS CARTA CA DEBIT VISA N. ****0428 DEL 31/12/25 ORE 11:08 C /O ANTHROPIC +14152360599 USA"
+  → Servizio estratto: "ANTHROPIC" (trovato dopo "C /O")
+- Descrizione: "OPENAI *CHATGPT SUBS"
+  → Servizio estratto: "CHATGPT" (parola chiave principale)
 
-DECISIONE FINALE:
+STEP 2 - CONFRONTA CON CAMPI SPECIFICI:
+Confronta il NOME DEL SERVIZIO SOLO con questi campi SPECIFICI:
+  1. Note Movimento (campo "Note Movimento:")
+  2. Note Fattura (campo "Note Fattura:")
 
-✅ SE DESCRIZIONE MATCHA:
-   → confidence = 90-95%
-   → cashflowId = [ID del movimento]
-   → reason = "Match: movimento [ID] per €[importo] - [breve spiegazione del match]"
-   → RICONCILIA AUTOMATICAMENTE
+**IGNORA COMPLETAMENTE**:
+  - Spesa (troppo generico: "Tools", "Utenze", ecc.)
+  - Tipo Spesa (troppo generico: "Costi per servizi", ecc.)
+  - Categoria (troppo generico)
 
-⚠️ SE DESCRIZIONE NON MATCHA MA C'È UN SOLO MOVIMENTO:
-   → confidence = 50-70% (importo compatibile ma descrizione incerta)
-   → cashflowId = [ID del movimento]
-   → reason = "Importo compatibile (€[X]) ma descrizione non corrisponde - verifica manuale"
-   → MOSTRA ALL'UTENTE PER VERIFICA
+STEP 3 - REGOLE DI MATCHING RIGOROSE:
+✅ È UN MATCH SOLO SE:
+  - Il NOME DEL SERVIZIO nella descrizione transazione è PRESENTE nelle Note Movimento O Note Fattura
+  - Esempio: "ANTHROPIC +1234" matcha SOLO se nelle note c'è "Anthropic", "anthropic", ecc.
 
-❌ SE NESSUN MOVIMENTO NELLA LISTA:
-   → confidence = 0
-   → cashflowId = null, invoiceId = null
+❌ NON È UN MATCH SE:
+  - Solo parole generiche combaciano ("Tools", "Costi", "Servizi")
+  - Il nome del servizio è DIVERSO (es: "ANTHROPIC" != "FIGMA")
+
+Esempi CORRETTI:
+  * "ANTHROPIC +14152360599" vs Note: "Anthropic" → ✅ MATCH ("anthropic" presente)
+  * "OPENAI *CHATGPT" vs Note: "Chatgpt" → ✅ MATCH ("chatgpt" presente)
+  * "FIGMA +1234" vs Note: "Figma" → ✅ MATCH ("figma" presente)
+
+Esempi SBAGLIATI:
+  * "ANTHROPIC +14152360599" vs Note: "Figma", Spesa: "Tools" → ❌ NO MATCH (servizio diverso!)
+  * "FIGMA +1234" vs Note: "Anthropic", Spesa: "Tools" → ❌ NO MATCH (servizio diverso!)
+  * Qualsiasi match basato solo su "Tools", "Costi", "Servizi" → ❌ NO MATCH (troppo generico)
+
+DECISIONE FINALE (SEGUI ESATTAMENTE QUESTE REGOLE RIGOROSE):
+
+IMPORTANTE: Prima di tutto, estrai il NOME DEL SERVIZIO dalla descrizione transazione e verifica se esiste nelle note dei movimenti disponibili.
+
+✅ CASO 1 - MATCH PERFETTO (nome servizio trovato):
+   CONDIZIONE OBBLIGATORIA: il NOME DEL SERVIZIO estratto dalla descrizione DEVE essere presente (anche parzialmente) nelle Note Movimento O Note Fattura di ALMENO UN movimento.
+
+   SE trovato:
+   → confidence = 95%
+   → cashflowId = [ID del movimento che contiene il nome servizio]
+   → reason = "Match: [NOME SERVIZIO] trovato in note"
+
+   ESEMPI:
+   - Descrizione: "C /O ANTHROPIC +14152360599" → servizio = "ANTHROPIC"
+     Movimento: CF-0282, note "Anthropic" → ✅ "ANTHROPIC" presente in "Anthropic" → MATCH!
+     Risposta: {"cashflowId": "CF-0282", "confidence": 95, "reason": "Match: ANTHROPIC trovato in note"}
+
+   - Descrizione: "C /O FIGMA +14158905404" → servizio = "FIGMA"
+     Movimento: CF-0145, note "Figma" → ✅ "FIGMA" presente in "Figma" → MATCH!
+     Risposta: {"cashflowId": "CF-0145", "confidence": 95, "reason": "Match: FIGMA trovato in note"}
+
+   - Descrizione: "C /O ANTHROPIC +14152360599" → servizio = "ANTHROPIC"
+     Movimento: CF-0145, note "Figma" → ❌ "ANTHROPIC" NON presente in "Figma" → NO MATCH!
+     VAI AL CASO 2!
+
+❌ CASO 2 - SERVIZIO NON TROVATO (confidence = 0%):
+   CONDIZIONE: il NOME DEL SERVIZIO estratto dalla descrizione NON è presente in NESSUNA Note Movimento O Note Fattura dei movimenti disponibili.
+
+   ANCHE SE:
+   - C'è un movimento con importo identico
+   - È l'unico movimento disponibile
+   - Spesa e Tipo Spesa coincidono (SONO TROPPO GENERICI!)
+
+   → confidence = 0%
+   → cashflowId = null
+   → reason = "Nessun movimento corrisponde a [NOME SERVIZIO] (trovati solo: [lista nomi servizi nei movimenti])"
+
+   ESEMPI CRITICI - SEGUI QUESTI:
+   - Descrizione: "C /O ANTHROPIC +14152360599" → servizio = "ANTHROPIC"
+     Movimenti disponibili: CF-0145 note "Figma", CF-0164 note "Figma"
+     → ❌ "ANTHROPIC" NON trovato in nessuna nota → NO MATCH!
+     Risposta: {"cashflowId": null, "confidence": 0, "reason": "Nessun movimento corrisponde a ANTHROPIC (trovati solo: Figma)"}
+
+   - Descrizione: "C /O ANTHROPIC +14152360599" → servizio = "ANTHROPIC"
+     Movimento: CF-0145, €20.00, note "Figma", spesa "Tools", tipo_spesa "Costi per servizi"
+     → ❌ "ANTHROPIC" != "Figma" → NO MATCH! (ignora spesa e tipo_spesa!)
+     Risposta: {"cashflowId": null, "confidence": 0, "reason": "Nessun movimento corrisponde a ANTHROPIC (trovati solo: Figma)"}
+
+❌ CASO 3 - MULTIPLI MOVIMENTI STESSO IMPORTO:
+   SE hai più movimenti con importo uguale MA NESSUNO ha il nome servizio che matcha:
+   → confidence = 0%
+   → cashflowId = null
+   → reason = "Trovati [N] movimenti con importo €[X] ma nessuno corrisponde a [SERVIZIO]"
+
+❌ CASO 4 - NESSUN MOVIMENTO:
+   → confidence = 0%
+   → cashflowId = null
    → reason = "Nessun movimento disponibile"
+
+**REGOLA D'ORO ASSOLUTA - LEGGI ATTENTAMENTE**:
+
+❌ SE il nome del servizio nella descrizione transazione NON È PRESENTE nelle Note Movimento O Note Fattura:
+   → confidence = 0%
+   → cashflowId = null
+   → reason = "Nessun movimento corrisponde a [NOME SERVIZIO]"
+
+ESEMPI CRITICI DA SEGUIRE:
+- Transazione: "C /O ANTHROPIC" → servizio = "ANTHROPIC"
+  Movimenti disponibili: CF-0145 note "Figma", CF-0164 note "Figma"
+  → ❌ NESSUNO ha "Anthropic" nelle note
+  → confidence = 0%, cashflowId = null
+  → reason = "Nessun movimento corrisponde a ANTHROPIC"
+
+- Transazione: "C /O FIGMA" → servizio = "FIGMA"
+  Movimenti disponibili: CF-0145 note "Figma"
+  → ✅ CF-0145 ha "Figma" nelle note
+  → confidence = 95%, cashflowId = "CF-0145"
+  → reason = "Match: FIGMA trovato in note"
+
+NON abbinare MAI se il nome servizio è diverso, ANCHE SE:
+- È l'unico movimento con quell'importo
+- Importo è identico
+- Spesa e Tipo Spesa sono uguali (sono troppo generici!)
+
+Il nome del servizio DEVE corrispondere, altrimenti confidence = 0%!
+
+REGOLE CRITICHE - LEGGI ATTENTAMENTE:
+1. MATCHING CASE-INSENSITIVE: "ANTHROPIC" = "Anthropic" = "anthropic" → SONO IDENTICI!
+2. PAROLA PARZIALE OK: "CHATGPT" contiene "ChatGPT", "GPT" → MATCH!
+3. SE C'È ANCHE UNA SOLA PAROLA COMUNE (>3 lettere) → CONFIDENCE 95%!
+4. **REGOLA ANTI-MISMATCH**: Se la descrizione contiene una parola chiave (es. "ANTHROPIC") ma il movimento contiene una DIVERSA parola chiave (es. "Figma", "Netflix", ecc.), NON È UN MATCH! Confidence = 0%!
+5. IGNORA COMPLETAMENTE i movimenti senza match di descrizione, anche se l'importo è perfetto
+6. **ESEMPIO DI NON-MATCH**: "ANTHROPIC +123" vs Note: "Figma" → 0% (parole diverse!)
+
+ESEMPI CHIARI DI MATCH:
+✅ "ANTHROPIC +14152360599" vs Note Fattura: "Anthropic" → 95% (parola identica!)
+✅ "ANTHROPIC +14152360599" vs Spesa: "Tools", Note: "Anthropic" → 95% (parola in note!)
+✅ "OPENAI *CHATGPT SUBS" vs Note Movimento: "Chatgpt" → 95% (parola identica!)
+✅ "OPENAI *CHATGPT SUBS" vs Spesa: "Chatgpt", Tipo Spesa: "Costi per servizi" → 95% (parola in spesa!)
+✅ "VERISURE ITALY SRL" vs Spesa: "Verisure" → 95% (parola identica!)
+✅ "VERISURE ITALY SRL" vs Note: "Verisure alarm", Spesa: "Utenze" → 95% (parola in note!)
+✅ "GOOGLE WORKSPACE" vs Tipo Spesa: "Costi per servizi", Note: "Google" → 95% (parola in note!)
+❌ "Compensazione approssimazione" vs Note: "Anthropic", Spesa: "Tools" → 0% (nessuna parola comune!)
 
 FORMATO RISPOSTA OBBLIGATORIO:
 IMPORTANT: Your response must be ONLY the JSON object below. Do not write any text before or after the JSON.
@@ -305,23 +472,49 @@ CRITICAL:
 
 ESEMPI DI RISPOSTE VALIDE (copia questo formato esatto):
 
-✅ Transazione: "ANTHROPIC +14152360599" €10.00 del 02/01/2026
-   Movimento: ID: CF-0053 | Fattura: Fattura_114 | €10.00 Note: "Anthropic"
-   → {"invoiceId": "Fattura_114", "cashflowId": "CF-0053", "confidence": 95, "reason": "Match perfetto: CF-0053 per €10.00 - 'Anthropic' trovato in note"}
+✅ ESEMPIO 1 - Match perfetto con un solo movimento:
+Transazione: "ANTHROPIC +14152360599 USA" €10.00 del 02/01/2026
+Movimento disponibile: ID: CF-0053 | Fattura: Fattura_114 | €10.00 | Note Fattura: "Anthropic"
+→ {"invoiceId": "Fattura_114", "cashflowId": "CF-0053", "confidence": 95, "reason": "Match perfetto: CF-0053 per €10.00 - 'Anthropic' trovato in note"}
 
-⚠️ Transazione: "PAGAMENTO POS" €67.08 del 02/01/2026
-   Movimento: ID: CF-0123 | Fattura: Fattura_89 | €67.08 Note: "Verisure"
-   → {"invoiceId": "Fattura_89", "cashflowId": "CF-0123", "confidence": 60, "reason": "Importo compatibile (€67.08) ma descrizione generica - verifica manuale"}
+✅ ESEMPIO 2 - Match perfetto tra multipli movimenti:
+Transazione: "OPENAI *CHATGPT SUBS +14158799686 USA" €17.08 del 03/01/2026
+Movimenti disponibili:
+  - ID: CF-0058 | €17.08 | Note Movimento: "Chatgpt" | Spesa: "Tools"
+  - ID: CF-0060 | €17.50 | Note Movimento: "Spotify" | Spesa: "Intrattenimento"
+  - ID: CF-0062 | €16.99 | Note Movimento: "Netflix" | Spesa: "Intrattenimento"
+→ {"invoiceId": null, "cashflowId": "CF-0058", "confidence": 95, "reason": "Match perfetto: CF-0058 per €17.08 - unico movimento con 'Chatgpt' nelle note"}
 
-❌ Transazione: "Commissioni bancarie" €0.59 del 02/01/2026
-   Movimenti disponibili: €10.00, €17.08, €50.00
-   → {"invoiceId": null, "cashflowId": null, "confidence": 0, "reason": "Nessun movimento con importo compatibile (€0.59) trovato"}`;
+✅ ESEMPIO 3 - Match tramite colonna Spesa (anche se Note è vuota):
+Transazione: "VERISURE ITALY SRL" €67.08 del 05/01/2026
+Movimento disponibile: ID: CF-0090 | €67.08 | Spesa: "Verisure" | Note Fattura: "" (vuota)
+→ {"invoiceId": null, "cashflowId": "CF-0090", "confidence": 95, "reason": "Match perfetto: CF-0090 per €67.08 - 'Verisure' trovato in spesa"}
+
+✅ ESEMPIO 3b - Match tramite Tipo Spesa:
+Transazione: "OPENAI API USAGE" €15.00 del 10/01/2026
+Movimento disponibile: ID: CF-0120 | €15.00 | Tipo Spesa: "Costi per servizi" | Spesa: "OpenAI" | Note: ""
+→ {"invoiceId": null, "cashflowId": "CF-0120", "confidence": 95, "reason": "Match perfetto: CF-0120 per €15.00 - 'OpenAI' trovato in spesa"}
+
+⚠️ ESEMPIO 4 - Un solo movimento ma descrizione non chiara:
+Transazione: "PAGAMENTO POS GENERICO" €67.08 del 02/01/2026
+Movimento disponibile: ID: CF-0123 | €67.08 | Note: "Abbonamento vario"
+→ {"invoiceId": null, "cashflowId": "CF-0123", "confidence": 60, "reason": "Importo compatibile (€67.08) ma descrizione non corrisponde - verifica manuale"}
+
+❌ ESEMPIO 5 - Multipli movimenti senza match chiaro:
+Transazione: "Bonifico generico" €50.00 del 02/01/2026
+Movimenti disponibili: CF-0100 (€50.00, Note: "Servizio A"), CF-0101 (€50.00, Note: "Servizio B")
+→ {"invoiceId": null, "cashflowId": null, "confidence": 0, "reason": "Trovati 2 movimenti ma nessuno corrisponde alla descrizione 'Bonifico generico'"}
+
+❌ ESEMPIO 6 - Nessun movimento con importo compatibile:
+Transazione: "Commissioni bancarie" €0.59 del 02/01/2026
+Movimenti disponibili: (nessuno - già filtrati)
+→ {"invoiceId": null, "cashflowId": null, "confidence": 0, "reason": "Nessun movimento disponibile"}`;
 
   try {
     const selectedModel = model || 'claude-3-5-haiku-20241022';
-    console.log('\n🤖 STEP 2: CALLING AI');
+    console.log('\n🤖 STEP 3: CALLING AI');
     console.log(`   Model: ${selectedModel}`);
-    console.log(`   Sending ${cashflowsWithinTolerance.length} cashflows (within ±2€ tolerance) for analysis...`);
+    console.log(`   Sending ${cashflowsToSendToAI.length} cashflow(s) for final analysis...`);
 
     let text = '';
 
@@ -371,7 +564,7 @@ ESEMPI DI RISPOSTE VALIDE (copia questo formato esatto):
 
     const result = JSON.parse(cleanedText);
 
-    console.log('\n🎯 STEP 3: AI RESPONSE');
+    console.log('\n🎯 STEP 4: AI RESPONSE');
     console.log(`   Raw JSON: ${cleanedText}`);
     console.log(`   ├─ cashflowId: ${result.cashflowId || 'null'}`);
     console.log(`   ├─ invoiceId: ${result.invoiceId || 'null'}`);
@@ -379,7 +572,7 @@ ESEMPI DI RISPOSTE VALIDE (copia questo formato esatto):
     console.log(`   └─ reason: "${result.reason}"`);
 
     // CRITICAL: Verify amount match before accepting AI suggestion
-    console.log('\n✅ STEP 4: VERIFICATION');
+    console.log('\n✅ STEP 5: VERIFICATION');
     if (result.cashflowId) {
       const matchedCashflow = cashflowRecords.find(cf => cf.id === result.cashflowId);
       if (matchedCashflow) {

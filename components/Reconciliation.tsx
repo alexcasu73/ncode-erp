@@ -28,6 +28,83 @@ const formatInvoiceId = (id: string, anno: number): string => {
   return `${numero}/${anno}`;
 };
 
+// Helper per verificare match tra descrizione transazione e note/spesa del cashflow
+const hasDescriptionMatch = (
+  transactionDesc: string,
+  cashflowNote?: string,
+  invoiceNote?: string,
+  invoiceSpesa?: string,
+  invoiceTipoSpesa?: string,
+  cashflowCategoria?: string
+): { matches: boolean; score: number } => {
+  if (!transactionDesc) return { matches: false, score: 0 };
+
+  const descLower = transactionDesc.toLowerCase()
+    .replace(/[^a-z0-9\s]/g, '') // Rimuovi caratteri speciali
+    .trim();
+
+  // Lista di parole GENERICHE da IGNORARE - troppo comuni per essere significative
+  const GENERIC_WORDS = new Set([
+    'tools', 'costi', 'servizi', 'spese', 'generiche', 'altri', 'team',
+    'marketing', 'utenze', 'banca', 'commercialista', 'intrattenimento',
+    'affitto', 'casa', 'per', 'servizi', 'altro', 'costo', 'spesa'
+  ]);
+
+  // Raccogli tutti i testi da confrontare, ESCLUDENDO Spesa e Tipo Spesa se sono troppo generici
+  const textsToCheck = [
+    cashflowNote,
+    invoiceNote,
+    // Solo includi spesa/tipo spesa se NON sono generici
+    invoiceSpesa && !GENERIC_WORDS.has(invoiceSpesa.toLowerCase().trim()) ? invoiceSpesa : undefined,
+    invoiceTipoSpesa && !GENERIC_WORDS.has(invoiceTipoSpesa.toLowerCase().trim()) ? invoiceTipoSpesa : undefined,
+    cashflowCategoria && !GENERIC_WORDS.has(cashflowCategoria.toLowerCase().trim()) ? cashflowCategoria : undefined
+  ].filter(Boolean);
+
+  if (textsToCheck.length === 0) return { matches: false, score: 0 };
+
+  let bestScore = 0;
+  let hasSpecificMatch = false; // Flag per verificare se c'è almeno una parola specifica che matcha
+
+  for (const text of textsToCheck) {
+    if (!text) continue;
+
+    const textLower = text.toLowerCase()
+      .replace(/[^a-z0-9\s]/g, '')
+      .trim();
+
+    // Estrai parole significative (più di 3 caratteri) e NON generiche
+    const descWords = descLower.split(/\s+/)
+      .filter(w => w.length > 3 && !GENERIC_WORDS.has(w));
+    const textWords = textLower.split(/\s+/)
+      .filter(w => w.length > 3 && !GENERIC_WORDS.has(w));
+
+    if (descWords.length === 0 || textWords.length === 0) continue;
+
+    // Conta quante parole matchano
+    let matchCount = 0;
+    for (const dw of descWords) {
+      for (const tw of textWords) {
+        // Match se una parola contiene l'altra (es. "anthropic" contiene "anthrop")
+        if (dw.includes(tw) || tw.includes(dw)) {
+          matchCount++;
+          hasSpecificMatch = true; // Trovata almeno una parola specifica che matcha
+          break;
+        }
+      }
+    }
+
+    // Calcola score: percentuale di parole che matchano
+    const score = (matchCount / Math.max(descWords.length, textWords.length)) * 100;
+    bestScore = Math.max(bestScore, score);
+  }
+
+  return {
+    // Match SOLO se c'è almeno una parola SPECIFICA che matcha E lo score è > 50%
+    matches: hasSpecificMatch && bestScore >= 50,
+    score: bestScore
+  };
+};
+
 // Transaction row component
 const TransactionRow: React.FC<{
   transaction: BankTransaction;
@@ -153,8 +230,15 @@ const TransactionRow: React.FC<{
             </div>
 
             {transaction.matchStatus === 'pending' && transaction.matchConfidence !== undefined && (
-              <div className={`text-sm font-medium ${getConfidenceColor(transaction.matchConfidence)}`}>
-                {transaction.matchConfidence}%
+              <div className="flex items-center gap-2">
+                <div className={`text-sm font-medium ${getConfidenceColor(transaction.matchConfidence)}`}>
+                  {transaction.matchConfidence}%
+                </div>
+                {transaction.matchConfidence === 0 && (
+                  <div className="px-2 py-1 bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400 text-xs font-medium rounded">
+                    Nessun match
+                  </div>
+                )}
               </div>
             )}
 
@@ -310,17 +394,44 @@ const TransactionRow: React.FC<{
                   const cfDate = new Date(cf.dataPagamento);
                   const dateDiff = Math.abs((cfDate.getTime() - txDate.getTime()) / (1000 * 60 * 60 * 24));
 
+                  // Check description match
+                  const descMatch = hasDescriptionMatch(
+                    transaction.descrizione || transaction.causale || '',
+                    cf.note,
+                    invoice?.note,
+                    invoice?.spesa,
+                    invoice?.tipoSpesa,
+                    cf.categoria
+                  );
+
+                  // Calculate score with strong weight on description match
+                  let score = 0;
+                  // Amount score: 100 points for exact match, decreasing with difference
+                  score += (amountDiffPercent < 1 ? 100 : Math.max(0, 100 - amountDiffPercent));
+                  // Date score: 50 points for recent dates (within 3 days)
+                  score += (dateDiff < 3 ? 50 : dateDiff < 7 ? 25 : 0);
+                  // Description score: HUGE bonus for matching description (200 points)
+                  if (descMatch.matches) {
+                    score += descMatch.score * 2; // Up to 200 points for perfect description match
+                  }
+
                   return {
                     cashflow: cf,
                     invoice,
                     amountDiff,
                     amountDiffPercent,
                     dateDiff,
-                    score: (amountDiffPercent < 1 ? 100 : 100 - amountDiffPercent) + (dateDiff < 3 ? 50 : 0)
+                    descriptionMatch: descMatch,
+                    score
                   };
                 })
                 .filter(c => c.amountDiffPercent < 10 || c.amountDiff < 10)
-                .sort((a, b) => b.score - a.score)
+                .sort((a, b) => {
+                  // Prioritize by description match, then by score
+                  if (a.descriptionMatch.matches && !b.descriptionMatch.matches) return -1;
+                  if (!a.descriptionMatch.matches && b.descriptionMatch.matches) return 1;
+                  return b.score - a.score;
+                })
                 .slice(0, 3); // Show top 3 candidates
 
               if (candidates.length === 0) return null;
@@ -1664,7 +1775,7 @@ const ReportView: React.FC<ReportViewProps> = ({ report }) => {
 // ====== END COMPARISON VIEW COMPONENTS ======
 
 export const Reconciliation: React.FC = () => {
-  const { invoices, cashflowRecords, reconciliationSessions, bankTransactions, addReconciliationSession, addBankTransaction, updateBankTransaction, updateReconciliationSession, deleteBankTransaction, deleteReconciliationSession, clearAllReconciliationSessions, addInvoice, addCashflowRecord, updateCashflowRecord, deleteCashflowRecord, deleteInvoice, aiProcessing, setAiProcessing, stopAiProcessing, refreshData } = useData();
+  const { invoices, cashflowRecords, reconciliationSessions, bankTransactions, addReconciliationSession, addBankTransaction, updateBankTransaction, updateReconciliationSession, deleteBankTransaction, deleteReconciliationSession, clearAllReconciliationSessions, addInvoice, addCashflowRecord, updateCashflowRecord, updateInvoice, deleteCashflowRecord, deleteInvoice, aiProcessing, setAiProcessing, stopAiProcessing, refreshData, getSettings } = useData();
 
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -1694,19 +1805,50 @@ export const Reconciliation: React.FC = () => {
     cashflowId: string;
     invoiceId?: string;
   } | null>(null);
+  const [showClearAllConfirm, setShowClearAllConfirm] = useState(false);
+  const [aiKeysConfigured, setAiKeysConfigured] = useState<boolean>(false);
 
   // Check if AI keys are configured
-  const checkAIKeysConfigured = () => {
-    const savedSettings = localStorage.getItem('ai_settings');
-    if (!savedSettings) return false;
+  const checkAIKeysConfigured = async () => {
     try {
-      const parsed = JSON.parse(savedSettings);
-      return (parsed.anthropicApiKey && parsed.anthropicApiKey.length > 0) ||
-             (parsed.openaiApiKey && parsed.openaiApiKey.length > 0);
-    } catch {
+      console.log('[Reconciliation] Checking AI keys configuration...');
+      const settings = await getSettings();
+      console.log('[Reconciliation] Settings received:', settings);
+
+      if (!settings) {
+        console.log('[Reconciliation] No settings returned');
+        return false;
+      }
+
+      const hasAnthropicKey = settings.anthropicApiKey && settings.anthropicApiKey.length > 0;
+      const hasOpenaiKey = settings.openaiApiKey && settings.openaiApiKey.length > 0;
+      const isConfigured = hasAnthropicKey || hasOpenaiKey;
+
+      console.log('[Reconciliation] AI keys check result:', {
+        hasAnthropicKey,
+        hasOpenaiKey,
+        isConfigured,
+        anthropicKeyLength: settings.anthropicApiKey?.length,
+        openaiKeyLength: settings.openaiApiKey?.length
+      });
+
+      return isConfigured;
+    } catch (err) {
+      console.error('[Reconciliation] Error checking AI keys:', err);
       return false;
     }
   };
+
+  // Load AI keys status on mount
+  React.useEffect(() => {
+    const loadAIKeysStatus = async () => {
+      console.log('[Reconciliation] Loading AI keys status on mount...');
+      const configured = await checkAIKeysConfigured();
+      console.log('[Reconciliation] AI keys configured:', configured);
+      setAiKeysConfigured(configured);
+    };
+    loadAIKeysStatus();
+  }, []);
   const [selectedAiProvider, setSelectedAiProvider] = useState<'anthropic' | 'openai'>(() => {
     const saved = localStorage.getItem('reconciliation_selectedAiProvider');
     // Try to load from AI settings
@@ -1890,8 +2032,6 @@ export const Reconciliation: React.FC = () => {
           if (skippedNoDate > 0) details.push(`${skippedNoDate} senza data`);
           if (skippedInvalidDate > 0) details.push(`${skippedInvalidDate} con data invalida`);
           if (skippedZeroAmount > 0) details.push(`${skippedZeroAmount} con importo zero`);
-
-          alert(`Importate ${parsed.transactions.length} transazioni.\n\n⚠️ Righe con problemi (${totalProblematic}) messe in "Ignorati":\n${details.join(', ')}\n\nControlla la descrizione per i dettagli.`);
         }
       }
 
@@ -1927,9 +2067,9 @@ export const Reconciliation: React.FC = () => {
       setSelectedSession(sessionId);
 
       // Check if AI keys are configured before starting AI processing
-      const canUseAI = aiMatchingEnabled && checkAIKeysConfigured();
+      const canUseAI = aiMatchingEnabled && aiKeysConfigured;
 
-      if (aiMatchingEnabled && !checkAIKeysConfigured()) {
+      if (aiMatchingEnabled && !aiKeysConfigured) {
         setError('⚠️ AI Matching è abilitato ma le API keys non sono configurate. Le transazioni verranno importate senza matching automatico. Configura le chiavi nelle Impostazioni.');
       }
 
@@ -2047,6 +2187,26 @@ export const Reconciliation: React.FC = () => {
                   matchedCount++;
                   matchedCashflowIds.add(aiMatchResult.cashflowId);
                   console.log(`✅ Transaction matched to cashflow ${aiMatchResult.cashflowId}`);
+
+                  // Get the cashflow to check if it has an invoice
+                  const matchedCashflow = cashflowRecords.find(cf => cf.id === aiMatchResult.cashflowId);
+
+                  // Update cashflow: set to Effettivo and update notes with transaction description
+                  console.log(`🔄 [File Upload] Updating cashflow ${aiMatchResult.cashflowId}...`);
+                  await updateCashflowRecord(aiMatchResult.cashflowId, {
+                    statoFatturazione: 'Effettivo',
+                    note: tx.descrizione || tx.causale || ''
+                  });
+                  console.log(`✅ [File Upload] Cashflow ${aiMatchResult.cashflowId} updated to Effettivo with transaction description`);
+
+                  // Update invoice notes if cashflow has an invoice
+                  if (matchedCashflow?.invoiceId) {
+                    console.log(`🔄 [File Upload] Updating invoice ${matchedCashflow.invoiceId} notes...`);
+                    await updateInvoice(matchedCashflow.invoiceId, {
+                      note: tx.descrizione || tx.causale || ''
+                    });
+                    console.log(`✅ [File Upload] Invoice ${matchedCashflow.invoiceId} notes updated`);
+                  }
                 }
               }
             } else if (aiMatchResult.invoiceId) {
@@ -2293,13 +2453,21 @@ export const Reconciliation: React.FC = () => {
   // Run AI analysis on single transaction
   const handleRunAI = async (transactionId: string) => {
     // Check if AI keys are configured
-    if (!checkAIKeysConfigured()) {
+    if (!aiKeysConfigured) {
       setError('⚠️ Configura le API keys nelle Impostazioni prima di usare l\'AI matching');
       return;
     }
 
     const tx = bankTransactions.find(t => t.id === transactionId);
     if (!tx) return;
+
+    // Set processing state to show loading indicator
+    setAiProcessing({
+      isProcessing: true,
+      sessionId: currentSession?.id || null,
+      current: 0,
+      total: 1
+    });
 
     try {
       // Refresh data to ensure we have latest cashflows from database
@@ -2317,16 +2485,59 @@ export const Reconciliation: React.FC = () => {
       });
       console.log(`[Single AI Match] Available data: ${invoices.length} invoices, ${cashflowRecords.length} cashflow records`);
 
-      const suggestion = await suggestMatch(tx, invoices, cashflowRecords, modelInfo.id);
+      // Filter out cashflows already matched to other transactions
+      const matchedCashflowIds = new Set(
+        bankTransactions
+          .filter(tx => tx.matchedCashflowId && tx.matchStatus !== 'ignored')
+          .map(tx => tx.matchedCashflowId!)
+      );
+
+      const matchedInvoiceIds = new Set(
+        bankTransactions
+          .filter(tx => tx.matchedInvoiceId && tx.matchStatus !== 'ignored')
+          .map(tx => tx.matchedInvoiceId!)
+      );
+
+      const availableCashflows = cashflowRecords.filter(
+        cf => !matchedCashflowIds.has(cf.id) && (!cf.invoiceId || !matchedInvoiceIds.has(cf.invoiceId))
+      );
+
+      console.log(`[Single AI Match] Filtered cashflows: ${availableCashflows.length}/${cashflowRecords.length} available (${cashflowRecords.length - availableCashflows.length} already matched)`);
+
+      const suggestion = await suggestMatch(tx, invoices, availableCashflows, modelInfo.id);
       console.log(`[Single AI Match Result]`, suggestion);
 
-      // Auto-match if confidence is high enough (>=80%)
+      // Auto-match ONLY if confidence is 95% (AI is very sure)
       let newMatchStatus: 'pending' | 'matched' = tx.matchStatus;
-      if (suggestion.confidence >= 80 && (suggestion.cashflowId || suggestion.invoiceId)) {
+      if (suggestion.confidence >= 95 && (suggestion.cashflowId || suggestion.invoiceId)) {
         newMatchStatus = 'matched';
         console.log(`✅ Auto-matching with confidence ${suggestion.confidence}%`);
       } else {
-        console.log(`⚠️ Not auto-matching: confidence ${suggestion.confidence}% (threshold: 80%)`);
+        console.log(`⚠️ Not auto-matching: confidence ${suggestion.confidence}% (threshold: 95%)`);
+      }
+
+      // Update cashflow and invoice if auto-matched
+      if (newMatchStatus === 'matched' && suggestion.cashflowId) {
+        console.log(`🔄 [Single AI Match] Updating cashflow ${suggestion.cashflowId}...`);
+
+        // Get the cashflow to check if it has an invoice
+        const matchedCashflow = cashflowRecords.find(cf => cf.id === suggestion.cashflowId);
+
+        // Update cashflow: set to Effettivo and update notes with transaction description
+        await updateCashflowRecord(suggestion.cashflowId, {
+          statoFatturazione: 'Effettivo',
+          note: tx.descrizione || tx.causale || ''
+        });
+        console.log(`✅ [Single AI Match] Cashflow ${suggestion.cashflowId} updated to Effettivo with transaction description`);
+
+        // Update invoice notes if cashflow has an invoice
+        if (matchedCashflow?.invoiceId) {
+          console.log(`🔄 [Single AI Match] Updating invoice ${matchedCashflow.invoiceId} notes...`);
+          await updateInvoice(matchedCashflow.invoiceId, {
+            note: tx.descrizione || tx.causale || ''
+          });
+          console.log(`✅ [Single AI Match] Invoice ${matchedCashflow.invoiceId} notes updated`);
+        }
       }
 
       await updateBankTransaction(transactionId, {
@@ -2351,6 +2562,14 @@ export const Reconciliation: React.FC = () => {
       console.error('AI matching error:', err);
       const errorMessage = err instanceof Error ? err.message : 'Errore sconosciuto';
       setError(`⚠️ Errore durante l'abbinamento AI: ${errorMessage}`);
+    } finally {
+      // Reset processing state
+      setAiProcessing({
+        isProcessing: false,
+        sessionId: null,
+        current: 0,
+        total: 0
+      });
     }
   };
 
@@ -2408,7 +2627,7 @@ export const Reconciliation: React.FC = () => {
   // Run AI on all pending
   const handleRunAIAll = async () => {
     // Check if AI keys are configured
-    if (!checkAIKeysConfigured()) {
+    if (!aiKeysConfigured) {
       setError('⚠️ Configura le API keys nelle Impostazioni prima di usare l\'AI matching');
       return;
     }
@@ -2461,13 +2680,37 @@ export const Reconciliation: React.FC = () => {
           break;
         }
 
-        // Auto-match if confidence is high enough (>=80%)
+        // Auto-match ONLY if confidence is 95% (AI is very sure)
         let newMatchStatus: 'pending' | 'matched' = 'pending';
-        if (suggestion.confidence >= 80 && (suggestion.cashflowId || suggestion.invoiceId)) {
+        if (suggestion.confidence >= 95 && (suggestion.cashflowId || suggestion.invoiceId)) {
           newMatchStatus = 'matched';
           console.log(`[Batch AI Match] ✅ Auto-matching transaction ${i+1}/${pending.length} with confidence ${suggestion.confidence}%`);
         } else {
-          console.log(`[Batch AI Match] ⚠️ Not auto-matching transaction ${i+1}/${pending.length}: confidence ${suggestion.confidence}%`);
+          console.log(`[Batch AI Match] ⚠️ Not auto-matching transaction ${i+1}/${pending.length}: confidence ${suggestion.confidence}% (threshold: 95%)`);
+        }
+
+        // Update cashflow and invoice if auto-matched
+        if (newMatchStatus === 'matched' && suggestion.cashflowId) {
+          console.log(`[Batch AI Match] 🔄 Updating cashflow ${suggestion.cashflowId}...`);
+
+          // Get the cashflow to check if it has an invoice
+          const matchedCashflow = cashflowRecords.find(cf => cf.id === suggestion.cashflowId);
+
+          // Update cashflow: set to Effettivo and update notes with transaction description
+          await updateCashflowRecord(suggestion.cashflowId, {
+            statoFatturazione: 'Effettivo',
+            note: tx.descrizione || tx.causale || ''
+          });
+          console.log(`[Batch AI Match] ✅ Cashflow ${suggestion.cashflowId} updated to Effettivo with transaction description`);
+
+          // Update invoice notes if cashflow has an invoice
+          if (matchedCashflow?.invoiceId) {
+            console.log(`[Batch AI Match] 🔄 Updating invoice ${matchedCashflow.invoiceId} notes...`);
+            await updateInvoice(matchedCashflow.invoiceId, {
+              note: tx.descrizione || tx.causale || ''
+            });
+            console.log(`[Batch AI Match] ✅ Invoice ${matchedCashflow.invoiceId} notes updated`);
+          }
         }
 
         await updateBankTransaction(tx.id, {
@@ -2575,6 +2818,44 @@ export const Reconciliation: React.FC = () => {
     }
   };
 
+  const handleBulkIgnore = async () => {
+    if (selectedIds.size === 0) return;
+
+    setIsDeleting(true);
+    try {
+      // Count how many are being moved from pending/matched to ignored
+      const selectedTxs = sessionTransactions.filter(tx => selectedIds.has(tx.id));
+      const pendingToIgnored = selectedTxs.filter(tx => tx.matchStatus === 'pending').length;
+      const matchedToIgnored = selectedTxs.filter(tx => tx.matchStatus === 'matched' || tx.matchStatus === 'manual').length;
+
+      for (const id of selectedIds) {
+        await updateBankTransaction(id, {
+          matchStatus: 'ignored',
+          matchReason: 'Ignorato manualmente',
+          matchedInvoiceId: null,
+          matchedCashflowId: null,
+          matchConfidence: null
+        });
+      }
+
+      // Update session counts
+      if (currentSession) {
+        await updateReconciliationSession(currentSession.id, {
+          matchedCount: Math.max(0, currentSession.matchedCount - matchedToIgnored),
+          pendingCount: Math.max(0, currentSession.pendingCount - pendingToIgnored),
+          ignoredCount: currentSession.ignoredCount + pendingToIgnored + matchedToIgnored
+        });
+      }
+
+      setSelectedIds(new Set());
+
+      // Refresh data to update all views
+      await refreshData();
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   const handleDeleteSession = async () => {
     if (!currentSession) return;
     if (!confirm(`Sei sicuro di voler eliminare l'intera sessione "${currentSession.periodo || currentSession.fileName}"? Verranno eliminate anche tutte le transazioni associate.`)) return;
@@ -2592,9 +2873,12 @@ export const Reconciliation: React.FC = () => {
     }
   };
 
-  const handleClearAllSessions = async () => {
-    if (!confirm(`Sei sicuro di voler eliminare TUTTE le riconciliazioni? Questa azione non può essere annullata.`)) return;
+  const handleClearAllSessions = () => {
+    setShowClearAllConfirm(true);
+  };
 
+  const confirmClearAll = async () => {
+    setShowClearAllConfirm(false);
     setIsDeleting(true);
     try {
       await clearAllReconciliationSessions();
@@ -2665,10 +2949,12 @@ export const Reconciliation: React.FC = () => {
   const handleCreateInvoice = async (invoiceData: Omit<Invoice, 'id'>, transaction: BankTransaction) => {
     const newInvoice = await addInvoice(invoiceData);
     if (newInvoice) {
-      // Create a cashflow record automatically for this invoice (without importo, reads from invoice)
+      // Create a cashflow record automatically for this invoice with the transaction amount
       await addCashflowRecord({
         invoiceId: newInvoice.id,
         dataPagamento: transaction.data,
+        importo: Math.abs(transaction.importo), // Use transaction amount
+        tipo: transaction.tipo,
         note: `Movimento automatico da riconciliazione - ${transaction.descrizione || transaction.causale || ''}`,
         statoFatturazione: 'Effettivo' // Set to Effettivo since it's being created from a bank transaction
       });
@@ -2773,11 +3059,23 @@ export const Reconciliation: React.FC = () => {
                 Svuota Tutto
               </button>
             )}
+
+            {/* Close session button */}
+            {currentSession && currentSession.status !== 'closed' && (
+              <button
+                onClick={handleCloseSession}
+                disabled={aiProcessing.isProcessing || isUploading}
+                className="flex items-center gap-2 px-6 py-2.5 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <FileCheck size={18} />
+                Chiudi Sessione
+              </button>
+            )}
           </div>
         </div>
 
         {/* AI Settings Panel */}
-        <div className="flex flex-col sm:flex-row sm:items-center gap-3 p-4 bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-900/10 dark:to-blue-900/10 border border-purple-200 dark:border-purple-800/30 rounded-lg">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3 p-4 bg-gray-50 dark:bg-gray-800/30 border border-gray-200 dark:border-gray-700 rounded-lg">
           {/* AI Toggle with Status Indicator */}
           <div className="flex items-center gap-2.5">
             <label className="relative inline-flex items-center cursor-pointer group">
@@ -2787,7 +3085,7 @@ export const Reconciliation: React.FC = () => {
                 onChange={(e) => setAiMatchingEnabled(e.target.checked)}
                 className="sr-only peer"
               />
-              <div className="w-11 h-6 bg-gray-200 dark:bg-gray-700 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple-300 dark:peer-focus:ring-purple-800 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
+              <div className="w-11 h-6 bg-gray-200 dark:bg-gray-700 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-green-300 dark:peer-focus:ring-green-800 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600"></div>
               <span className="ms-3 text-sm font-semibold text-dark dark:text-white flex items-center gap-2">
                 <span className={`inline-block w-2 h-2 rounded-full ${aiMatchingEnabled ? 'bg-green-500 animate-pulse' : 'bg-gray-400'}`}></span>
                 Matching AI
@@ -2797,7 +3095,7 @@ export const Reconciliation: React.FC = () => {
 
           {/* Vertical Divider */}
           {aiMatchingEnabled && (
-            <div className="hidden sm:block h-8 w-px bg-purple-200 dark:bg-purple-700"></div>
+            <div className="hidden sm:block h-8 w-px bg-gray-300 dark:bg-gray-600"></div>
           )}
 
           {/* AI Configuration - Only show when enabled */}
@@ -2815,7 +3113,7 @@ export const Reconciliation: React.FC = () => {
                     setSelectedAiProvider(newProvider);
                     setSelectedAiModel(newProvider === 'openai' ? 'gpt-4o-mini' : 'claude-3-5-haiku-20241022');
                   }}
-                  className="text-sm font-semibold text-dark dark:text-white bg-white/50 dark:bg-gray-800/50 border border-purple-200 dark:border-purple-700 rounded-md px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-purple-500 cursor-pointer hover:bg-white dark:hover:bg-gray-800 transition-colors"
+                  className="text-sm font-semibold text-dark dark:text-white bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-primary/50 cursor-pointer hover:border-gray-400 dark:hover:border-gray-500 transition-colors"
                 >
                   <option value="anthropic">Anthropic (Claude)</option>
                   <option value="openai">OpenAI (GPT)</option>
@@ -2830,7 +3128,7 @@ export const Reconciliation: React.FC = () => {
                 <select
                   value={selectedAiModel}
                   onChange={(e) => setSelectedAiModel(e.target.value)}
-                  className="text-sm font-semibold text-dark dark:text-white bg-white/50 dark:bg-gray-800/50 border border-purple-200 dark:border-purple-700 rounded-md px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-purple-500 cursor-pointer hover:bg-white dark:hover:bg-gray-800 transition-colors min-w-[200px]"
+                  className="text-sm font-semibold text-dark dark:text-white bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-primary/50 cursor-pointer hover:border-gray-400 dark:hover:border-gray-500 transition-colors min-w-[200px]"
                 >
                   {selectedAiProvider === 'anthropic' ? (
                     <>
@@ -2874,7 +3172,7 @@ export const Reconciliation: React.FC = () => {
       )}
 
       {/* Warning: AI keys not configured */}
-      {aiMatchingEnabled && !checkAIKeysConfigured() && (
+      {aiMatchingEnabled && !aiKeysConfigured && (
         <div className="mb-6 p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg flex items-start gap-3">
           <AlertCircle size={20} className="text-yellow-600 dark:text-yellow-400 flex-shrink-0 mt-0.5" />
           <div className="flex-1">
@@ -2970,19 +3268,6 @@ export const Reconciliation: React.FC = () => {
               >
                 <RefreshCw size={16} />
                 Riapri Sessione
-              </button>
-            </div>
-          )}
-
-          {currentSession.status !== 'closed' && (
-            <div className="mb-6 flex justify-end">
-              <button
-                onClick={handleCloseSession}
-                disabled={aiProcessing.isProcessing || isUploading}
-                className="flex items-center gap-2 pl-4 pr-12 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-green-600"
-              >
-                <FileCheck size={16} />
-                {aiProcessing.isProcessing || isUploading ? 'Processamento in corso...' : 'Chiudi Sessione'}
               </button>
             </div>
           )}
@@ -3103,6 +3388,18 @@ export const Reconciliation: React.FC = () => {
             </div>
 
             <div className="flex items-center gap-2 flex-wrap">
+              {/* Bulk ignore button */}
+              {selectedIds.size > 0 && (
+                <button
+                  onClick={handleBulkIgnore}
+                  disabled={isDeleting || aiProcessing.isProcessing || isUploading || currentSession.status === 'closed'}
+                  className="flex items-center gap-2 pl-4 pr-12 py-2 bg-gray-600 text-white rounded-lg font-medium hover:bg-gray-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <StopCircle size={16} />
+                  {aiProcessing.isProcessing || isUploading ? 'Processamento in corso...' : isDeleting ? 'Ignorando...' : `Ignora (${selectedIds.size})`}
+                </button>
+              )}
+
               {/* Bulk delete button */}
               {selectedIds.size > 0 && (
                 <button
@@ -3115,36 +3412,34 @@ export const Reconciliation: React.FC = () => {
                 </button>
               )}
 
-              {/* Delete session button */}
-              <button
-                onClick={handleDeleteSession}
-                disabled={isDeleting || aiProcessing.isProcessing || isUploading || currentSession.status === 'closed'}
-                className="flex items-center gap-2 pl-4 pr-12 py-2 bg-white dark:bg-dark-card border border-gray-200 dark:border-dark-border text-gray-500 dark:text-gray-400 rounded-lg font-medium hover:bg-gray-50 dark:hover:bg-dark-bg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <Trash2 size={16} />
-                {aiProcessing.isProcessing || isUploading ? 'Processamento in corso...' : 'Elimina Sessione'}
-              </button>
-
-              {stats.pending > 0 && (
+              {/* Delete session button - hide during AI processing */}
+              {!aiProcessing.isProcessing && !isUploading && (
                 <button
-                  onClick={aiProcessing.isProcessing ? stopAiProcessing : handleRunAIAll}
-                  disabled={currentSession.status === 'closed'}
-                  className={`flex items-center gap-2 pl-4 pr-12 py-2 rounded-lg font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
-                    aiProcessing.isProcessing
-                      ? 'bg-red-600 hover:bg-red-700 text-white'
-                      : 'bg-accent hover:opacity-90 text-white'
-                  }`}
+                  onClick={handleDeleteSession}
+                  disabled={isDeleting || currentSession.status === 'closed'}
+                  className="flex items-center gap-2 pl-4 pr-12 py-2 bg-white dark:bg-dark-card border border-gray-200 dark:border-dark-border text-gray-500 dark:text-gray-400 rounded-lg font-medium hover:bg-gray-50 dark:hover:bg-dark-bg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {aiProcessing.isProcessing ? (
-                    <StopCircle size={16} />
-                  ) : (
-                    <RefreshCw size={16} />
-                  )}
-                  {aiProcessing.isProcessing
-                    ? `Termina (${aiProcessing.current}/${aiProcessing.total})`
-                    : `Analizza Tutti con AI (${stats.pending})`
-                  }
+                  <Trash2 size={16} />
+                  Elimina Sessione
                 </button>
+              )}
+
+              {stats.pending > 0 && !aiProcessing.isProcessing && (
+                <button
+                  onClick={handleRunAIAll}
+                  disabled={currentSession.status === 'closed'}
+                  className="flex items-center gap-2 pl-4 pr-12 py-2 rounded-lg font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed bg-accent hover:opacity-90 text-white"
+                >
+                  <RefreshCw size={16} />
+                  Analizza Tutti con AI ({stats.pending})
+                </button>
+              )}
+
+              {aiProcessing.isProcessing && (
+                <div className="flex items-center gap-2 px-4 py-2.5 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                  <RefreshCw size={16} className="animate-spin text-blue-600 dark:text-blue-400" />
+                  <span className="text-sm font-medium text-blue-700 dark:text-blue-300">Processamento in corso...</span>
+                </div>
               )}
             </div>
           </div>
@@ -3297,6 +3592,31 @@ export const Reconciliation: React.FC = () => {
                 </div>
               </>
             )}
+          </div>
+        </div>
+      )}
+
+      {showClearAllConfirm && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white dark:bg-dark-card rounded-xl shadow-2xl p-6 max-w-md w-full mx-4">
+            <h3 className="text-lg font-semibold text-dark dark:text-white mb-3">Svuota Tutto</h3>
+            <p className="text-sm text-gray-600 dark:text-gray-300 mb-6">
+              Sei sicuro di voler eliminare TUTTE le riconciliazioni? Questa azione non può essere annullata.
+            </p>
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={() => setShowClearAllConfirm(false)}
+                className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-dark dark:text-white rounded-lg hover:opacity-90 transition-all font-medium"
+              >
+                Annulla
+              </button>
+              <button
+                onClick={confirmClearAll}
+                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:opacity-90 transition-all font-medium"
+              >
+                SI
+              </button>
+            </div>
           </div>
         </div>
       )}

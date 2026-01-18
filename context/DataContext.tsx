@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
+import { useAuth } from './AuthContext';
 import { Customer, Deal, Invoice, Transaction, FinancialItem, DealStage, CashflowRecord, BankBalance, BankTransaction, ReconciliationSession, AppSettings, InvoiceNotification } from '../types';
 import {
   MOCK_CUSTOMERS,
@@ -123,6 +124,12 @@ interface DataContextType {
   getSettings: () => Promise<AppSettings | null>;
   updateSettings: (settings: Partial<Omit<AppSettings, 'id'>>) => Promise<boolean>;
 
+  // User Management
+  getCompanyUsers: () => Promise<any[]>;
+  createUser: (userData: { email: string; name: string; password: string; role: string }) => Promise<{ error: Error | null }>;
+  updateUser: (userId: string, updates: { full_name?: string; role?: string; is_active?: boolean }) => Promise<{ error: Error | null }>;
+  deleteUser: (userId: string) => Promise<void>;
+
   // Invoice Notifications
   checkInvoiceDueDates: () => Promise<void>; // Controlla scadenze e genera notifiche
   dismissNotification: (id: string) => Promise<boolean>; // Cancella una notifica
@@ -142,6 +149,7 @@ export const useData = () => {
 };
 
 export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { companyId, user } = useAuth();
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [deals, setDeals] = useState<Deal[]>([]);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
@@ -198,18 +206,27 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return;
     }
 
+    // Wait for companyId to be available
+    if (!companyId) {
+      console.log('[DataContext] Waiting for companyId...');
+      setLoading(false);
+      return;
+    }
+
     try {
+      console.log('[DataContext] Fetching data for company:', companyId);
+
       const [customersRes, dealsRes, invoicesRes, transactionsRes, financialItemsRes, cashflowRes, bankBalancesRes, reconciliationSessionsRes, bankTransactionsRes, settingsRes, notificationsRes] = await Promise.all([
-        supabase.from('customers').select('*'),
-        supabase.from('deals').select('*'),
-        supabase.from('invoices').select('*'),
-        supabase.from('transactions').select('*'),
-        supabase.from('financial_items').select('*'),
-        supabase.from('cashflow_records').select('*'),
-        supabase.from('bank_balances').select('*'),
-        supabase.from('reconciliation_sessions').select('*'),
-        supabase.from('bank_transactions').select('*'),
-        supabase.from('settings').select('*').eq('id', 'default').single(),
+        supabase.from('customers').select('*').eq('company_id', companyId),
+        supabase.from('deals').select('*').eq('company_id', companyId),
+        supabase.from('invoices').select('*').eq('company_id', companyId),
+        supabase.from('transactions').select('*').eq('company_id', companyId),
+        supabase.from('financial_items').select('*').eq('company_id', companyId),
+        supabase.from('cashflow_records').select('*').eq('company_id', companyId),
+        supabase.from('bank_balances').select('*').eq('company_id', companyId),
+        supabase.from('reconciliation_sessions').select('*').eq('company_id', companyId),
+        supabase.from('bank_transactions').select('*').eq('company_id', companyId),
+        supabase.from('settings').select('*').eq('company_id', companyId).single(),
         supabase.from('invoice_notifications').select('*').eq('dismissed', false),
       ]);
 
@@ -260,7 +277,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } finally {
       setLoading(false);
     }
-  }, [isSupabaseConfigured]);
+  }, [isSupabaseConfigured, companyId]);
 
   useEffect(() => {
     fetchData();
@@ -302,9 +319,14 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return newCustomer;
     }
 
+    if (!companyId) {
+      console.error('No company ID available');
+      return null;
+    }
+
     const { data, error } = await supabase
       .from('customers')
-      .insert(camelToSnake(customer))
+      .insert({ ...camelToSnake(customer), company_id: companyId })
       .select()
       .single();
 
@@ -640,9 +662,14 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return newTransaction;
     }
 
+    if (!companyId) {
+      console.error('No company ID available');
+      return null;
+    }
+
     const { data, error } = await supabase
       .from('transactions')
-      .insert(camelToSnake(transaction))
+      .insert({ ...camelToSnake(transaction), company_id: companyId })
       .select()
       .single();
 
@@ -708,9 +735,14 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return newItem;
     }
 
+    if (!companyId) {
+      console.error('No company ID available');
+      return null;
+    }
+
     const { data, error } = await supabase
       .from('financial_items')
-      .insert(camelToSnake(itemWithId))
+      .insert({ ...camelToSnake(itemWithId), company_id: companyId })
       .select()
       .single();
 
@@ -826,6 +858,23 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     console.log('✅ [updateCashflowRecord] Cashflow record updated successfully');
     setCashflowRecords(prev => prev.map(cf => cf.id === id ? { ...cf, ...record } : cf));
+
+    // If stato changed to Effettivo and cashflow has an invoice, reload the invoice
+    // because the trigger will have updated it
+    if (record.statoFatturazione === 'Effettivo' && currentCashflow?.invoiceId) {
+      console.log('🔄 [updateCashflowRecord] Reloading invoice after cashflow became Effettivo');
+      const { data: updatedInvoice, error: invoiceError } = await supabase
+        .from('invoices')
+        .select('*')
+        .eq('id', currentCashflow.invoiceId)
+        .single();
+
+      if (!invoiceError && updatedInvoice) {
+        const invoice = snakeToCamel(updatedInvoice) as Invoice;
+        setInvoices(prev => prev.map(inv => inv.id === currentCashflow.invoiceId ? invoice : inv));
+        console.log('✅ [updateCashflowRecord] Invoice reloaded, new stato:', invoice.statoFatturazione);
+      }
+    }
 
     // If stato changed and cashflow has an invoiceId, re-check notifications
     console.log('🔍 [updateCashflowRecord] Checking notification conditions:');
@@ -980,12 +1029,18 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     }
 
+    if (!companyId) {
+      console.error('No company ID available');
+      return null;
+    }
+
     if (existingBalance) {
       // Update existing
       const { data, error } = await supabase
         .from('bank_balances')
         .update(camelToSnake({ saldoIniziale, note }))
         .eq('anno', anno)
+        .eq('company_id', companyId)
         .select()
         .single();
 
@@ -1001,7 +1056,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Insert new
       const { data, error } = await supabase
         .from('bank_balances')
-        .insert(camelToSnake({ anno, saldoIniziale, note }))
+        .insert({ ...camelToSnake({ anno, saldoIniziale, note }), company_id: companyId })
         .select()
         .single();
 
@@ -1184,28 +1239,52 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Settings functions
   const getSettings = async (): Promise<AppSettings | null> => {
+    console.log('[getSettings] Called - isSupabaseConfigured:', isSupabaseConfigured, 'companyId:', companyId);
+
     if (!isSupabaseConfigured) {
       // Return from state if Supabase not configured
+      console.log('[getSettings] Supabase not configured, returning state:', settings);
       return settings;
     }
 
+    if (!companyId) {
+      console.error('[getSettings] No company ID available for settings');
+      return null;
+    }
+
     try {
+      console.log('[getSettings] Querying settings for company:', companyId);
       const { data, error } = await supabase
         .from('settings')
         .select('*')
         .eq('id', 'default')
+        .eq('company_id', companyId)
         .single();
 
       if (error) {
-        console.error('Error fetching settings:', error);
-        return null;
+        console.error('[getSettings] Error fetching settings:', error);
+        // Return default settings if none exist yet
+        return {
+          id: 'default',
+          defaultAiProvider: 'anthropic',
+          anthropicApiKey: '',
+          openaiApiKey: '',
+          notificationRefreshInterval: 5
+        };
       }
+
+      console.log('[getSettings] Settings fetched successfully:', {
+        hasAnthropicKey: !!data.anthropic_api_key,
+        hasOpenaiKey: !!data.openai_api_key,
+        anthropicKeyLength: data.anthropic_api_key?.length,
+        openaiKeyLength: data.openai_api_key?.length
+      });
 
       const convertedSettings = snakeToCamel(data);
       setSettings(convertedSettings);
       return convertedSettings;
     } catch (err) {
-      console.error('Error in getSettings:', err);
+      console.error('[getSettings] Error in getSettings:', err);
       return null;
     }
   };
@@ -1217,12 +1296,17 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return true;
     }
 
+    if (!companyId) {
+      console.error('No company ID available for updating settings');
+      return false;
+    }
+
     try {
       const { error } = await supabase
         .from('settings')
         .upsert({
           id: 'default',
-          company_id: '00000000-0000-0000-0000-000000000001', // Ncode Studio
+          company_id: companyId,
           ...camelToSnake(newSettings),
           updated_at: new Date().toISOString()
         });
@@ -1238,6 +1322,334 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } catch (err) {
       console.error('Error in updateSettings:', err);
       return false;
+    }
+  };
+
+  // User Management Functions
+  const getCompanyUsers = async (): Promise<any[]> => {
+    if (!companyId) {
+      console.error('No company ID available');
+      return [];
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from('company_users')
+        .select(`
+          user_id,
+          role,
+          is_active,
+          created_at,
+          users:user_id (
+            id,
+            email,
+            full_name
+          )
+        `)
+        .eq('company_id', companyId);
+
+      if (error) {
+        console.error('Error fetching company users:', error);
+        return [];
+      }
+
+      // Transform the data to a flatter structure
+      const transformedUsers = (data || []).map((cu: any) => ({
+        id: cu.user_id,
+        email: cu.users.email,
+        name: cu.users.full_name,
+        role: cu.role,
+        is_active: cu.is_active,
+        created_at: cu.created_at,
+      }));
+
+      return transformedUsers;
+    } catch (err) {
+      console.error('Error in getCompanyUsers:', err);
+      return [];
+    }
+  };
+
+  const createUser = async (userData: {
+    email: string;
+    name: string;
+    password: string;
+    role: string;
+  }): Promise<{ error: Error | null }> => {
+    if (!companyId) {
+      return { error: new Error('No company ID available') };
+    }
+
+    if (!user) {
+      return { error: new Error('No authenticated user') };
+    }
+
+    try {
+      console.log('👤 Admin creating new user:', userData.email);
+
+      // PERMISSION CHECK: Verify current user is an admin
+      const { data: currentUserRole, error: roleError } = await supabase
+        .from('company_users')
+        .select('role')
+        .eq('user_id', user.id)
+        .eq('company_id', companyId)
+        .eq('is_active', true)
+        .single();
+
+      if (roleError || !currentUserRole || currentUserRole.role !== 'admin') {
+        console.error('❌ Permission denied: User is not an admin');
+        return { error: new Error('Permesso negato: solo gli amministratori possono creare utenti') };
+      }
+
+      console.log('✅ Permission check passed: User is admin');
+
+      // CRITICAL: Save current admin session before creating new user
+      // This prevents the new user from "taking over" the current session
+      const { data: currentSession } = await supabase.auth.getSession();
+
+      if (!currentSession.session) {
+        return { error: new Error('Nessuna sessione attiva. Effettua il login e riprova.') };
+      }
+
+      const adminSession = currentSession.session;
+      console.log('💾 Saved admin session:', adminSession.user.email);
+
+      // 1. Create user in Supabase Auth
+      // WARNING: This will AUTO-LOGIN the new user and replace current session!
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email: userData.email,
+        password: userData.password,
+        options: {
+          data: {
+            name: userData.name,
+            company_id: companyId,
+          },
+          emailRedirectTo: undefined,
+        },
+      });
+
+      if (authError) {
+        console.error('❌ Error creating auth user:', authError);
+        return { error: new Error('Errore nella creazione dell\'utente: ' + authError.message) };
+      }
+
+      if (!authData.user) {
+        return { error: new Error('Errore: utente non creato') };
+      }
+
+      const userId = authData.user.id;
+      console.log('✅ Created auth user:', userId);
+
+      // 2. Create user in users table
+      const { error: userError } = await supabase.from('users').insert({
+        id: userId,
+        email: userData.email,
+        full_name: userData.name,
+        is_active: true,
+      });
+
+      if (userError) {
+        console.error('❌ Error creating user record:', userError);
+        // Try to restore admin session even on error
+        await supabase.auth.setSession(adminSession);
+        return { error: new Error('Errore nella creazione del profilo utente: ' + userError.message) };
+      }
+
+      console.log('✅ Created user record');
+
+      // 3. Link user to company
+      const { error: linkError } = await supabase.from('company_users').insert({
+        user_id: userId,
+        company_id: companyId,
+        role: userData.role,
+        is_active: true,
+      });
+
+      if (linkError) {
+        console.error('❌ Error linking user to company:', linkError);
+        // Try to restore admin session even on error
+        await supabase.auth.setSession(adminSession);
+        return { error: new Error('Errore nel collegamento utente-azienda: ' + linkError.message) };
+      }
+
+      console.log('✅ Linked user to company');
+
+      // 4. CRITICAL: Restore admin session
+      // The signUp above replaced our session with the new user's session
+      // We need to restore the admin's session to prevent "impersonation"
+      console.log('🔄 Restoring admin session...');
+      const { error: restoreError } = await supabase.auth.setSession(adminSession);
+
+      if (restoreError) {
+        console.error('❌ Failed to restore admin session:', restoreError);
+        // This is critical - if we can't restore, the admin is now logged in as the new user!
+        return { error: new Error('Utente creato ma impossibile ripristinare la sessione admin. Fai logout e login per continuare.') };
+      }
+
+      console.log('✅ Admin session restored:', adminSession.user.email);
+      console.log('🎉 User created successfully without impersonation!');
+
+      return { error: null };
+    } catch (err) {
+      console.error('❌ Unexpected error creating user:', err);
+      return { error: err as Error };
+    }
+  };
+
+  const updateUser = async (
+    userId: string,
+    updates: { full_name?: string; role?: string; is_active?: boolean }
+  ): Promise<{ error: Error | null }> => {
+    if (!companyId) {
+      return { error: new Error('No company ID available') };
+    }
+
+    if (!user) {
+      return { error: new Error('No authenticated user') };
+    }
+
+    try {
+      // PERMISSION CHECK: Verify current user is an admin
+      const { data: currentUserRole, error: roleError } = await supabase
+        .from('company_users')
+        .select('role')
+        .eq('user_id', user.id)
+        .eq('company_id', companyId)
+        .eq('is_active', true)
+        .single();
+
+      if (roleError || !currentUserRole || currentUserRole.role !== 'admin') {
+        console.error('❌ Permission denied: User is not an admin');
+        return { error: new Error('Permesso negato: solo gli amministratori possono modificare utenti') };
+      }
+      // Update users table if full_name is provided
+      if (updates.full_name) {
+        const { error: userError } = await supabase
+          .from('users')
+          .update({ full_name: updates.full_name })
+          .eq('id', userId);
+
+        if (userError) {
+          console.error('Error updating user full_name:', userError);
+          return { error: new Error('Errore nell\'aggiornamento del nome: ' + userError.message) };
+        }
+      }
+
+      // Update company_users table for role and is_active
+      if (updates.role !== undefined || updates.is_active !== undefined) {
+        const updateData: any = {};
+        if (updates.role !== undefined) updateData.role = updates.role;
+        if (updates.is_active !== undefined) updateData.is_active = updates.is_active;
+
+        const { error: linkError } = await supabase
+          .from('company_users')
+          .update(updateData)
+          .eq('user_id', userId)
+          .eq('company_id', companyId);
+
+        if (linkError) {
+          console.error('Error updating user role/status:', linkError);
+          return { error: new Error('Errore nell\'aggiornamento del ruolo/stato: ' + linkError.message) };
+        }
+      }
+
+      return { error: null };
+    } catch (err) {
+      console.error('Unexpected error updating user:', err);
+      return { error: err as Error };
+    }
+  };
+
+  const deleteUser = async (userId: string): Promise<void> => {
+    if (!companyId) {
+      throw new Error('No company ID available');
+    }
+
+    if (!user) {
+      throw new Error('No authenticated user');
+    }
+
+    try {
+      // PERMISSION CHECK: Verify current user is an admin (unless deleting self)
+      if (userId !== user.id) {
+        const { data: currentUserRole, error: roleError } = await supabase
+          .from('company_users')
+          .select('role')
+          .eq('user_id', user.id)
+          .eq('company_id', companyId)
+          .eq('is_active', true)
+          .single();
+
+        if (roleError || !currentUserRole || currentUserRole.role !== 'admin') {
+          console.error('❌ Permission denied: User is not an admin');
+          throw new Error('Permesso negato: solo gli amministratori possono eliminare utenti');
+        }
+      }
+
+      // Check if this is the last admin/user in the company
+      const { data: companyUsers, error: checkError } = await supabase
+        .from('company_users')
+        .select('user_id, role')
+        .eq('company_id', companyId)
+        .eq('is_active', true);
+
+      if (checkError) {
+        console.error('Error checking company users:', checkError);
+        throw new Error('Errore nella verifica degli utenti');
+      }
+
+      // Check if there's only one user left
+      if (companyUsers && companyUsers.length <= 1) {
+        throw new Error('Non puoi eliminare l\'ultimo utente dell\'azienda');
+      }
+
+      // Check if this is the last admin
+      const adminUsers = companyUsers?.filter(cu => cu.role === 'admin') || [];
+      const isUserAdmin = adminUsers.some(cu => cu.user_id === userId);
+
+      if (isUserAdmin && adminUsers.length <= 1) {
+        throw new Error('Non puoi eliminare l\'ultimo amministratore dell\'azienda');
+      }
+
+      // 1. Delete from company_users (this removes the link)
+      const { error: linkError } = await supabase
+        .from('company_users')
+        .delete()
+        .eq('user_id', userId)
+        .eq('company_id', companyId);
+
+      if (linkError) {
+        console.error('Error deleting company_users link:', linkError);
+        throw new Error('Errore nell\'eliminazione del collegamento utente-azienda');
+      }
+
+      // 2. Delete from users table
+      // This will trigger the database trigger to delete from auth.users automatically
+      const { error: userError } = await supabase
+        .from('users')
+        .delete()
+        .eq('id', userId);
+
+      if (userError) {
+        console.error('Error deleting user record:', userError);
+        throw new Error('Errore nell\'eliminazione del profilo utente');
+      }
+
+      console.log('✅ User deleted successfully. Database triggers will handle auth cleanup.');
+
+      // If deleting current user, sign out
+      if (userId === user?.id) {
+        console.log('🚪 Current user deleted, signing out...');
+        // Clear local data
+        localStorage.clear();
+        sessionStorage.clear();
+        // Sign out and redirect
+        await supabase.auth.signOut();
+        window.location.href = '/';
+      }
+    } catch (err) {
+      console.error('Unexpected error deleting user:', err);
+      throw err;
     }
   };
 
@@ -1451,6 +1863,10 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     settings,
     getSettings,
     updateSettings,
+    getCompanyUsers,
+    createUser,
+    updateUser,
+    deleteUser,
     invoiceNotifications,
     checkInvoiceDueDates,
     dismissNotification,
