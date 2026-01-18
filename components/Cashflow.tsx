@@ -798,34 +798,19 @@ export const Cashflow: React.FC = () => {
 
       for (const cashflow of importedCashflows) {
         try {
+          // Check if ID already exists and skip if it does
           let cashflowId = cashflow.id || `CF-${crypto.randomUUID()}`;
-
-          // Check if ID already exists in MY company
           const existingCashflow = cashflowRecords.find(cf => cf.id === cashflowId);
 
           if (existingCashflow) {
-            // Skip duplicate ID in same company
+            // Skip duplicate ID
             errorCount++;
-            console.error(`ID duplicato nella tua azienda: ${cashflow.id}, riga saltata`);
+            console.error(`ID duplicato ${cashflow.id}, riga saltata`);
             continue;
           }
 
-          // Try to insert with original ID
-          try {
-            await addCashflowRecord({ ...cashflow, id: cashflowId } as CashflowRecord);
-            successCount++;
-          } catch (insertErr: any) {
-            // If insert fails due to duplicate key (ID exists in another company)
-            if (insertErr?.code === '23505' || insertErr?.message?.includes('duplicate key')) {
-              // Generate new unique ID and retry
-              const newId = `CF-${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-              console.log(`ID ${cashflowId} esiste in altra azienda, generato nuovo ID: ${newId}`);
-              await addCashflowRecord({ ...cashflow, id: newId } as CashflowRecord);
-              successCount++;
-            } else {
-              throw insertErr;
-            }
-          }
+          await addCashflowRecord({ ...cashflow, id: cashflowId } as CashflowRecord);
+          successCount++;
         } catch (err) {
           errorCount++;
           console.error(`Errore importazione cashflow:`, err);

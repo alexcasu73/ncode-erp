@@ -356,34 +356,19 @@ export const Invoicing: React.FC = () => {
 
       for (const invoice of importedInvoices) {
         try {
+          // Check if ID already exists and skip if it does
           let invoiceId = invoice.id || `Fattura_${crypto.randomUUID()}`;
-
-          // Check if ID already exists in MY company
           const existingInvoice = invoices.find(inv => inv.id === invoiceId);
 
           if (existingInvoice) {
-            // Skip duplicate ID in same company
+            // Skip duplicate ID
             errorCount++;
-            console.error(`ID duplicato nella tua azienda: ${invoice.id}, riga saltata`);
+            console.error(`ID duplicato ${invoice.id}, riga saltata`);
             continue;
           }
 
-          // Try to insert with original ID
-          try {
-            await addInvoice({ ...invoice, id: invoiceId } as Invoice);
-            successCount++;
-          } catch (insertErr: any) {
-            // If insert fails due to duplicate key (ID exists in another company)
-            if (insertErr?.code === '23505' || insertErr?.message?.includes('duplicate key')) {
-              // Generate new unique ID and retry
-              const newId = `Fattura_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-              console.log(`ID ${invoiceId} esiste in altra azienda, generato nuovo ID: ${newId}`);
-              await addInvoice({ ...invoice, id: newId } as Invoice);
-              successCount++;
-            } else {
-              throw insertErr;
-            }
-          }
+          await addInvoice({ ...invoice, id: invoiceId } as Invoice);
+          successCount++;
         } catch (err) {
           errorCount++;
           console.error(`Errore importazione fattura:`, err);
