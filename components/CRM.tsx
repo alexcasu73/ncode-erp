@@ -167,19 +167,34 @@ export const CRM: React.FC = () => {
 
       for (const customer of importedCustomers) {
         try {
-          // Check if ID already exists and skip if it does
           let customerId = customer.id || `Cliente_${crypto.randomUUID()}`;
+
+          // Check if ID already exists in MY company
           const existingCustomer = customers.find(c => c.id === customerId);
 
           if (existingCustomer) {
-            // Skip duplicate ID
+            // Skip duplicate ID in same company
             errorCount++;
-            console.error(`ID duplicato ${customer.id}, riga saltata`);
+            console.error(`ID duplicato nella tua azienda: ${customer.id}, riga saltata`);
             continue;
           }
 
-          await addCustomer({ ...customer, id: customerId } as Customer);
-          successCount++;
+          // Try to insert with original ID
+          try {
+            await addCustomer({ ...customer, id: customerId } as Customer);
+            successCount++;
+          } catch (insertErr: any) {
+            // If insert fails due to duplicate key (ID exists in another company)
+            if (insertErr?.code === '23505' || insertErr?.message?.includes('duplicate key')) {
+              // Generate new unique ID and retry
+              const newId = `Cliente_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+              console.log(`ID ${customerId} esiste in altra azienda, generato nuovo ID: ${newId}`);
+              await addCustomer({ ...customer, id: newId } as Customer);
+              successCount++;
+            } else {
+              throw insertErr;
+            }
+          }
         } catch (err) {
           errorCount++;
           console.error(`Errore importazione cliente:`, err);
