@@ -1312,7 +1312,9 @@ export const Cashflow: React.FC = () => {
                     <td className="px-3 py-3 whitespace-nowrap text-sm font-medium text-primary">
                       {formatInvoiceNumber(inv.id, inv.anno)}
                     </td>
-                    <td className="px-3 py-3 text-sm text-gray-500 dark:text-gray-400 truncate max-w-[10rem]" data-tooltip={inv.nomeProgetto || undefined}>{inv.nomeProgetto || '-'}</td>
+                    <td className="px-3 py-3 text-sm text-gray-500 dark:text-gray-400 truncate max-w-[10rem]" data-tooltip={inv.nomeProgetto || (inv.spesa && inv.tipoSpesa ? `${inv.spesa} - ${inv.tipoSpesa}` : inv.spesa || inv.tipoSpesa) || undefined}>
+                      {inv.nomeProgetto || (inv.spesa && inv.tipoSpesa ? `${inv.spesa} - ${inv.tipoSpesa}` : inv.spesa || inv.tipoSpesa || '-')}
+                    </td>
                     <td className="px-3 py-3 text-sm text-gray-500 dark:text-gray-400 truncate max-w-[5rem]" data-tooltip={inv.spesa && inv.tipoSpesa ? `${inv.spesa} - ${inv.tipoSpesa}` : inv.spesa || inv.tipoSpesa || undefined}>{inv.spesa || '-'}</td>
                     <td className="px-3 py-3 text-sm text-gray-500 dark:text-gray-400 truncate max-w-[12rem]" data-tooltip={record.note || inv.note || undefined}>{record.note || inv.note || '-'}</td>
                     <td className="px-3 py-3 whitespace-nowrap">
