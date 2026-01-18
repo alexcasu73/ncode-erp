@@ -165,23 +165,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       const companySlug = generateSlug(data.companyName);
 
-      // 1. Create company in companies table
-      const { data: companyData, error: companyError } = await supabase
-        .from('companies')
-        .insert({
-          name: data.companyName,
-          slug: companySlug,
-          is_active: true,
-        })
-        .select('id')
-        .single();
+      // 1. Create company using database function (bypasses RLS during registration)
+      const { data: newCompanyId, error: companyError } = await supabase
+        .rpc('create_company_for_registration', {
+          company_name: data.companyName,
+          company_slug: companySlug,
+        });
 
-      if (companyError) {
+      if (companyError || !newCompanyId) {
         console.error('Error creating company:', companyError);
-        return { error: new Error('Errore nella creazione dell\'azienda: ' + companyError.message) };
+        return { error: new Error('Errore nella creazione dell\'azienda: ' + (companyError?.message || 'Unknown error')) };
       }
-
-      const newCompanyId = companyData.id;
 
       // 2. Create user in Supabase Auth
       const { data: authData, error: authError } = await supabase.auth.signUp({
