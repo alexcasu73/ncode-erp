@@ -11,24 +11,24 @@ interface EmailInvitation {
 }
 
 /**
- * Get SMTP settings for the current company
+ * Get email settings for the current company
  */
 export async function getSmtpSettings(companyId: string): Promise<AppSettings | null> {
   try {
     const { data, error } = await supabase
-      .from('app_settings')
+      .from('settings')
       .select('*')
       .eq('company_id', companyId)
       .single();
 
     if (error) {
-      console.error('Error fetching SMTP settings:', error);
+      console.error('Error fetching email settings:', error);
       return null;
     }
 
     return data;
   } catch (err) {
-    console.error('Unexpected error fetching SMTP settings:', err);
+    console.error('Unexpected error fetching email settings:', err);
     return null;
   }
 }
