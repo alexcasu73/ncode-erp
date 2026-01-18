@@ -762,11 +762,31 @@ export const Cashflow: React.FC = () => {
       }
 
       // Add imported cashflows to database
+      let successCount = 0;
+      let errorCount = 0;
+
       for (const cashflow of importedCashflows) {
-        await addCashflowRecord(cashflow as CashflowRecord);
+        try {
+          // Check if ID already exists and generate a new one if needed
+          let cashflowId = cashflow.id || `CF-${crypto.randomUUID()}`;
+          const existingCashflow = cashflowRecords.find(cf => cf.id === cashflowId);
+
+          if (existingCashflow) {
+            // Generate unique ID
+            cashflowId = `CF-${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+            console.log(`ID duplicato ${cashflow.id}, generato nuovo ID: ${cashflowId}`);
+          }
+
+          await addCashflowRecord({ ...cashflow, id: cashflowId } as CashflowRecord);
+          successCount++;
+        } catch (err) {
+          errorCount++;
+          console.error(`Errore importazione cashflow:`, err);
+        }
       }
 
-      alert(`Import completato! ${importedCashflows.length} flussi di cassa importati${errors.length > 0 ? ` con ${errors.length} errori` : ''}.`);
+      const message = `Import completato!\n✅ Flussi importati: ${successCount}\n${errorCount > 0 ? `❌ Errori: ${errorCount}\n` : ''}${errors.length > 0 ? `⚠️ Righe scartate (validazione): ${errors.length}` : ''}`;
+      alert(message);
 
       if (errors.length > 0) {
         console.error('Import errors:', errors);

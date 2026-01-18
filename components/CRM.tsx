@@ -162,11 +162,31 @@ export const CRM: React.FC = () => {
       }
 
       // Add imported customers to database
+      let successCount = 0;
+      let errorCount = 0;
+
       for (const customer of importedCustomers) {
-        await addCustomer(customer as Customer);
+        try {
+          // Check if ID already exists and generate a new one if needed
+          let customerId = customer.id || `Cliente_${crypto.randomUUID()}`;
+          const existingCustomer = customers.find(c => c.id === customerId);
+
+          if (existingCustomer) {
+            // Generate unique ID
+            customerId = `Cliente_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+            console.log(`ID duplicato ${customer.id}, generato nuovo ID: ${customerId}`);
+          }
+
+          await addCustomer({ ...customer, id: customerId } as Customer);
+          successCount++;
+        } catch (err) {
+          errorCount++;
+          console.error(`Errore importazione cliente:`, err);
+        }
       }
 
-      alert(`Import completato! ${importedCustomers.length} clienti importati${errors.length > 0 ? ` con ${errors.length} errori` : ''}.`);
+      const message = `Import completato!\n✅ Clienti importati: ${successCount}\n${errorCount > 0 ? `❌ Errori: ${errorCount}\n` : ''}${errors.length > 0 ? `⚠️ Righe scartate (validazione): ${errors.length}` : ''}`;
+      alert(message);
 
       if (errors.length > 0) {
         console.error('Import errors:', errors);

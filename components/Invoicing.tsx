@@ -351,11 +351,31 @@ export const Invoicing: React.FC = () => {
       }
 
       // Add imported invoices to database
+      let successCount = 0;
+      let errorCount = 0;
+
       for (const invoice of importedInvoices) {
-        await addInvoice(invoice as Invoice);
+        try {
+          // Check if ID already exists and generate a new one if needed
+          let invoiceId = invoice.id || `Fattura_${crypto.randomUUID()}`;
+          const existingInvoice = invoices.find(inv => inv.id === invoiceId);
+
+          if (existingInvoice) {
+            // Generate unique ID
+            invoiceId = `Fattura_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+            console.log(`ID duplicato ${invoice.id}, generato nuovo ID: ${invoiceId}`);
+          }
+
+          await addInvoice({ ...invoice, id: invoiceId } as Invoice);
+          successCount++;
+        } catch (err) {
+          errorCount++;
+          console.error(`Errore importazione fattura:`, err);
+        }
       }
 
-      alert(`Import completato! ${importedInvoices.length} fatture importate${errors.length > 0 ? ` con ${errors.length} errori` : ''}.`);
+      const message = `Import completato!\n✅ Fatture importate: ${successCount}\n${errorCount > 0 ? `❌ Errori: ${errorCount}\n` : ''}${errors.length > 0 ? `⚠️ Righe scartate (validazione): ${errors.length}` : ''}`;
+      alert(message);
 
       if (errors.length > 0) {
         console.error('Import errors:', errors);
