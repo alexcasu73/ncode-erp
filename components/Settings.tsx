@@ -19,6 +19,18 @@ const Settings: React.FC = () => {
   // Email provider
   const [emailProvider, setEmailProvider] = useState<'smtp' | 'google-oauth2'>('smtp');
 
+  // Sincronizza automaticamente lo stato "enabled" con il provider selezionato
+  const handleEmailProviderChange = (provider: 'smtp' | 'google-oauth2') => {
+    setEmailProvider(provider);
+    if (provider === 'smtp') {
+      setSmtpEnabled(true);
+      setGoogleOauth2Enabled(false);
+    } else {
+      setSmtpEnabled(false);
+      setGoogleOauth2Enabled(true);
+    }
+  };
+
   // SMTP Settings
   const [smtpEnabled, setSmtpEnabled] = useState(false);
   const [smtpHost, setSmtpHost] = useState('smtp.gmail.com');
@@ -56,10 +68,11 @@ const Settings: React.FC = () => {
         setNotificationRefreshInterval([1, 3, 5].includes(interval) ? interval as 1 | 3 | 5 : 5);
 
         // Load email provider
-        setEmailProvider(settings.emailProvider || 'smtp');
+        const provider = settings.emailProvider || 'smtp';
+        setEmailProvider(provider);
 
         // Load SMTP settings
-        setSmtpEnabled(settings.smtpEnabled || false);
+        setSmtpEnabled(provider === 'smtp' || settings.smtpEnabled || false);
         setSmtpHost(settings.smtpHost || 'smtp.gmail.com');
         setSmtpPort(settings.smtpPort || 587);
         setSmtpSecure(settings.smtpSecure || false);
@@ -69,7 +82,7 @@ const Settings: React.FC = () => {
         setSmtpFromEmail(settings.smtpFromEmail || '');
 
         // Load Google OAuth2 settings
-        setGoogleOauth2Enabled(settings.googleOauth2Enabled || false);
+        setGoogleOauth2Enabled(provider === 'google-oauth2' || settings.googleOauth2Enabled || false);
         setGoogleClientId(settings.googleClientId || '');
         setGoogleClientSecret(settings.googleClientSecret || '');
         setGoogleRefreshToken(settings.googleRefreshToken || '');
@@ -440,7 +453,7 @@ const Settings: React.FC = () => {
 
         <div className="grid grid-cols-2 gap-4">
           <button
-            onClick={() => setEmailProvider('smtp')}
+            onClick={() => handleEmailProviderChange('smtp')}
             className={`p-4 rounded-lg border-2 transition-all ${
               emailProvider === 'smtp'
                 ? 'border-primary bg-primary/5 dark:bg-primary/10'
@@ -467,7 +480,7 @@ const Settings: React.FC = () => {
           </button>
 
           <button
-            onClick={() => setEmailProvider('google-oauth2')}
+            onClick={() => handleEmailProviderChange('google-oauth2')}
             className={`p-4 rounded-lg border-2 transition-all ${
               emailProvider === 'google-oauth2'
                 ? 'border-primary bg-primary/5 dark:bg-primary/10'
@@ -498,30 +511,17 @@ const Settings: React.FC = () => {
       {/* SMTP Configuration for Email Invitations */}
       {emailProvider === 'smtp' && (
         <div className="bg-white dark:bg-dark-card rounded-lg border border-gray-200 dark:border-dark-border p-6 mb-6 shadow-sm">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h2 className="text-xl font-semibold text-dark dark:text-white flex items-center gap-2">
-                <Mail size={20} />
-                Configurazione SMTP
-              </h2>
-              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                Configura SMTP tradizionale per inviare inviti via email
-              </p>
-            </div>
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={smtpEnabled}
-                onChange={(e) => setSmtpEnabled(e.target.checked)}
-                className="w-5 h-5 text-primary rounded focus:ring-2 focus:ring-primary"
-              />
-              <span className="text-sm font-medium text-dark dark:text-white">
-                {smtpEnabled ? 'Abilitato' : 'Disabilitato'}
-              </span>
-            </label>
+          <div className="mb-4">
+            <h2 className="text-xl font-semibold text-dark dark:text-white flex items-center gap-2">
+              <Mail size={20} />
+              Configurazione SMTP
+            </h2>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+              Configura SMTP tradizionale per inviare inviti via email
+            </p>
           </div>
 
-        {smtpEnabled && (
+        {true && (
           <div className="space-y-4">
             {/* Gmail Quick Setup */}
             <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
@@ -696,30 +696,17 @@ const Settings: React.FC = () => {
       {/* Google OAuth2 Configuration */}
       {emailProvider === 'google-oauth2' && (
         <div className="bg-white dark:bg-dark-card rounded-lg border border-gray-200 dark:border-dark-border p-6 mb-6 shadow-sm">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h2 className="text-xl font-semibold text-dark dark:text-white flex items-center gap-2">
-                <span className="text-xl">G</span>
-                Configurazione Google OAuth2
-              </h2>
-              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                Usa OAuth2 per inviare email via Gmail (consigliato)
-              </p>
-            </div>
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={googleOauth2Enabled}
-                onChange={(e) => setGoogleOauth2Enabled(e.target.checked)}
-                className="w-5 h-5 text-primary rounded focus:ring-2 focus:ring-primary"
-              />
-              <span className="text-sm font-medium text-dark dark:text-white">
-                {googleOauth2Enabled ? 'Abilitato' : 'Disabilitato'}
-              </span>
-            </label>
+          <div className="mb-4">
+            <h2 className="text-xl font-semibold text-dark dark:text-white flex items-center gap-2">
+              <span className="text-xl">G</span>
+              Configurazione Google OAuth2
+            </h2>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+              Usa OAuth2 per inviare email via Gmail (consigliato)
+            </p>
           </div>
 
-          {googleOauth2Enabled && (
+          {true && (
             <div className="space-y-4">
               {/* Info Box */}
               <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
