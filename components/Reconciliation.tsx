@@ -2563,8 +2563,11 @@ export const Reconciliation: React.FC = () => {
 
       // Update session counts after batch processing
       if (currentSession) {
-        // Refresh transactions to get updated counts
-        const updatedTransactions = await fetchBankTransactions(currentSession.id);
+        // Refresh data to get updated transactions
+        await refreshData();
+
+        // Get updated counts from sessionTransactions
+        const updatedTransactions = bankTransactions.filter(tx => tx.sessionId === currentSession.id);
         const matchedCount = updatedTransactions.filter(tx => tx.matchStatus === 'matched' || tx.matchStatus === 'manual').length;
         const pendingCount = updatedTransactions.filter(tx => tx.matchStatus === 'pending').length;
         const ignoredCount = updatedTransactions.filter(tx => tx.matchStatus === 'ignored').length;
