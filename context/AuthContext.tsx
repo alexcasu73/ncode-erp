@@ -204,53 +204,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       const userId = authData.user.id;
 
-      // 3. Create user in users table
-      const { error: userError } = await supabase
-        .from('users')
-        .insert({
-          id: userId,
-          email: data.email,
-          full_name: data.adminName,
-          is_active: true,
+      // 3. Complete user registration (users table, company_users, settings)
+      const { data: registrationSuccess, error: registrationError } = await supabase
+        .rpc('complete_user_registration', {
+          p_user_id: userId,
+          p_email: data.email,
+          p_full_name: data.adminName,
+          p_company_id: newCompanyId,
         });
 
-      if (userError) {
-        console.error('Error creating user record:', userError);
-        // Cleanup would be more complex here, might need admin API to delete auth user
-        return { error: new Error('Errore nella creazione del profilo utente: ' + userError.message) };
-      }
-
-      // 4. Link user to company with admin role
-      const { error: linkError } = await supabase
-        .from('company_users')
-        .insert({
-          user_id: userId,
-          company_id: newCompanyId,
-          role: 'admin',
-          is_active: true,
-        });
-
-      if (linkError) {
-        console.error('Error linking user to company:', linkError);
-        return { error: new Error('Errore nel collegamento utente-azienda: ' + linkError.message) };
-      }
-
-      // 5. Create default settings for the new company
-      const { error: settingsError } = await supabase
-        .from('settings')
-        .insert({
-          id: 'default',
-          company_id: newCompanyId,
-          default_ai_provider: 'anthropic',
-          anthropic_api_key: '',
-          openai_api_key: '',
-          notification_refresh_interval: 5,
-        });
-
-      if (settingsError) {
-        console.error('Error creating company settings:', settingsError);
-        // Non blocking - settings can be created later
-        console.warn('Settings not created, user can configure them later');
+      if (registrationError || !registrationSuccess) {
+        console.error('Error completing user registration:', registrationError);
+        return { error: new Error('Errore nel completamento della registrazione: ' + (registrationError?.message || 'Unknown error')) };
       }
 
       // 6. Auto-confirm email and sign in (for local development)
