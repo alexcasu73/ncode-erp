@@ -1,5 +1,5 @@
 import * as XLSX from 'xlsx';
-import type { Invoice, CashflowRecord, Customer } from '../types';
+import type { Invoice, CashflowRecord, Customer, Deal } from '../types';
 
 // ==================== EXPORT FUNCTIONS ====================
 
@@ -295,10 +295,97 @@ export async function importCustomersFromExcel(file: File): Promise<{ customers:
   return { customers, errors };
 }
 
+/**
+ * Export unificato: esporta fatture, flussi, clienti e opportunità in un unico file Excel
+ */
+export function exportUnifiedExcel(
+  invoices: Invoice[],
+  cashflows: CashflowRecord[],
+  customers: Customer[],
+  deals: Deal[],
+  filename: string = 'export-completo.xlsx'
+) {
+  const workbook = XLSX.utils.book_new();
+
+  // Sheet 1: Fatture
+  const invoiceData = invoices.map(inv => ({
+    'ID': inv.id,
+    'Data': inv.data instanceof Date ? inv.data.toISOString().split('T')[0] : inv.data,
+    'Data Scadenza': inv.dataScadenza ? (inv.dataScadenza instanceof Date ? inv.dataScadenza.toISOString().split('T')[0] : inv.dataScadenza) : '',
+    'Mese': inv.mese,
+    'Anno': inv.anno,
+    'Progetto': inv.nomeProgetto,
+    'Tipo': inv.tipo,
+    'Stato': inv.statoFatturazione,
+    'Spesa': inv.spesa,
+    'Tipo Spesa': inv.tipoSpesa,
+    'Note': inv.note,
+    'Importo Netto': inv.flusso,
+    'IVA': inv.iva,
+    '% IVA': inv.percentualeIva,
+    '% Fatturazione': inv.percentualeFatturazione,
+    'Checked': inv.checked ? 'Sì' : 'No'
+  }));
+  const worksheetInvoices = XLSX.utils.json_to_sheet(invoiceData);
+  worksheetInvoices['!cols'] = Object.keys(invoiceData[0] || {}).map(() => ({ wch: 15 }));
+  XLSX.utils.book_append_sheet(workbook, worksheetInvoices, 'Fatture');
+
+  // Sheet 2: Flussi di Cassa
+  const cashflowData = cashflows.map(cf => ({
+    'ID': cf.id,
+    'ID Fattura': cf.invoiceId || '',
+    'Data Pagamento': cf.dataPagamento || '',
+    'Importo': cf.importo || 0,
+    'Note': cf.note || '',
+    'Stato': cf.statoFatturazione || '',
+    'Tipo': cf.tipo || '',
+    'Descrizione': cf.descrizione || '',
+    'Categoria': cf.categoria || '',
+    'Data Creazione': cf.createdAt || ''
+  }));
+  const worksheetCashflow = XLSX.utils.json_to_sheet(cashflowData);
+  worksheetCashflow['!cols'] = Object.keys(cashflowData[0] || {}).map(() => ({ wch: 15 }));
+  XLSX.utils.book_append_sheet(workbook, worksheetCashflow, 'Flussi di Cassa');
+
+  // Sheet 3: Clienti
+  const customerData = customers.map(cust => ({
+    'ID': cust.id,
+    'Nome': cust.name,
+    'Azienda': cust.company,
+    'Email': cust.email,
+    'Stato': cust.status,
+    'Ricavi': cust.revenue,
+    'P.IVA': cust.vatId,
+    'Codice SDI': cust.sdiCode,
+    'Indirizzo': cust.address,
+    'Telefono': cust.phone
+  }));
+  const worksheetCustomers = XLSX.utils.json_to_sheet(customerData);
+  worksheetCustomers['!cols'] = Object.keys(customerData[0] || {}).map(() => ({ wch: 20 }));
+  XLSX.utils.book_append_sheet(workbook, worksheetCustomers, 'Clienti');
+
+  // Sheet 4: Opportunità
+  const dealData = deals.map(deal => ({
+    'ID': deal.id,
+    'Titolo': deal.title,
+    'Cliente': deal.customerName,
+    'Valore': deal.value,
+    'Fase': deal.stage,
+    'Probabilità': deal.probability,
+    'Chiusura Prevista': deal.expectedClose
+  }));
+  const worksheetDeals = XLSX.utils.json_to_sheet(dealData);
+  worksheetDeals['!cols'] = Object.keys(dealData[0] || {}).map(() => ({ wch: 20 }));
+  XLSX.utils.book_append_sheet(workbook, worksheetDeals, 'Opportunità');
+
+  XLSX.writeFile(workbook, filename);
+}
+
 export default {
   exportInvoicesToExcel,
   exportCashflowToExcel,
   exportCustomersToExcel,
+  exportUnifiedExcel,
   importInvoicesFromExcel,
   importCashflowFromExcel,
   importCustomersFromExcel

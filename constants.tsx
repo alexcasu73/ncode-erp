@@ -1,5 +1,5 @@
 import { Deal, DealStage, Customer, Invoice, Transaction, FinancialItem } from './types';
-import { LayoutDashboard, Users, Briefcase, Receipt, PieChart, Wallet, BookOpen, FileCheck, Settings as SettingsIcon, UserCog, UserCircle } from 'lucide-react';
+import { LayoutDashboard, Users, Briefcase, Receipt, PieChart, Wallet, BookOpen, FileCheck, Settings as SettingsIcon, UserCog, UserCircle, FileSpreadsheet } from 'lucide-react';
 
 export const APP_NAME = "Ncode ERP";
 
@@ -16,6 +16,7 @@ export const MAIN_NAV_ITEMS = [
 
 // Settings navigation items (system management)
 export const SETTINGS_NAV_ITEMS = [
+  { id: 'import', label: 'Import Dati', icon: FileSpreadsheet },
   { id: 'users', label: 'Utenti', icon: UserCog },
   { id: 'profile', label: 'Profilo', icon: UserCircle },
   { id: 'settings', label: 'Impostazioni', icon: SettingsIcon },

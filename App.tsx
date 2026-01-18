@@ -13,6 +13,7 @@ import { Profile } from './components/Profile';
 import { Login } from './components/Login';
 import { Register } from './components/Register';
 import { InvoiceNotifications } from './components/InvoiceNotifications';
+import { UnifiedImport } from './components/UnifiedImport';
 import { Bell, Menu, X, Sun, Moon, RefreshCw } from 'lucide-react';
 import { useTheme } from './context/ThemeContext';
 import { useData } from './context/DataContext';
@@ -56,6 +57,7 @@ const App: React.FC = () => {
       case 'cashflow': return <Cashflow />;
       case 'reconciliation': return <Reconciliation />;
       case 'financials': return <FinancialStatement />;
+      case 'import': return <UnifiedImport />;
       case 'users': return <UserManagement />;
       case 'profile': return <Profile />;
       case 'settings': return <Settings />;

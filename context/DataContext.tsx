@@ -388,12 +388,17 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return newDeal;
     }
 
+    if (!companyId) {
+      console.error('No company ID available');
+      return null;
+    }
+
     const dealWithCompany = {
       ...deal,
-      companyId: '00000000-0000-0000-0000-000000000001' // Ncode Studio
+      companyId
     };
 
-    const { data, error } = await supabase
+    const { data, error} = await supabase
       .from('deals')
       .insert(camelToSnake(dealWithCompany))
       .select()
@@ -461,10 +466,16 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return max;
     }, 0);
     const newId = `Fattura_${String(maxNum + 1).padStart(3, '0')}`;
+
+    if (!companyId) {
+      console.error('No company ID available');
+      return null;
+    }
+
     const invoiceWithId = {
       ...invoice,
       id: newId,
-      companyId: '00000000-0000-0000-0000-000000000001' // Ncode Studio
+      companyId
     };
 
     console.log('Adding invoice:', invoiceWithId);
@@ -804,9 +815,14 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return newRecord;
     }
 
+    if (!companyId) {
+      console.error('No company ID available');
+      return null;
+    }
+
     const recordWithCompany = {
       ...record,
-      companyId: '00000000-0000-0000-0000-000000000001' // Ncode Studio
+      companyId
     };
     const dataToInsert = camelToSnake(recordWithCompany);
     console.log('🔵 Inserting cashflow record into Supabase:', dataToInsert);
