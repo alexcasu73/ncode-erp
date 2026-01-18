@@ -162,17 +162,8 @@ export async function importInvoicesFromExcel(file: File): Promise<{ invoices: P
           continue; // Skip silently
         }
 
-        // Required fields validation
-        if (!row['Progetto'] || !row['Tipo'] || row['Importo Netto'] === undefined) {
-          errors.push(`Riga ${rowNum}: campi obbligatori mancanti (Progetto, Tipo, Importo Netto)`);
-          continue;
-        }
-
-        const data = parseDate(row['Data']);
-        if (!data) {
-          errors.push(`Riga ${rowNum}: data non valida`);
-          continue;
-        }
+        // Parse date, use today's date if missing or invalid
+        const data = parseDate(row['Data']) || new Date().toISOString().split('T')[0];
 
         const invoice: Partial<Invoice> = {
           id: row['ID'] || `Fattura_${crypto.randomUUID()}`,
@@ -180,7 +171,7 @@ export async function importInvoicesFromExcel(file: File): Promise<{ invoices: P
           dataScadenza: parseDate(row['Data Scadenza']),
           mese: row['Mese'] || '',
           anno: parseInt(row['Anno']) || new Date(data).getFullYear(),
-          nomeProgetto: row['Progetto'],
+          nomeProgetto: row['Progetto'] || '-',
           tipo: row['Tipo'] === 'Entrata' || row['Tipo'] === 'Uscita' ? row['Tipo'] : 'Entrata',
           statoFatturazione: ['Stimato', 'Effettivo', 'Nessuno'].includes(row['Stato']) ? row['Stato'] : 'Stimato',
           spesa: row['Spesa'] || '',
@@ -278,22 +269,12 @@ export async function importCustomersFromExcel(file: File): Promise<{ customers:
           continue; // Skip silently
         }
 
-        // Required fields validation with specific error messages
-        const missingFields = [];
-        if (!row['Nome']) missingFields.push('Nome');
-        if (!row['Azienda']) missingFields.push('Azienda');
-        if (!row['Email']) missingFields.push('Email');
-
-        if (missingFields.length > 0) {
-          errors.push(`Riga ${rowNum}: campi obbligatori mancanti (${missingFields.join(', ')})`);
-          continue;
-        }
-
+        // Fill empty required fields with "-"
         const customer: Partial<Customer> = {
           id: row['ID'] || `Cliente_${crypto.randomUUID()}`,
-          name: row['Nome'],
-          company: row['Azienda'],
-          email: row['Email'],
+          name: row['Nome'] || '-',
+          company: row['Azienda'] || '-',
+          email: row['Email'] || '-',
           status: ['Attivo', 'Prospetto', 'Inattivo'].includes(row['Stato']) ? row['Stato'] : 'Attivo',
           revenue: parseNumber(row['Ricavi']),
           vatId: row['P.IVA'] || '',
