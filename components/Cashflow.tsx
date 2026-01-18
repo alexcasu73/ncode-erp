@@ -1235,6 +1235,7 @@ export const Cashflow: React.FC = () => {
                       <td className="px-3 py-3 whitespace-nowrap text-sm font-medium text-gray-400 italic">
                         Standalone
                       </td>
+                      <td className="px-3 py-3 text-sm text-gray-500 dark:text-gray-400 truncate max-w-[10rem]">-</td>
                       <td className="px-3 py-3 text-sm text-gray-500 dark:text-gray-400 truncate max-w-[5rem]">-</td>
                       <td className="px-3 py-3 text-sm text-gray-500 dark:text-gray-400 truncate max-w-[12rem]" data-tooltip={record.note || undefined}>{record.note || '-'}</td>
                       <td className="px-3 py-3 whitespace-nowrap">
