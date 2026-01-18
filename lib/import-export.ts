@@ -156,6 +156,12 @@ export async function importInvoicesFromExcel(file: File): Promise<{ invoices: P
       const rowNum = i + 2; // Excel row number (accounting for header)
 
       try {
+        // Skip completely empty rows
+        const hasAnyData = Object.values(row).some(val => val !== null && val !== undefined && val !== '');
+        if (!hasAnyData) {
+          continue; // Skip silently
+        }
+
         // Required fields validation
         if (!row['Progetto'] || !row['Tipo'] || row['Importo Netto'] === undefined) {
           errors.push(`Riga ${rowNum}: campi obbligatori mancanti (Progetto, Tipo, Importo Netto)`);
@@ -217,6 +223,12 @@ export async function importCashflowFromExcel(file: File): Promise<{ cashflows: 
       const rowNum = i + 2;
 
       try {
+        // Skip completely empty rows
+        const hasAnyData = Object.values(row).some(val => val !== null && val !== undefined && val !== '');
+        if (!hasAnyData) {
+          continue; // Skip silently
+        }
+
         const cashflow: Partial<CashflowRecord> = {
           id: row['ID'] || `CF-${crypto.randomUUID()}`,
           invoiceId: row['ID Fattura'] || undefined,
@@ -260,9 +272,20 @@ export async function importCustomersFromExcel(file: File): Promise<{ customers:
       const rowNum = i + 2;
 
       try {
-        // Required fields
-        if (!row['Nome'] || !row['Azienda'] || !row['Email']) {
-          errors.push(`Riga ${rowNum}: campi obbligatori mancanti (Nome, Azienda, Email)`);
+        // Skip completely empty rows (all values are empty/null/undefined)
+        const hasAnyData = Object.values(row).some(val => val !== null && val !== undefined && val !== '');
+        if (!hasAnyData) {
+          continue; // Skip silently
+        }
+
+        // Required fields validation with specific error messages
+        const missingFields = [];
+        if (!row['Nome']) missingFields.push('Nome');
+        if (!row['Azienda']) missingFields.push('Azienda');
+        if (!row['Email']) missingFields.push('Email');
+
+        if (missingFields.length > 0) {
+          errors.push(`Riga ${rowNum}: campi obbligatori mancanti (${missingFields.join(', ')})`);
           continue;
         }
 
