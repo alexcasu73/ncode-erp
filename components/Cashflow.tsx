@@ -169,6 +169,8 @@ export const Cashflow: React.FC = () => {
   const [formNote, setFormNote] = useState('');
   const [formStatoFatturazione, setFormStatoFatturazione] = useState<'Stimato' | 'Effettivo' | 'Nessuno'>('Effettivo');
   const [formTipoStandalone, setFormTipoStandalone] = useState<'Entrata' | 'Uscita'>('Entrata');
+  const [formSpesa, setFormSpesa] = useState('');
+  const [formTipoSpesa, setFormTipoSpesa] = useState('');
 
   // Filtri per la selezione fatture nel modal
   const [invoiceSearchTerm, setInvoiceSearchTerm] = useState('');
@@ -537,6 +539,8 @@ export const Cashflow: React.FC = () => {
     setFormImporto('');
     setFormNote('');
     setFormStatoFatturazione('Effettivo');
+    setFormSpesa('');
+    setFormTipoSpesa('');
     // Reset filtri fatture
     setInvoiceSearchTerm('');
     setInvoiceFilterTipo('tutti');
@@ -570,6 +574,10 @@ export const Cashflow: React.FC = () => {
       setFormTipoStandalone(record.tipo || 'Entrata');
     }
 
+    // Popola spesa e tipo_spesa dalla fattura collegata
+    setFormSpesa(record.invoice?.spesa || '');
+    setFormTipoSpesa(record.invoice?.tipoSpesa || '');
+
     // Reset filtri fatture per facilitare la ricerca
     setInvoiceSearchTerm('');
     setInvoiceFilterTipo('tutti');
@@ -598,10 +606,14 @@ export const Cashflow: React.FC = () => {
         setFormImporto(totale.toString());
         setFormStatoFatturazione(inv.statoFatturazione || 'Effettivo');
         setFormNote(inv.note || '');
+        setFormSpesa(inv.spesa || '');
+        setFormTipoSpesa(inv.tipoSpesa || '');
       }
     } else {
       setFormImporto('');
       setFormStatoFatturazione('Effettivo');
+      setFormSpesa('');
+      setFormTipoSpesa('');
       setFormNote('');
     }
   };
@@ -651,6 +663,25 @@ export const Cashflow: React.FC = () => {
     }
 
     console.log('💾 Saving cashflow record:', recordData);
+
+    // Se c'è una fattura collegata, aggiorna anche spesa e tipo_spesa se modificati
+    if (hasInvoice && invoice) {
+      const spesaChanged = formSpesa !== (invoice.spesa || '');
+      const tipoSpesaChanged = formTipoSpesa !== (invoice.tipoSpesa || '');
+
+      if (spesaChanged || tipoSpesaChanged) {
+        const invoiceUpdateData: any = {};
+        if (spesaChanged) invoiceUpdateData.spesa = formSpesa || '';
+        if (tipoSpesaChanged) invoiceUpdateData.tipoSpesa = formTipoSpesa || '';
+
+        console.log('💾 Updating invoice fields:', invoiceUpdateData);
+        const invoiceUpdated = await updateInvoice(formInvoiceId, invoiceUpdateData);
+        if (!invoiceUpdated) {
+          alert('Errore durante l\'aggiornamento della fattura. Controlla la console per i dettagli.');
+          return;
+        }
+      }
+    }
 
     let result;
     if (editingRecord) {
@@ -1496,6 +1527,36 @@ export const Cashflow: React.FC = () => {
                         {formatCurrency((selectedInvoice.flusso || 0) + (selectedInvoice.iva || 0))}
                       </span>
                     </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Spesa e Tipo Spesa (solo se c'è una fattura) */}
+              {formInvoiceId && (
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">
+                      Spesa
+                    </label>
+                    <input
+                      type="text"
+                      value={formSpesa}
+                      onChange={(e) => setFormSpesa(e.target.value)}
+                      className="w-full pl-4 pr-4 py-2 border border-gray-200 dark:border-dark-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 bg-white dark:bg-gray-800/30 text-dark dark:text-white"
+                      placeholder="Es: Edo"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">
+                      Tipo Spesa
+                    </label>
+                    <input
+                      type="text"
+                      value={formTipoSpesa}
+                      onChange={(e) => setFormTipoSpesa(e.target.value)}
+                      className="w-full pl-4 pr-4 py-2 border border-gray-200 dark:border-dark-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 bg-white dark:bg-gray-800/30 text-dark dark:text-white"
+                      placeholder="Es: Team"
+                    />
                   </div>
                 </div>
               )}
