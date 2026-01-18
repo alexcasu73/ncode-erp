@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Users, UserPlus, Edit2, Trash2, Check, X, Shield, UserCog, Eye, ToggleLeft, ToggleRight, Lock } from 'lucide-react';
+import { Users, UserPlus, Edit2, Trash2, Check, X, Shield, UserCog, Eye, ToggleLeft, ToggleRight, Lock, Mail } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useData } from '../context/DataContext';
 import { useUserRole } from '../hooks/useUserRole';
+import { sendInvitationEmail } from '../lib/email';
 
 interface User {
   id: string;
@@ -29,6 +30,7 @@ export const UserManagement: React.FC = () => {
   const [formRole, setFormRole] = useState<'admin' | 'manager' | 'user' | 'viewer'>('user');
   const [formError, setFormError] = useState('');
   const [formLoading, setFormLoading] = useState(false);
+  const [sendEmailInvite, setSendEmailInvite] = useState(true); // Default to email invite
 
   useEffect(() => {
     loadUsers();
@@ -55,32 +57,82 @@ export const UserManagement: React.FC = () => {
 
     try {
       // Validate
-      if (!formEmail || !formName || !formPassword) {
-        setFormError('Tutti i campi sono obbligatori');
+      if (!formEmail || !formName) {
+        setFormError('Email e nome sono obbligatori');
         setFormLoading(false);
         return;
       }
 
-      if (formPassword.length < 8) {
+      if (!sendEmailInvite && !formPassword) {
+        setFormError('La password è obbligatoria se non invii un invito via email');
+        setFormLoading(false);
+        return;
+      }
+
+      if (!sendEmailInvite && formPassword.length < 8) {
         setFormError('La password deve essere di almeno 8 caratteri');
         setFormLoading(false);
         return;
       }
 
-      const { error } = await createUser({
-        email: formEmail,
-        name: formName,
-        password: formPassword,
-        role: formRole,
-      });
+      if (sendEmailInvite) {
+        // Send email invite
+        // Generate temporary password for account creation
+        const tempPassword = crypto.randomUUID();
 
-      if (error) {
-        setFormError(error.message || 'Errore nella creazione dell\'utente');
+        const { error: createError } = await createUser({
+          email: formEmail,
+          name: formName,
+          password: tempPassword,
+          role: formRole,
+        });
+
+        if (createError) {
+          setFormError(createError.message || 'Errore nella creazione dell\'utente');
+          setFormLoading(false);
+          return;
+        }
+
+        // Get company name for email
+        const companyName = 'Ncode ERP'; // TODO: Get from context/settings
+
+        // Send invitation email
+        const inviteLink = `${window.location.origin}/reset-password?email=${encodeURIComponent(formEmail)}`;
+
+        const emailResult = await sendInvitationEmail(companyId!, {
+          toEmail: formEmail,
+          toName: formName,
+          inviterName: currentUser?.email || 'Admin',
+          companyName,
+          inviteLink,
+          role: formRole,
+        });
+
+        if (!emailResult.success) {
+          setFormError(`Utente creato ma errore invio email: ${emailResult.error}`);
+        } else {
+          // Success
+          setShowAddModal(false);
+          resetForm();
+          loadUsers();
+        }
       } else {
-        // Success
-        setShowAddModal(false);
-        resetForm();
-        loadUsers();
+        // Create with password
+        const { error } = await createUser({
+          email: formEmail,
+          name: formName,
+          password: formPassword,
+          role: formRole,
+        });
+
+        if (error) {
+          setFormError(error.message || 'Errore nella creazione dell\'utente');
+        } else {
+          // Success
+          setShowAddModal(false);
+          resetForm();
+          loadUsers();
+        }
       }
     } catch (err) {
       setFormError('Errore imprevisto');
@@ -172,6 +224,7 @@ export const UserManagement: React.FC = () => {
     setFormPassword('');
     setFormRole('user');
     setFormError('');
+    setSendEmailInvite(true); // Reset to default (send invite)
   };
 
   const openAddModal = () => {
@@ -458,22 +511,49 @@ export const UserManagement: React.FC = () => {
                 />
               </div>
 
-              {/* Password (only for new users) */}
+              {/* Invite method (only for new users) */}
               {!editingUser && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Password
-                  </label>
-                  <input
-                    type="password"
-                    required
-                    value={formPassword}
-                    onChange={(e) => setFormPassword(e.target.value)}
-                    className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-dark-border bg-white dark:bg-dark-bg text-dark dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
-                    placeholder="Minimo 8 caratteri"
-                    minLength={8}
-                  />
-                </div>
+                <>
+                  <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+                    <label className="flex items-center gap-3 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={sendEmailInvite}
+                        onChange={(e) => setSendEmailInvite(e.target.checked)}
+                        className="w-5 h-5 text-primary rounded focus:ring-2 focus:ring-primary"
+                      />
+                      <div className="flex items-center gap-2">
+                        <Mail size={18} className="text-blue-600 dark:text-blue-400" />
+                        <span className="font-medium text-blue-900 dark:text-blue-300">
+                          Invia invito via email
+                        </span>
+                      </div>
+                    </label>
+                    <p className="text-xs text-blue-700 dark:text-blue-300 mt-2 ml-8">
+                      {sendEmailInvite
+                        ? 'L\'utente riceverà un\'email con il link per impostare la password'
+                        : 'Imposterai manualmente la password per l\'utente'}
+                    </p>
+                  </div>
+
+                  {/* Password (only if not sending invite) */}
+                  {!sendEmailInvite && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Password
+                      </label>
+                      <input
+                        type="password"
+                        required={!sendEmailInvite}
+                        value={formPassword}
+                        onChange={(e) => setFormPassword(e.target.value)}
+                        className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-dark-border bg-white dark:bg-dark-bg text-dark dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
+                        placeholder="Minimo 8 caratteri"
+                        minLength={8}
+                      />
+                    </div>
+                  )}
+                </>
               )}
 
               {/* Role */}

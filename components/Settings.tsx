@@ -16,6 +16,9 @@ const Settings: React.FC = () => {
   const [showOpenAIKey, setShowOpenAIKey] = useState(false);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
 
+  // Email provider
+  const [emailProvider, setEmailProvider] = useState<'smtp' | 'google-oauth2'>('smtp');
+
   // SMTP Settings
   const [smtpEnabled, setSmtpEnabled] = useState(false);
   const [smtpHost, setSmtpHost] = useState('smtp.gmail.com');
@@ -30,6 +33,16 @@ const Settings: React.FC = () => {
   const [testEmail, setTestEmail] = useState('');
   const [smtpTestResult, setSmtpTestResult] = useState<{ success: boolean; message: string } | null>(null);
 
+  // Google OAuth2 Settings
+  const [googleOauth2Enabled, setGoogleOauth2Enabled] = useState(false);
+  const [googleClientId, setGoogleClientId] = useState('');
+  const [googleClientSecret, setGoogleClientSecret] = useState('');
+  const [googleRefreshToken, setGoogleRefreshToken] = useState('');
+  const [googleUserEmail, setGoogleUserEmail] = useState('');
+  const [googleFromName, setGoogleFromName] = useState('');
+  const [showGoogleClientSecret, setShowGoogleClientSecret] = useState(false);
+  const [showGoogleRefreshToken, setShowGoogleRefreshToken] = useState(false);
+
   // Load settings from database on mount ONCE
   useEffect(() => {
     const loadSettings = async () => {
@@ -42,6 +55,9 @@ const Settings: React.FC = () => {
         const interval = settings.notificationRefreshInterval || 5;
         setNotificationRefreshInterval([1, 3, 5].includes(interval) ? interval as 1 | 3 | 5 : 5);
 
+        // Load email provider
+        setEmailProvider(settings.emailProvider || 'smtp');
+
         // Load SMTP settings
         setSmtpEnabled(settings.smtpEnabled || false);
         setSmtpHost(settings.smtpHost || 'smtp.gmail.com');
@@ -51,6 +67,14 @@ const Settings: React.FC = () => {
         setSmtpPassword(settings.smtpPassword || '');
         setSmtpFromName(settings.smtpFromName || '');
         setSmtpFromEmail(settings.smtpFromEmail || '');
+
+        // Load Google OAuth2 settings
+        setGoogleOauth2Enabled(settings.googleOauth2Enabled || false);
+        setGoogleClientId(settings.googleClientId || '');
+        setGoogleClientSecret(settings.googleClientSecret || '');
+        setGoogleRefreshToken(settings.googleRefreshToken || '');
+        setGoogleUserEmail(settings.googleUserEmail || '');
+        setGoogleFromName(settings.googleFromName || '');
       }
     };
     loadSettings();
@@ -72,6 +96,7 @@ const Settings: React.FC = () => {
         anthropicApiKey,
         openaiApiKey,
         notificationRefreshInterval,
+        emailProvider,
         smtpEnabled,
         smtpHost,
         smtpPort,
@@ -80,6 +105,12 @@ const Settings: React.FC = () => {
         smtpPassword,
         smtpFromName,
         smtpFromEmail,
+        googleOauth2Enabled,
+        googleClientId,
+        googleClientSecret,
+        googleRefreshToken,
+        googleUserEmail,
+        googleFromName,
       });
 
       if (success) {
@@ -397,30 +428,98 @@ const Settings: React.FC = () => {
         </div>
       </div>
 
-      {/* SMTP Configuration for Email Invitations */}
+      {/* Email Provider Selection */}
       <div className="bg-white dark:bg-dark-card rounded-lg border border-gray-200 dark:border-dark-border p-6 mb-6 shadow-sm">
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h2 className="text-xl font-semibold text-dark dark:text-white flex items-center gap-2">
-              <Mail size={20} />
-              Configurazione Email (SMTP)
-            </h2>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-              Configura SMTP per inviare inviti via email ai nuovi utenti
-            </p>
-          </div>
-          <label className="flex items-center gap-2 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={smtpEnabled}
-              onChange={(e) => setSmtpEnabled(e.target.checked)}
-              className="w-5 h-5 text-primary rounded focus:ring-2 focus:ring-primary"
-            />
-            <span className="text-sm font-medium text-dark dark:text-white">
-              {smtpEnabled ? 'Abilitato' : 'Disabilitato'}
-            </span>
-          </label>
+        <h2 className="text-xl font-semibold text-dark dark:text-white mb-4 flex items-center gap-2">
+          <Mail size={20} />
+          Provider Email per Inviti
+        </h2>
+        <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+          Seleziona come inviare le email di invito ai nuovi utenti
+        </p>
+
+        <div className="grid grid-cols-2 gap-4">
+          <button
+            onClick={() => setEmailProvider('smtp')}
+            className={`p-4 rounded-lg border-2 transition-all ${
+              emailProvider === 'smtp'
+                ? 'border-primary bg-primary/5 dark:bg-primary/10'
+                : 'border-gray-200 dark:border-dark-border hover:border-gray-300 dark:hover:border-gray-600'
+            }`}
+          >
+            <div className="flex items-center gap-3 mb-2">
+              <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                emailProvider === 'smtp' ? 'bg-primary text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400'
+              }`}>
+                <Mail size={20} />
+              </div>
+              <div className="text-left">
+                <div className="font-semibold text-dark dark:text-white">SMTP Tradizionale</div>
+                <div className="text-xs text-gray-500 dark:text-gray-400">Gmail, Outlook, ecc.</div>
+              </div>
+            </div>
+            {emailProvider === 'smtp' && (
+              <div className="flex items-center gap-1 text-primary text-sm font-medium">
+                <CheckCircle size={14} />
+                Selezionato
+              </div>
+            )}
+          </button>
+
+          <button
+            onClick={() => setEmailProvider('google-oauth2')}
+            className={`p-4 rounded-lg border-2 transition-all ${
+              emailProvider === 'google-oauth2'
+                ? 'border-primary bg-primary/5 dark:bg-primary/10'
+                : 'border-gray-200 dark:border-dark-border hover:border-gray-300 dark:hover:border-gray-600'
+            }`}
+          >
+            <div className="flex items-center gap-3 mb-2">
+              <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                emailProvider === 'google-oauth2' ? 'bg-primary text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400'
+              }`}>
+                <span className="text-lg font-bold">G</span>
+              </div>
+              <div className="text-left">
+                <div className="font-semibold text-dark dark:text-white">Google OAuth2</div>
+                <div className="text-xs text-gray-500 dark:text-gray-400">Consigliato per Gmail</div>
+              </div>
+            </div>
+            {emailProvider === 'google-oauth2' && (
+              <div className="flex items-center gap-1 text-primary text-sm font-medium">
+                <CheckCircle size={14} />
+                Selezionato
+              </div>
+            )}
+          </button>
         </div>
+      </div>
+
+      {/* SMTP Configuration for Email Invitations */}
+      {emailProvider === 'smtp' && (
+        <div className="bg-white dark:bg-dark-card rounded-lg border border-gray-200 dark:border-dark-border p-6 mb-6 shadow-sm">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h2 className="text-xl font-semibold text-dark dark:text-white flex items-center gap-2">
+                <Mail size={20} />
+                Configurazione SMTP
+              </h2>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                Configura SMTP tradizionale per inviare inviti via email
+              </p>
+            </div>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={smtpEnabled}
+                onChange={(e) => setSmtpEnabled(e.target.checked)}
+                className="w-5 h-5 text-primary rounded focus:ring-2 focus:ring-primary"
+              />
+              <span className="text-sm font-medium text-dark dark:text-white">
+                {smtpEnabled ? 'Abilitato' : 'Disabilitato'}
+              </span>
+            </label>
+          </div>
 
         {smtpEnabled && (
           <div className="space-y-4">
@@ -592,6 +691,142 @@ const Settings: React.FC = () => {
           </div>
         )}
       </div>
+      )}
+
+      {/* Google OAuth2 Configuration */}
+      {emailProvider === 'google-oauth2' && (
+        <div className="bg-white dark:bg-dark-card rounded-lg border border-gray-200 dark:border-dark-border p-6 mb-6 shadow-sm">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h2 className="text-xl font-semibold text-dark dark:text-white flex items-center gap-2">
+                <span className="text-xl">G</span>
+                Configurazione Google OAuth2
+              </h2>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                Usa OAuth2 per inviare email via Gmail (consigliato)
+              </p>
+            </div>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={googleOauth2Enabled}
+                onChange={(e) => setGoogleOauth2Enabled(e.target.checked)}
+                className="w-5 h-5 text-primary rounded focus:ring-2 focus:ring-primary"
+              />
+              <span className="text-sm font-medium text-dark dark:text-white">
+                {googleOauth2Enabled ? 'Abilitato' : 'Disabilitato'}
+              </span>
+            </label>
+          </div>
+
+          {googleOauth2Enabled && (
+            <div className="space-y-4">
+              {/* Info Box */}
+              <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+                <h3 className="font-semibold text-blue-900 dark:text-blue-300 mb-2">ℹ️ Vantaggi di Google OAuth2</h3>
+                <ul className="text-sm text-blue-800 dark:text-blue-200 space-y-1 list-disc list-inside">
+                  <li>Il refresh token non scade mai</li>
+                  <li>Più sicuro delle password App</li>
+                  <li>Usa l'API Gmail ufficiale</li>
+                  <li>Migliore deliverability</li>
+                </ul>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                {/* Client ID */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Google Client ID
+                  </label>
+                  <input
+                    type="text"
+                    value={googleClientId}
+                    onChange={(e) => setGoogleClientId(e.target.value)}
+                    placeholder="xxxxx.apps.googleusercontent.com"
+                    className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-dark-border bg-white dark:bg-dark-bg text-dark dark:text-white focus:outline-none focus:ring-2 focus:ring-primary font-mono text-sm"
+                  />
+                </div>
+
+                {/* Client Secret */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Google Client Secret
+                  </label>
+                  <div className="relative">
+                    <input
+                      type={showGoogleClientSecret ? 'text' : 'password'}
+                      value={googleClientSecret}
+                      onChange={(e) => setGoogleClientSecret(e.target.value)}
+                      placeholder="GOCSPX-xxxxx"
+                      className="w-full px-4 pr-12 py-2 rounded-lg border border-gray-300 dark:border-dark-border bg-white dark:bg-dark-bg text-dark dark:text-white focus:outline-none focus:ring-2 focus:ring-primary font-mono text-sm"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowGoogleClientSecret(!showGoogleClientSecret)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400 hover:text-dark dark:hover:text-white"
+                    >
+                      {showGoogleClientSecret ? <EyeOff size={18} /> : <Eye size={18} />}
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Refresh Token */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Google Refresh Token
+                </label>
+                <div className="relative">
+                  <input
+                    type={showGoogleRefreshToken ? 'text' : 'password'}
+                    value={googleRefreshToken}
+                    onChange={(e) => setGoogleRefreshToken(e.target.value)}
+                    placeholder="1//04xxxxx"
+                    className="w-full px-4 pr-12 py-2 rounded-lg border border-gray-300 dark:border-dark-border bg-white dark:bg-dark-bg text-dark dark:text-white focus:outline-none focus:ring-2 focus:ring-primary font-mono text-sm"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowGoogleRefreshToken(!showGoogleRefreshToken)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400 hover:text-dark dark:hover:text-white"
+                  >
+                    {showGoogleRefreshToken ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                {/* Gmail User Email */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Gmail Account
+                  </label>
+                  <input
+                    type="email"
+                    value={googleUserEmail}
+                    onChange={(e) => setGoogleUserEmail(e.target.value)}
+                    placeholder="team@ncodestudio.it"
+                    className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-dark-border bg-white dark:bg-dark-bg text-dark dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
+                  />
+                </div>
+
+                {/* From Name */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Nome Mittente
+                  </label>
+                  <input
+                    type="text"
+                    value={googleFromName}
+                    onChange={(e) => setGoogleFromName(e.target.value)}
+                    placeholder="Ncode ERP"
+                    className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-dark-border bg-white dark:bg-dark-bg text-dark dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Warning if no key configured */}
       {!isAnthropicKeyValid && !isOpenAIKeyValid && (

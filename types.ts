@@ -14,6 +14,8 @@ export interface AppSettings {
   anthropicApiKey: string;
   openaiApiKey: string;
   notificationRefreshInterval: 1 | 3 | 5; // Intervallo refresh notifiche in minuti
+  // Email provider selection
+  emailProvider?: 'smtp' | 'google-oauth2'; // Provider email
   // SMTP Settings for email invitations
   smtpEnabled?: boolean;
   smtpHost?: string; // es. smtp.gmail.com
@@ -23,6 +25,13 @@ export interface AppSettings {
   smtpPassword?: string; // password o app password
   smtpFromName?: string; // nome mittente
   smtpFromEmail?: string; // email mittente
+  // Google OAuth2 Settings
+  googleOauth2Enabled?: boolean;
+  googleClientId?: string;
+  googleClientSecret?: string;
+  googleRefreshToken?: string;
+  googleUserEmail?: string; // Gmail account to send from
+  googleFromName?: string; // Nome mittente
   updatedAt?: string;
 }
 

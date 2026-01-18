@@ -34,34 +34,59 @@ export async function getSmtpSettings(companyId: string): Promise<AppSettings | 
 }
 
 /**
- * Validate SMTP settings
+ * Validate email settings (SMTP or OAuth2)
  */
-export function validateSmtpSettings(settings: AppSettings): { valid: boolean; errors: string[] } {
+export function validateEmailSettings(settings: AppSettings): { valid: boolean; errors: string[] } {
   const errors: string[] = [];
 
-  if (!settings.smtpEnabled) {
-    errors.push('SMTP non abilitato');
-    return { valid: false, errors };
-  }
+  const provider = settings.emailProvider || 'smtp';
 
-  if (!settings.smtpHost) {
-    errors.push('Host SMTP mancante');
-  }
+  if (provider === 'google-oauth2') {
+    if (!settings.googleOauth2Enabled) {
+      errors.push('Google OAuth2 non abilitato');
+      return { valid: false, errors };
+    }
 
-  if (!settings.smtpPort || settings.smtpPort < 1 || settings.smtpPort > 65535) {
-    errors.push('Porta SMTP non valida');
-  }
+    if (!settings.googleClientId) {
+      errors.push('Google Client ID mancante');
+    }
 
-  if (!settings.smtpUser) {
-    errors.push('Username SMTP mancante');
-  }
+    if (!settings.googleClientSecret) {
+      errors.push('Google Client Secret mancante');
+    }
 
-  if (!settings.smtpPassword) {
-    errors.push('Password SMTP mancante');
-  }
+    if (!settings.googleRefreshToken) {
+      errors.push('Google Refresh Token mancante');
+    }
 
-  if (!settings.smtpFromEmail) {
-    errors.push('Email mittente mancante');
+    if (!settings.googleUserEmail) {
+      errors.push('Google User Email mancante');
+    }
+  } else if (provider === 'smtp') {
+    if (!settings.smtpEnabled) {
+      errors.push('SMTP non abilitato');
+      return { valid: false, errors };
+    }
+
+    if (!settings.smtpHost) {
+      errors.push('Host SMTP mancante');
+    }
+
+    if (!settings.smtpPort || settings.smtpPort < 1 || settings.smtpPort > 65535) {
+      errors.push('Porta SMTP non valida');
+    }
+
+    if (!settings.smtpUser) {
+      errors.push('Username SMTP mancante');
+    }
+
+    if (!settings.smtpPassword) {
+      errors.push('Password SMTP mancante');
+    }
+
+    if (!settings.smtpFromEmail) {
+      errors.push('Email mittente mancante');
+    }
   }
 
   return { valid: errors.length === 0, errors };
@@ -223,25 +248,25 @@ Se non hai richiesto questo invito, puoi ignorare questa email.
 
 /**
  * Send invitation email to a new user
- * Uses Supabase Edge Function to send email via SMTP
+ * Uses Supabase Edge Function to send email via SMTP or Google OAuth2
  */
 export async function sendInvitationEmail(
   companyId: string,
   invitation: EmailInvitation
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    // Get SMTP settings
+    // Get email settings
     const settings = await getSmtpSettings(companyId);
     if (!settings) {
-      return { success: false, error: 'Impossibile recuperare le impostazioni SMTP' };
+      return { success: false, error: 'Impossibile recuperare le impostazioni email' };
     }
 
     // Validate settings
-    const validation = validateSmtpSettings(settings);
+    const validation = validateEmailSettings(settings);
     if (!validation.valid) {
       return {
         success: false,
-        error: `Configurazione SMTP non valida: ${validation.errors.join(', ')}`
+        error: `Configurazione email non valida: ${validation.errors.join(', ')}`
       };
     }
 
@@ -249,29 +274,48 @@ export async function sendInvitationEmail(
     const emailHtml = generateInviteEmailHtml(invitation);
     const emailText = generateInviteEmailText(invitation);
 
-    // Call Supabase Edge Function to send email
-    // Note: This requires a Supabase Edge Function to be deployed
-    const { data, error } = await supabase.functions.invoke('send-email', {
-      body: {
-        smtp: {
-          host: settings.smtpHost,
-          port: settings.smtpPort,
-          secure: settings.smtpSecure,
-          user: settings.smtpUser,
-          password: settings.smtpPassword,
-        },
-        from: {
-          name: settings.smtpFromName || settings.smtpFromEmail || 'Ncode ERP',
-          email: settings.smtpFromEmail || settings.smtpUser || '',
-        },
-        to: {
-          name: invitation.toName,
-          email: invitation.toEmail,
-        },
-        subject: `Invito a ${invitation.companyName} - Ncode ERP`,
-        html: emailHtml,
-        text: emailText,
+    const provider = settings.emailProvider || 'smtp';
+
+    // Prepare request body based on provider
+    const requestBody: any = {
+      provider,
+      from: {
+        name: provider === 'google-oauth2'
+          ? (settings.googleFromName || 'Ncode ERP')
+          : (settings.smtpFromName || settings.smtpFromEmail || 'Ncode ERP'),
+        email: provider === 'google-oauth2'
+          ? (settings.googleUserEmail || '')
+          : (settings.smtpFromEmail || settings.smtpUser || ''),
       },
+      to: {
+        name: invitation.toName,
+        email: invitation.toEmail,
+      },
+      subject: `Invito a ${invitation.companyName} - Ncode ERP`,
+      html: emailHtml,
+      text: emailText,
+    };
+
+    if (provider === 'google-oauth2') {
+      requestBody.googleOAuth2 = {
+        clientId: settings.googleClientId,
+        clientSecret: settings.googleClientSecret,
+        refreshToken: settings.googleRefreshToken,
+        userEmail: settings.googleUserEmail,
+      };
+    } else {
+      requestBody.smtp = {
+        host: settings.smtpHost,
+        port: settings.smtpPort,
+        secure: settings.smtpSecure,
+        user: settings.smtpUser,
+        password: settings.smtpPassword,
+      };
+    }
+
+    // Call Supabase Edge Function to send email
+    const { data, error } = await supabase.functions.invoke('send-email', {
+      body: requestBody,
     });
 
     if (error) {
