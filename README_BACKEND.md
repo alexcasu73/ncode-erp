@@ -58,7 +58,7 @@ Questo avvia **frontend e backend contemporaneamente** in un unico terminale.
 Il file `server/.env` è già configurato per l'ambiente locale:
 
 ```env
-SERVER_PORT=3001
+SERVER_PORT=3000
 NODE_ENV=development
 FRONTEND_URL=http://localhost:5173
 DATABASE_URL=postgresql://postgres:postgres@localhost:54322/postgres
@@ -71,7 +71,7 @@ Il file `.env` principale include ora l'URL del backend:
 ```env
 VITE_SUPABASE_URL=http://127.0.0.1:54321
 VITE_SUPABASE_ANON_KEY=sb_publishable_ACJWlzQHlZjBrEguHvfOxg_3BJgxAaH
-VITE_API_URL=http://localhost:3001/api
+VITE_API_URL=http://localhost:3000/api
 ```
 
 ## 📧 Configurazione Email
@@ -112,7 +112,7 @@ Dovresti ricevere un'email di invito di esempio.
 
 ### Backend
 ```bash
-curl http://localhost:3001/api/health
+curl http://localhost:3000/api/health
 ```
 
 Risposta attesa:
@@ -192,16 +192,16 @@ server/src/
 
 ### Backend non si avvia
 ```bash
-# Verifica che la porta 3001 sia libera
-lsof -i :3001
+# Verifica che la porta 3000 sia libera
+lsof -i :3000
 
 # Se occupata, uccidi il processo
 kill -9 <PID>
 ```
 
 ### Frontend non comunica con Backend
-1. Verifica che il backend sia in esecuzione su porta 3001
-2. Controlla che `.env` contenga: `VITE_API_URL=http://localhost:3001/api`
+1. Verifica che il backend sia in esecuzione su porta 3000
+2. Controlla che `.env` contenga: `VITE_API_URL=http://localhost:3000/api`
 3. Riavvia il frontend: `npm run dev`
 
 ### Email non vengono inviate
@@ -237,7 +237,7 @@ Aggiorna questi valori per produzione:
 
 **server/.env:**
 ```env
-SERVER_PORT=3001
+SERVER_PORT=3000
 NODE_ENV=production
 FRONTEND_URL=https://your-domain.com
 DATABASE_URL=postgresql://user:pass@host:port/database
