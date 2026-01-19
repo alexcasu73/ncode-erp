@@ -1,6 +1,9 @@
 import { supabase } from './supabase';
 import type { AppSettings } from '../types';
 
+// Backend API base URL
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
+
 interface EmailInvitation {
   toEmail: string;
   toName: string;
@@ -264,20 +267,19 @@ Se non hai richiesto questo invito, puoi ignorare questa email.
 
 /**
  * Send invitation email to a new user
- * Uses Supabase Edge Function to send email via SMTP or Google OAuth2
+ * Uses backend Express API to send email via SMTP or Google OAuth2
  */
 export async function sendInvitationEmail(
   companyId: string,
   invitation: EmailInvitation
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    // Get email settings
+    // Validate settings first
     const settings = await getSmtpSettings(companyId);
     if (!settings) {
       return { success: false, error: 'Impossibile recuperare le impostazioni email' };
     }
 
-    // Validate settings
     const validation = validateEmailSettings(settings);
     if (!validation.valid) {
       return {
@@ -286,73 +288,49 @@ export async function sendInvitationEmail(
       };
     }
 
-    // Prepare email content
-    const emailHtml = generateInviteEmailHtml(invitation);
-    const emailText = generateInviteEmailText(invitation);
+    // Extract token from invite link
+    const urlParams = new URL(invitation.inviteLink).searchParams;
+    const inviteToken = urlParams.get('token') || 'no-token';
 
-    const provider = settings.emailProvider || 'smtp';
-
-    // Prepare request body based on provider
-    const requestBody: any = {
-      provider,
-      from: {
-        name: provider === 'google-oauth2'
-          ? (settings.googleFromName || 'Ncode ERP')
-          : (settings.smtpFromName || settings.smtpFromEmail || 'Ncode ERP'),
-        email: provider === 'google-oauth2'
-          ? (settings.googleUserEmail || '')
-          : (settings.smtpFromEmail || settings.smtpUser || ''),
+    // Call backend API to send email
+    const response = await fetch(`${API_BASE_URL}/email/send-invitation`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
       },
-      to: {
-        name: invitation.toName,
-        email: invitation.toEmail,
-      },
-      subject: `Invito a ${invitation.companyName} - Ncode ERP`,
-      html: emailHtml,
-      text: emailText,
-    };
-
-    if (provider === 'google-oauth2') {
-      requestBody.googleOAuth2 = {
-        clientId: settings.googleClientId,
-        clientSecret: settings.googleClientSecret,
-        refreshToken: settings.googleRefreshToken,
-        userEmail: settings.googleUserEmail,
-      };
-    } else {
-      requestBody.smtp = {
-        host: settings.smtpHost,
-        port: settings.smtpPort,
-        secure: settings.smtpSecure,
-        user: settings.smtpUser,
-        password: settings.smtpPassword,
-      };
-    }
-
-    // Call Supabase Edge Function to send email
-    const { data, error } = await supabase.functions.invoke('send-email', {
-      body: requestBody,
+      body: JSON.stringify({
+        companyId,
+        toEmail: invitation.toEmail,
+        toName: invitation.toName,
+        inviterName: invitation.inviterName,
+        companyName: invitation.companyName,
+        inviteToken,
+        role: invitation.role
+      }),
     });
 
-    if (error) {
-      console.error('Error sending email:', error);
+    const data = await response.json();
 
-      // Provide more helpful error message
-      let errorMessage = error.message || 'Errore invio email';
-
-      if (errorMessage.includes('FunctionsRelayError') || errorMessage.includes('non-2xx')) {
-        errorMessage = 'Edge Function non disponibile. Per testare l\'invio email:\n\n' +
-          '1. Deploy su Supabase Cloud: supabase functions deploy send-email\n' +
-          '2. Oppure avvia localmente: supabase functions serve\n\n' +
-          'L\'invio email funzionerà in produzione dopo il deploy.';
-      }
-
-      return { success: false, error: errorMessage };
+    if (!response.ok) {
+      console.error('Error sending email:', data);
+      return {
+        success: false,
+        error: data.message || data.error || 'Errore invio email'
+      };
     }
 
     return { success: true };
   } catch (err: any) {
     console.error('Unexpected error sending email:', err);
+
+    // Check if backend is unreachable
+    if (err.message?.includes('fetch') || err.name === 'TypeError') {
+      return {
+        success: false,
+        error: 'Backend non raggiungibile. Assicurati che il server sia in esecuzione su porta 3001'
+      };
+    }
+
     return { success: false, error: err.message || 'Errore imprevisto' };
   }
 }
