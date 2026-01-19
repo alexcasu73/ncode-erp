@@ -60,7 +60,7 @@ Il file `server/.env` è già configurato per l'ambiente locale:
 ```env
 SERVER_PORT=3000
 NODE_ENV=development
-FRONTEND_URL=http://localhost:5173
+FRONTEND_URL=http://localhost:3000
 DATABASE_URL=postgresql://postgres:postgres@localhost:54322/postgres
 ```
 
@@ -125,7 +125,7 @@ Risposta attesa:
 ```
 
 ### Frontend
-Apri il browser su: http://localhost:5173
+Apri il browser su: http://localhost:3000
 
 ### Database (Supabase)
 ```bash
