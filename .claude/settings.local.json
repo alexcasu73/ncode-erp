@@ -34,7 +34,8 @@
       "Bash(pkill:*)",
       "Bash(find:*)",
       "Bash(docker ps:*)",
-      "Bash(supabase functions serve:*)"
+      "Bash(supabase functions serve:*)",
+      "Bash(ls:*)"
     ]
   }
 }
