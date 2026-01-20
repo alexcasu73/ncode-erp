@@ -424,7 +424,7 @@ export const Dashboard: React.FC = () => {
   };
 
   return (
-    <div ref={dashboardRef} className="flex flex-col gap-6 h-full animate-fade-in" style={{ paddingBottom: '20px' }}>
+    <div ref={dashboardRef} className="flex flex-col gap-6 h-full animate-fade-in" style={{ paddingBottom: '15px' }}>
       {/* Header Section for Dashboard */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 flex-shrink-0">
         <div>

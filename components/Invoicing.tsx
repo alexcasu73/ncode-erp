@@ -429,7 +429,7 @@ export const Invoicing: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6 animate-fade-in" style={{ paddingBottom: '20px' }}>
+    <div className="space-y-6 animate-fade-in" style={{ paddingBottom: '15px' }}>
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>

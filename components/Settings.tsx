@@ -175,7 +175,7 @@ const Settings: React.FC = () => {
   const isOpenAIKeyValid = openaiApiKey.length > 0;
 
   return (
-    <div className="p-6 max-w-4xl mx-auto" style={{ paddingBottom: '20px' }}>
+    <div className="p-6 max-w-4xl mx-auto" style={{ paddingBottom: '15px' }}>
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-dark dark:text-white flex items-center gap-3">
