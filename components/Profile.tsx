@@ -263,7 +263,7 @@ export const Profile: React.FC = () => {
   };
 
   return (
-    <div className="p-6 max-w-4xl mx-auto" style={{ paddingBottom: '5px' }}>
+    <div className="p-6 max-w-4xl mx-auto" style={{ paddingBottom: '20px' }}>
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-dark dark:text-white flex items-center gap-3">

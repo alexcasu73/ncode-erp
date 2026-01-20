@@ -344,7 +344,7 @@ export const FinancialStatement: React.FC = () => {
   };
 
   return (
-    <div ref={bilancioRef} className="flex flex-col gap-6 h-full animate-fade-in" style={{ paddingBottom: '5px' }}>
+    <div ref={bilancioRef} className="flex flex-col gap-6 h-full animate-fade-in" style={{ paddingBottom: '20px' }}>
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 flex-shrink-0">
         <div>

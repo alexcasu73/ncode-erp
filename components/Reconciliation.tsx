@@ -2889,7 +2889,7 @@ export const Reconciliation: React.FC = () => {
   }
 
   return (
-    <div style={{ paddingBottom: '5px' }}>
+    <div style={{ paddingBottom: '20px' }}>
       {/* Header */}
       <div className="mb-6">
         {/* Title Row */}
