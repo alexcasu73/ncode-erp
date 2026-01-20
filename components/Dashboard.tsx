@@ -461,15 +461,17 @@ export const Dashboard: React.FC = () => {
               <TrendingUp size={18} className="text-gray-500 dark:text-gray-400" />
               <h3 className="text-card-title text-gray-500 dark:text-gray-400">Margine (Effettivo)</h3>
             </div>
-            <div className="flex items-center gap-3 mt-2">
-              <span className={`text-kpi-value ${dashboardData.currentRevenue >= 0 ? 'text-secondary' : 'text-red-600'}`}>
-                {formatCurrency(dashboardData.currentRevenue)}
-              </span>
-              {dashboardData.lastRevenue !== 0 && (
-                <span className={`text-white text-xs px-2 py-1 rounded-md font-medium ${dashboardData.revenueChange >= 0 ? 'bg-secondary' : 'bg-red-600'}`}>
-                  {dashboardData.revenueChange >= 0 ? '+' : ''}{dashboardData.revenueChange.toFixed(1)}%
+            <div className="mt-2">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className={`text-base sm:text-lg md:text-xl xl:text-2xl font-bold whitespace-nowrap ${dashboardData.currentRevenue >= 0 ? 'text-secondary' : 'text-red-600'}`}>
+                  {formatCurrency(dashboardData.currentRevenue)}
                 </span>
-              )}
+                {dashboardData.lastRevenue !== 0 && (
+                  <span className={`text-white text-xs px-2 py-1 rounded-md font-medium whitespace-nowrap ${dashboardData.revenueChange >= 0 ? 'bg-secondary' : 'bg-red-600'}`}>
+                    {dashboardData.revenueChange >= 0 ? '+' : ''}{dashboardData.revenueChange.toFixed(1)}%
+                  </span>
+                )}
+              </div>
             </div>
             {dashboardData.lastRevenue !== 0 && (
               <p className="text-small text-gray-500 dark:text-gray-400 mt-1">
@@ -493,26 +495,28 @@ export const Dashboard: React.FC = () => {
               <Wallet size={18} className="text-primary" />
               <h3 className="text-card-title text-gray-500 dark:text-gray-400">Saldo in Banca (Effettivo)</h3>
             </div>
-            <div className="flex items-center gap-3 mt-2">
-              <span className={`text-kpi-value ${dashboardData.currentCashBalance >= 0 ? 'text-secondary' : 'text-red-600'}`}>
-                {formatCurrency(dashboardData.currentCashBalance)}
-              </span>
-              {dashboardData.lastCashBalance !== 0 && (
-                <span className={`text-white text-xs px-2 py-1 rounded-md font-medium ${dashboardData.cashBalanceChange >= 0 ? 'bg-secondary' : 'bg-red-600'}`}>
-                  {dashboardData.cashBalanceChange >= 0 ? '+' : ''}{dashboardData.cashBalanceChange.toFixed(1)}%
+            <div className="mt-2">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className={`text-base sm:text-lg md:text-xl xl:text-2xl font-bold whitespace-nowrap ${dashboardData.currentCashBalance >= 0 ? 'text-secondary' : 'text-red-600'}`}>
+                  {formatCurrency(dashboardData.currentCashBalance)}
                 </span>
-              )}
+                {dashboardData.lastCashBalance !== 0 && (
+                  <span className={`text-white text-xs px-2 py-1 rounded-md font-medium whitespace-nowrap ${dashboardData.cashBalanceChange >= 0 ? 'bg-secondary' : 'bg-red-600'}`}>
+                    {dashboardData.cashBalanceChange >= 0 ? '+' : ''}{dashboardData.cashBalanceChange.toFixed(1)}%
+                  </span>
+                )}
+              </div>
             </div>
             <div className="space-y-1 mt-2">
-              <p className="text-xs text-gray-500 dark:text-gray-400">
+              <p className="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">
                 Iniziale: {formatCurrency(dashboardData.saldoIniziale || 0)}
               </p>
-              <div className="flex items-center gap-3">
-                <div className="flex items-center gap-1">
+              <div className="flex items-center gap-x-3 gap-y-0.5 flex-wrap">
+                <div className="flex items-center gap-1 whitespace-nowrap">
                   <TrendingUp size={14} className="text-secondary" />
                   <span className="text-xs text-gray-500 dark:text-gray-400">{formatCurrency(dashboardData.currentCashflowIn)}</span>
                 </div>
-                <div className="flex items-center gap-1">
+                <div className="flex items-center gap-1 whitespace-nowrap">
                   <TrendingDown size={14} className="text-red-500" />
                   <span className="text-xs text-gray-500 dark:text-gray-400">{formatCurrency(dashboardData.currentCashflowOut)}</span>
                 </div>
