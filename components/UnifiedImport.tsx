@@ -213,7 +213,7 @@ export const UnifiedImport: React.FC = () => {
   };
 
   return (
-    <div className="bg-white dark:bg-dark-card rounded-lg shadow-sm p-6 pb-8">
+    <div className="bg-white dark:bg-dark-card rounded-lg shadow-sm p-6" style={{ paddingBottom: '5px' }}>
       <div className="flex items-center gap-3 mb-4">
         <FileSpreadsheet className="text-primary" size={24} />
         <div>
