@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useRef } from 'react';
-import { Upload, FileCheck, AlertCircle, Check, X, RefreshCw, ChevronDown, ChevronUp, Search, Eye, Link2, Trash2, FilePlus, PlusCircle, StopCircle } from 'lucide-react';
+import { Upload, FileCheck, AlertCircle, Check, X, RefreshCw, ChevronDown, ChevronUp, Search, Eye, Link2, Trash2, FilePlus, PlusCircle, StopCircle, Lock } from 'lucide-react';
 import { useData } from '../context/DataContext';
+import { useUserRole } from '../hooks/useUserRole';
 import { parseBankStatementExcel, formatPeriodo, type ParsedBankStatement, type ParsedTransaction } from '../lib/excel-parser';
 import { suggestMatch, quickMatch, type MatchSuggestion } from '../lib/reconciliation-ai';
 import type { BankTransaction, ReconciliationSession, Invoice, CashflowRecord, CashflowWithInvoice, SideBySideRow, DifferenceReport } from '../types';
@@ -1776,6 +1777,7 @@ const ReportView: React.FC<ReportViewProps> = ({ report }) => {
 
 export const Reconciliation: React.FC = () => {
   const { invoices, cashflowRecords, reconciliationSessions, bankTransactions, addReconciliationSession, addBankTransaction, updateBankTransaction, updateReconciliationSession, deleteBankTransaction, deleteReconciliationSession, clearAllReconciliationSessions, addInvoice, addCashflowRecord, updateCashflowRecord, updateInvoice, deleteCashflowRecord, deleteInvoice, aiProcessing, setAiProcessing, stopAiProcessing, refreshData, getSettings } = useData();
+  const { canReconcile, loading: roleLoading } = useUserRole();
 
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -2851,6 +2853,40 @@ export const Reconciliation: React.FC = () => {
     }
     setCreateCashflowTransaction(null);
   };
+
+  // Check permissions - MUST be after all hooks
+  if (roleLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
+  if (!canReconcile) {
+    return (
+      <div className="p-6 max-w-6xl mx-auto">
+        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-8 text-center">
+          <Lock size={48} className="mx-auto mb-4 text-red-600 dark:text-red-400" />
+          <h2 className="text-2xl font-bold text-red-900 dark:text-red-300 mb-2">Accesso Negato</h2>
+          <p className="text-red-700 dark:text-red-400 mb-4">
+            Non hai i permessi necessari per accedere alle riconciliazioni.
+          </p>
+          <p className="text-sm text-red-600 dark:text-red-500">
+            Solo gli amministratori e i manager possono effettuare riconciliazioni bancarie.
+          </p>
+          <div className="mt-6">
+            <button
+              onClick={() => window.history.back()}
+              className="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+            >
+              Torna Indietro
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-0">

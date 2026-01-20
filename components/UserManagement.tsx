@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Users, UserPlus, Edit2, Trash2, Check, X, Shield, UserCog, Eye, ToggleLeft, ToggleRight, Lock, Mail } from 'lucide-react';
+import { Users, UserPlus, Edit2, Trash2, Check, X, Shield, UserCog, Eye, ToggleLeft, ToggleRight, Lock, Mail, RefreshCw } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useData } from '../context/DataContext';
 import { useUserRole } from '../hooks/useUserRole';
@@ -28,6 +28,7 @@ export const UserManagement: React.FC = () => {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [userToDelete, setUserToDelete] = useState<User | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
+  const [resendingInvite, setResendingInvite] = useState<string | null>(null);
 
   // Form state
   const [formEmail, setFormEmail] = useState('');
@@ -60,6 +61,8 @@ export const UserManagement: React.FC = () => {
     setFormLoading(true);
 
     try {
+      console.log('🔵 [UserManagement] Starting user invitation for:', formEmail);
+
       // Validate - only email is required now
       if (!formEmail) {
         setFormError('L\'email è obbligatoria');
@@ -71,6 +74,7 @@ export const UserManagement: React.FC = () => {
       const tempName = formEmail.split('@')[0];
 
       // Create invitation with magic link
+      console.log('🔵 [UserManagement] Creating invitation via createUser...');
       const { error: createError, data: inviteData } = await createUser({
         email: formEmail,
         name: tempName, // Temporary name, user will provide real name during setup
@@ -78,10 +82,13 @@ export const UserManagement: React.FC = () => {
       });
 
       if (createError) {
+        console.error('❌ [UserManagement] Failed to create invitation:', createError);
         setFormError(createError.message || 'Errore nella creazione dell\'invito');
         setFormLoading(false);
         return;
       }
+
+      console.log('✅ [UserManagement] Invitation created:', inviteData);
 
       // Get company name for email
       const companyName = 'Ncode ERP'; // TODO: Get from context/settings
@@ -89,6 +96,7 @@ export const UserManagement: React.FC = () => {
       // Build magic link with token
       const magicLink = `${window.location.origin}/setup-account?token=${inviteData.token}`;
 
+      console.log('📧 [UserManagement] Sending invitation email...');
       const emailResult = await sendInvitationEmail(companyId!, {
         toEmail: formEmail,
         toName: 'Nuovo Utente', // Generic greeting, user will provide real name
@@ -99,14 +107,31 @@ export const UserManagement: React.FC = () => {
       });
 
       if (!emailResult.success) {
+        console.error('❌ [UserManagement] Email failed:', emailResult.error);
         setFormError(`Invito creato ma errore invio email: ${emailResult.error}`);
+        // Reload user list to show pending invitation
+        console.log('🔄 [UserManagement] Reloading users after email error...');
+        await loadUsers();
       } else {
-        // Success - close modal
+        console.log('✅ [UserManagement] Email sent successfully');
+        // Success - close modal and reload user list
         setShowAddModal(false);
         resetForm();
-        // Note: user won't appear in list until they complete setup
+        console.log('🔄 [UserManagement] Reloading users after success...');
+        const usersBeforeReload = users.length;
+        await loadUsers();
+        console.log('✅ [UserManagement] Users reloaded');
+        console.log('   Before reload:', usersBeforeReload, 'users');
+        console.log('   After reload:', users.length, 'users');
+        // Force a small delay and reload again to ensure fresh data
+        setTimeout(async () => {
+          console.log('🔄 [UserManagement] Second reload to ensure fresh data...');
+          await loadUsers();
+          console.log('✅ [UserManagement] Second reload complete, total users:', users.length);
+        }, 1000);
       }
     } catch (err) {
+      console.error('❌ [UserManagement] Unexpected error:', err);
       setFormError('Errore imprevisto');
     } finally {
       setFormLoading(false);
@@ -188,25 +213,90 @@ export const UserManagement: React.FC = () => {
     try {
       if (userToDelete.status === 'pending') {
         // Delete pending invitation from user_invitations table
+        console.log('🗑️ [UserManagement] Deleting pending invitation:', userToDelete.id);
         const { error } = await supabase
           .from('user_invitations')
           .delete()
           .eq('id', userToDelete.id);
 
-        if (error) throw error;
+        if (error) {
+          console.error('❌ [UserManagement] Error deleting invitation:', error);
+          throw error;
+        }
+        console.log('✅ [UserManagement] Invitation deleted successfully');
       } else {
         // Delete active user
+        console.log('🗑️ [UserManagement] Deleting active user:', userToDelete.id);
         await deleteUser(userToDelete.id);
+        console.log('✅ [UserManagement] User deleted successfully');
       }
 
       setShowDeleteModal(false);
       setUserToDelete(null);
-      loadUsers();
-    } catch (err) {
-      console.error('Error deleting user:', err);
-      alert('Errore nell\'eliminazione dell\'utente');
+      await loadUsers();
+      console.log('✅ [UserManagement] User list reloaded after deletion');
+    } catch (err: any) {
+      console.error('❌ [UserManagement] Error deleting user:', err);
+      alert(`Errore nell'eliminazione: ${err.message || 'Errore sconosciuto'}`);
     } finally {
       setDeleteLoading(false);
+    }
+  };
+
+  const handleResendInvitation = async (user: User) => {
+    if (!companyId) return;
+
+    setResendingInvite(user.id);
+    try {
+      console.log('📧 [UserManagement] Resending invitation for:', user.email);
+
+      // Get the invitation token from database
+      const { data: invitation, error: fetchError } = await supabase
+        .from('user_invitations')
+        .select('token, role, expires_at')
+        .eq('id', user.id)
+        .single();
+
+      if (fetchError || !invitation) {
+        console.error('❌ [UserManagement] Failed to fetch invitation:', fetchError);
+        alert('Errore: impossibile recuperare l\'invito');
+        return;
+      }
+
+      // Check if invitation is expired
+      if (new Date(invitation.expires_at) < new Date()) {
+        alert('L\'invito è scaduto. Elimina questo invito e creane uno nuovo.');
+        return;
+      }
+
+      // Get company name
+      const companyName = 'Ncode ERP'; // TODO: Get from context/settings
+
+      // Build magic link with token
+      const magicLink = `${window.location.origin}/setup-account?token=${invitation.token}`;
+
+      console.log('📧 [UserManagement] Sending invitation email...');
+      const emailResult = await sendInvitationEmail(companyId, {
+        toEmail: user.email,
+        toName: user.name,
+        inviterName: currentUser?.email || 'Admin',
+        companyName,
+        inviteLink: magicLink,
+        role: invitation.role,
+      });
+
+      if (!emailResult.success) {
+        console.error('❌ [UserManagement] Email failed:', emailResult.error);
+        alert(`Errore invio email: ${emailResult.error}`);
+      } else {
+        console.log('✅ [UserManagement] Email resent successfully');
+        alert('Invito reinviato con successo! ✅');
+      }
+    } catch (err) {
+      console.error('❌ [UserManagement] Unexpected error:', err);
+      alert('Errore imprevisto nel reinvio dell\'invito');
+    } finally {
+      setResendingInvite(null);
     }
   };
 
@@ -408,6 +498,25 @@ export const UserManagement: React.FC = () => {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                     <div className="flex items-center justify-end gap-2">
+                      {/* Resend invitation button - only for pending invitations */}
+                      {user.status === 'pending' && (
+                        <button
+                          onClick={() => handleResendInvitation(user)}
+                          disabled={resendingInvite === user.id}
+                          className={`${
+                            resendingInvite === user.id
+                              ? 'text-gray-400 dark:text-gray-600 cursor-wait opacity-50'
+                              : 'text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300'
+                          }`}
+                          title="Reinvia invito"
+                        >
+                          {resendingInvite === user.id ? (
+                            <RefreshCw size={16} className="animate-spin" />
+                          ) : (
+                            <Mail size={16} />
+                          )}
+                        </button>
+                      )}
                       {/* Edit button - only for active users, not for pending invitations */}
                       {user.status !== 'pending' && (
                         <button

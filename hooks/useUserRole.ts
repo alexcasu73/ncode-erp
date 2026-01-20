@@ -11,9 +11,13 @@ interface UserRoleData {
   isUser: boolean;
   isViewer: boolean;
   loading: boolean;
-  canManageUsers: boolean;
-  canManageCompany: boolean;
-  canViewAll: boolean;
+  canManageUsers: boolean; // Only admin
+  canManageCompany: boolean; // Admin and manager
+  canViewAll: boolean; // Everyone except viewer
+  canEdit: boolean; // Can create/update/delete data (not viewer)
+  canDelete: boolean; // Can delete records (not viewer)
+  canImport: boolean; // Can import data (only admin and manager)
+  canReconcile: boolean; // Can reconcile transactions (only admin and manager)
 }
 
 /**
@@ -70,5 +74,9 @@ export const useUserRole = (): UserRoleData => {
     canManageUsers: role === 'admin', // Only admins can create/edit/delete users
     canManageCompany: role === 'admin' || role === 'manager', // Admins and managers can manage company data
     canViewAll: role !== 'viewer', // Everyone except viewers can view all data
+    canEdit: role !== 'viewer', // Everyone except viewers can create/edit data
+    canDelete: role !== 'viewer', // Everyone except viewers can delete data
+    canImport: role === 'admin' || role === 'manager', // Only admins and managers can import data
+    canReconcile: role === 'admin' || role === 'manager', // Only admins and managers can reconcile
   };
 };

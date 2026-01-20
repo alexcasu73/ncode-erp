@@ -36,7 +36,9 @@ const camelToSnake = (obj: any): any => {
   if (obj !== null && typeof obj === 'object') {
     return Object.keys(obj).reduce((acc, key) => {
       const snakeKey = key.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`);
-      acc[snakeKey] = camelToSnake(obj[key]);
+      const value = obj[key];
+      // Convert undefined to null for database (Supabase ignores undefined)
+      acc[snakeKey] = value === undefined ? null : camelToSnake(value);
       return acc;
     }, {} as any);
   }
@@ -548,8 +550,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     setInvoices(prev => prev.map(i => i.id === id ? { ...i, ...invoice } : i));
 
-    // If due date was updated, check notification for this specific invoice
-    if (invoice.dataScadenza !== undefined) {
+    // If due date was updated (including when it's removed/cleared), check notification
+    if ('dataScadenza' in invoice) {
       console.log(`[updateInvoice] Due date changed for invoice ${id}, checking notification immediately`);
 
       // Get the updated invoice data
@@ -557,29 +559,52 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (fullInvoice) {
         const updatedInvoice = { ...fullInvoice, ...invoice };
 
-        // Check if this invoice should have a notification
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        const dueDate = new Date(invoice.dataScadenza);
-        dueDate.setHours(0, 0, 0, 0);
-        const todayStr = today.toISOString().split('T')[0];
-        const dueDateStr = dueDate.toISOString().split('T')[0];
-
-        // Check if invoice is in stato 'Effettivo' with unpaid cashflow
-        const isEligibleForNotification = updatedInvoice.statoFatturazione === 'Effettivo' &&
-                                         cashflowRecords.some(cf =>
-                                           cf.invoiceId === id &&
-                                           cf.statoFatturazione !== 'Effettivo'
-                                         );
+        console.log(`[updateInvoice] Invoice details:`, {
+          id,
+          statoFatturazione: updatedInvoice.statoFatturazione,
+          dataScadenza: invoice.dataScadenza,
+          tipo: updatedInvoice.tipo
+        });
 
         let tipo: 'da_pagare' | 'scaduta' | null = null;
 
-        if (isEligibleForNotification) {
-          if (dueDateStr === todayStr) {
-            tipo = 'da_pagare';
-          } else if (dueDate < today) {
-            tipo = 'scaduta';
+        // Only check for notification if there's actually a due date
+        if (invoice.dataScadenza) {
+          // Check if this invoice should have a notification
+          const today = new Date();
+          today.setHours(0, 0, 0, 0);
+          const dueDate = new Date(invoice.dataScadenza);
+          dueDate.setHours(0, 0, 0, 0);
+          const todayStr = today.toISOString().split('T')[0];
+          const dueDateStr = dueDate.toISOString().split('T')[0];
+
+          console.log(`[updateInvoice] Date comparison:`, {
+            today: todayStr,
+            dueDate: dueDateStr,
+            isToday: dueDateStr === todayStr,
+            isPast: dueDate < today
+          });
+
+          // Check if invoice is UNPAID (stato 'Stimato')
+          // Notifications only for unpaid invoices
+          const isEligibleForNotification = updatedInvoice.statoFatturazione === 'Stimato';
+
+          console.log(`[updateInvoice] Notification eligibility:`, {
+            invoiceStato: updatedInvoice.statoFatturazione,
+            isUnpaid: updatedInvoice.statoFatturazione === 'Stimato',
+            isEligible: isEligibleForNotification
+          });
+
+          if (isEligibleForNotification) {
+            if (dueDateStr === todayStr) {
+              tipo = 'da_pagare';
+            } else if (dueDate < today) {
+              tipo = 'scaduta';
+            }
           }
+        } else {
+          // dataScadenza was cleared/removed
+          console.log(`[updateInvoice] Due date removed for invoice ${id} - dismissing notification`);
         }
 
         // Check if notification exists
@@ -630,7 +655,10 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         } else {
           // Should NOT have a notification - dismiss if exists
           if (existing) {
-            console.log(`[updateInvoice] Dismissing notification - due date is in the future or not eligible`);
+            const reason = updatedInvoice.statoFatturazione === 'Effettivo'
+              ? 'invoice is paid (Effettivo)'
+              : 'due date is in the future';
+            console.log(`[updateInvoice] Dismissing notification - ${reason}`);
             const { error: dismissError } = await supabase
               .from('invoice_notifications')
               .update({ dismissed: true })
@@ -1406,6 +1434,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.log('🔵 [getCompanyUsers] Raw users data:', JSON.stringify(usersData, null, 2));
 
       // Fetch pending invitations (not yet accepted)
+      console.log('🔍 [getCompanyUsers] Fetching invitations for company:', companyId);
       const { data: invitationsData, error: invitationsError } = await supabase
         .from('user_invitations')
         .select('id, email, role, created_at, expires_at')
@@ -1415,10 +1444,14 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       if (invitationsError) {
         console.error('❌ [getCompanyUsers] Error fetching invitations:', invitationsError);
+        console.error('❌ [getCompanyUsers] Error details:', JSON.stringify(invitationsError, null, 2));
+      } else {
+        console.log('✅ [getCompanyUsers] Invitations query successful');
       }
 
       console.log('🔵 [getCompanyUsers] Active users count:', usersData?.length);
       console.log('🔵 [getCompanyUsers] Pending invitations count:', invitationsData?.length);
+      console.log('🔵 [getCompanyUsers] Raw invitations data:', JSON.stringify(invitationsData, null, 2));
 
       // Transform active users with detailed logging
       const transformedUsers = (usersData || []).map((cu: any, index: number) => {
@@ -1705,29 +1738,33 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const invoicesWithDueDate = invoices.filter(inv => inv.dataScadenza);
 
       for (const invoice of invoicesWithDueDate) {
-        // Only check invoices in stato 'Effettivo' (confirmed invoices)
-        if (invoice.statoFatturazione !== 'Effettivo') {
-          console.log(`[Notifications] Skipping invoice ${invoice.id} - invoice stato is '${invoice.statoFatturazione}' (not Effettivo)`);
+        // Only notify for UNPAID invoices (stato 'Stimato')
+        // When invoice becomes 'Effettivo' (paid), notification should disappear
+        if (invoice.statoFatturazione === 'Effettivo') {
+          console.log(`[Notifications] Skipping invoice ${invoice.id} - already paid (stato 'Effettivo')`);
+
+          // If there's an existing notification for a paid invoice, dismiss it
+          const { data: existing } = await supabase
+            .from('invoice_notifications')
+            .select('*')
+            .eq('invoice_id', invoice.id)
+            .eq('dismissed', false)
+            .maybeSingle();
+
+          if (existing) {
+            console.log(`[Notifications] Dismissing notification for paid invoice ${invoice.id}`);
+            await supabase
+              .from('invoice_notifications')
+              .update({ dismissed: true })
+              .eq('id', existing.id);
+
+            setInvoiceNotifications(prev => prev.filter(n => n.id !== existing.id));
+          }
           continue;
         }
 
-        // Check if this invoice has an associated cashflow
-        const cashflow = cashflowRecords.find(cf => cf.invoiceId === invoice.id);
-
-        // Skip if no cashflow exists
-        if (!cashflow) {
-          console.log(`[Notifications] Skipping invoice ${invoice.id} - no cashflow associated`);
-          continue;
-        }
-
-        // Skip if cashflow is 'Effettivo' (already paid)
-        if (cashflow.statoFatturazione === 'Effettivo') {
-          console.log(`[Notifications] Skipping invoice ${invoice.id} - cashflow is 'Effettivo' (paid)`);
-          continue;
-        }
-
-        // Only notify for confirmed invoices (Effettivo) with unpaid cashflow (Stimato)
-        console.log(`[Notifications] Checking invoice ${invoice.id} (stato: ${invoice.statoFatturazione}) with cashflow stato '${cashflow.statoFatturazione}'`);
+        // Only notify for unpaid invoices (stato 'Stimato')
+        console.log(`[Notifications] Checking unpaid invoice ${invoice.id} (stato: ${invoice.statoFatturazione})`);
 
         const dueDate = new Date(invoice.dataScadenza!);
         dueDate.setHours(0, 0, 0, 0);
@@ -1804,7 +1841,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
             }
           }
         } else {
-          // tipo is null - due date is in the future
+          // tipo is null - due date is in the future OR invoice is paid
           // Dismiss any existing notification for this invoice
           const { data: existing } = await supabase
             .from('invoice_notifications')
@@ -1814,7 +1851,11 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
             .maybeSingle();
 
           if (existing) {
-            console.log(`[Notifications] Due date is in the future - dismissing notification for invoice ${invoice.id}`);
+            const reason = invoice.statoFatturazione === 'Effettivo'
+              ? 'invoice is paid'
+              : 'due date is in the future';
+            console.log(`[Notifications] Dismissing notification for invoice ${invoice.id} - ${reason}`);
+
             const { error: dismissError } = await supabase
               .from('invoice_notifications')
               .update({ dismissed: true })

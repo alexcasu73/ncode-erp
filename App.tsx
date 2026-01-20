@@ -70,8 +70,8 @@ const App: React.FC = () => {
       return <SetupPassword onComplete={() => {
         setAuthView('login');
         setIsSetupPasswordFlow(false);
-        // Clear URL parameters
-        window.history.replaceState({}, '', window.location.pathname);
+        // Clear URL and redirect to root
+        window.history.replaceState({}, '', '/');
       }} />;
     }
     if (authView === 'reset-password') {

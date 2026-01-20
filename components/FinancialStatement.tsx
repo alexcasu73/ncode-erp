@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useRef } from 'react';
 import { useData } from '../context/DataContext';
+import { useUserRole } from '../hooks/useUserRole';
 import { Download, Printer, Filter, Building2, TrendingUp, TrendingDown, Scale, Edit2, Plus, X, Check } from 'lucide-react';
 import { FinancialItem } from '../types';
 import { formatCurrency, formatCurrencyNoDecimals } from '../lib/currency';
@@ -17,6 +18,7 @@ export const FinancialStatement: React.FC = () => {
     updateFinancialItem,
     deleteFinancialItem
   } = useData();
+  const { canEdit, canDelete, isViewer, loading: roleLoading } = useUserRole();
 
   const [activeTab, setActiveTab] = useState<'balance' | 'income'>('balance');
   const [filterStato, setFilterStato] = useState<'Stimato' | 'Effettivo'>('Effettivo');
@@ -447,21 +449,23 @@ export const FinancialStatement: React.FC = () => {
             <div className="bg-white dark:bg-dark-card rounded-xl overflow-hidden flex flex-col" shadow-sm>
               <div className="p-6 border-b border-gray-200 dark:border-dark-border bg-green-50/50 dark:bg-green-900/10 flex justify-between items-center flex-shrink-0">
                 <h3 className="text-lg font-bold text-dark dark:text-white">Attivo</h3>
-                <button
-                  onClick={() => {
-                    setNewItemForm({
-                      section: 'Stato Patrimoniale',
-                      category: 'Attivo',
-                      name: '',
-                      amount: 0
-                    });
-                    setIsAddingItem(true);
-                  }}
-                  className="flex items-center gap-1 px-3 py-1.5 bg-primary text-white rounded-lg text-xs font-medium hover:opacity-90 transition-all shadow-sm"
-                >
-                  <Plus size={14} />
-                  Aggiungi
-                </button>
+                {!roleLoading && canEdit && (
+                  <button
+                    onClick={() => {
+                      setNewItemForm({
+                        section: 'Stato Patrimoniale',
+                        category: 'Attivo',
+                        name: '',
+                        amount: 0
+                      });
+                      setIsAddingItem(true);
+                    }}
+                    className="flex items-center gap-1 px-3 py-1.5 bg-primary text-white rounded-lg text-xs font-medium hover:opacity-90 transition-all shadow-sm"
+                  >
+                    <Plus size={14} />
+                    Aggiungi
+                  </button>
+                )}
               </div>
               <div className="p-6 flex-1 overflow-y-auto min-h-0">
                 <table className="w-full">
@@ -478,22 +482,26 @@ export const FinancialStatement: React.FC = () => {
                           <td className="py-3 text-sm font-medium text-gray-500 dark:text-gray-400">{item.name}</td>
                           <td className="py-3 whitespace-nowrap text-right text-sm font-bold text-dark dark:text-white">{formatCurrencyNoDecimals(item.amount)}</td>
                           <td className="py-3 text-right opacity-0 group-hover:opacity-100 transition-opacity">
-                            <button
-                              onClick={() => setEditingItem(item)}
-                              className="p-1 hover:bg-gray-50 dark:hover:bg-dark-bg rounded text-gray-500 dark:text-gray-400"
-                            >
-                              <Edit2 size={14} />
-                            </button>
-                            <button
-                              onClick={() => {
-                                if (confirm('Eliminare questa voce?')) {
-                                  deleteFinancialItem(item.id);
-                                }
-                              }}
+                            {!roleLoading && canEdit && (
+                              <button
+                                onClick={() => setEditingItem(item)}
+                                className="p-1 hover:bg-gray-50 dark:hover:bg-dark-bg rounded text-gray-500 dark:text-gray-400"
+                              >
+                                <Edit2 size={14} />
+                              </button>
+                            )}
+                            {!roleLoading && canDelete && (
+                              <button
+                                onClick={() => {
+                                  if (confirm('Eliminare questa voce?')) {
+                                    deleteFinancialItem(item.id);
+                                  }
+                                }}
                               className="p-1 hover:bg-red-100 dark:hover:bg-red-900/30 rounded text-red-600 dark:text-red-400 ml-1"
                             >
                               <X size={14} />
                             </button>
+                            )}
                           </td>
                         </tr>
                       ))
@@ -513,21 +521,23 @@ export const FinancialStatement: React.FC = () => {
             <div className="bg-white dark:bg-dark-card rounded-xl overflow-hidden flex flex-col" shadow-sm>
               <div className="p-6 border-b border-gray-200 dark:border-dark-border bg-red-50/50 dark:bg-red-900/10 flex justify-between items-center flex-shrink-0">
                 <h3 className="text-lg font-bold text-dark dark:text-white">Passivo e Netto</h3>
-                <button
-                  onClick={() => {
-                    setNewItemForm({
-                      section: 'Stato Patrimoniale',
-                      category: 'Passivo',
-                      name: '',
-                      amount: 0
-                    });
-                    setIsAddingItem(true);
-                  }}
-                  className="flex items-center gap-1 px-3 py-1.5 bg-primary text-white rounded-lg text-xs font-medium hover:opacity-90 transition-all shadow-sm"
-                >
-                  <Plus size={14} />
-                  Aggiungi
-                </button>
+                {!roleLoading && canEdit && (
+                  <button
+                    onClick={() => {
+                      setNewItemForm({
+                        section: 'Stato Patrimoniale',
+                        category: 'Passivo',
+                        name: '',
+                        amount: 0
+                      });
+                      setIsAddingItem(true);
+                    }}
+                    className="flex items-center gap-1 px-3 py-1.5 bg-primary text-white rounded-lg text-xs font-medium hover:opacity-90 transition-all shadow-sm"
+                  >
+                    <Plus size={14} />
+                    Aggiungi
+                  </button>
+                )}
               </div>
               <div className="p-6 flex-1 overflow-y-auto min-h-0">
                 <table className="w-full">
@@ -544,22 +554,26 @@ export const FinancialStatement: React.FC = () => {
                           <td className="py-3 text-sm font-medium text-gray-500 dark:text-gray-400">{item.name}</td>
                           <td className="py-3 whitespace-nowrap text-right text-sm font-bold text-dark dark:text-white">{formatCurrencyNoDecimals(item.amount)}</td>
                           <td className="py-3 text-right opacity-0 group-hover:opacity-100 transition-opacity">
-                            <button
-                              onClick={() => setEditingItem(item)}
-                              className="p-1 hover:bg-gray-50 dark:hover:bg-dark-bg rounded text-gray-500 dark:text-gray-400"
-                            >
-                              <Edit2 size={14} />
-                            </button>
-                            <button
-                              onClick={() => {
-                                if (confirm('Eliminare questa voce?')) {
-                                  deleteFinancialItem(item.id);
-                                }
-                              }}
+                            {!roleLoading && canEdit && (
+                              <button
+                                onClick={() => setEditingItem(item)}
+                                className="p-1 hover:bg-gray-50 dark:hover:bg-dark-bg rounded text-gray-500 dark:text-gray-400"
+                              >
+                                <Edit2 size={14} />
+                              </button>
+                            )}
+                            {!roleLoading && canDelete && (
+                              <button
+                                onClick={() => {
+                                  if (confirm('Eliminare questa voce?')) {
+                                    deleteFinancialItem(item.id);
+                                  }
+                                }}
                               className="p-1 hover:bg-red-100 dark:hover:bg-red-900/30 rounded text-red-600 dark:text-red-400 ml-1"
                             >
                               <X size={14} />
                             </button>
+                            )}
                           </td>
                         </tr>
                       ))

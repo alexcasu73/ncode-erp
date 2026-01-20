@@ -14,6 +14,7 @@ const Settings: React.FC = () => {
   const [showAnthropicKey, setShowAnthropicKey] = useState(false);
   const [showOpenAIKey, setShowOpenAIKey] = useState(false);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+  const [notificationRefreshInterval, setNotificationRefreshInterval] = useState<1 | 3 | 5>(5);
 
   // Email provider
   const [emailProvider, setEmailProvider] = useState<'smtp' | 'google-oauth2'>('smtp');
@@ -62,6 +63,7 @@ const Settings: React.FC = () => {
         setDefaultProvider(settings.defaultAiProvider);
         setAnthropicApiKey(settings.anthropicApiKey);
         setOpenaiApiKey(settings.openaiApiKey);
+        setNotificationRefreshInterval(settings.notificationRefreshInterval || 5);
 
         // Load email provider
         const provider = settings.emailProvider || 'smtp';
@@ -110,6 +112,7 @@ const Settings: React.FC = () => {
         defaultAiProvider: defaultProvider,
         anthropicApiKey,
         openaiApiKey,
+        notificationRefreshInterval,
         emailProvider,
         smtpEnabled,
         smtpHost,
@@ -352,6 +355,61 @@ const Settings: React.FC = () => {
 
         <div className="mt-3 text-xs text-gray-500 dark:text-gray-400">
           <strong>Modelli disponibili:</strong> GPT-4o (~$0.50/100 tx), GPT-4o-mini (~$0.05/100 tx), GPT-4 Turbo (~$2/100 tx), GPT-3.5 Turbo (~$0.15/100 tx)
+        </div>
+      </div>
+
+      {/* Notification Settings */}
+      <div className="bg-white dark:bg-dark-card rounded-lg border border-gray-200 dark:border-dark-border p-6 mb-6 shadow-sm">
+        <h2 className="text-xl font-semibold text-dark dark:text-white mb-4 flex items-center gap-2">
+          <Bell size={20} />
+          Impostazioni Notifiche
+        </h2>
+        <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+          Configura la frequenza di controllo delle scadenze fatture
+        </p>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            Intervallo Refresh Notifiche
+          </label>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
+            Ogni quanto controllare le fatture in scadenza
+          </p>
+          <div className="grid grid-cols-3 gap-3">
+            <button
+              onClick={() => setNotificationRefreshInterval(1)}
+              className={`p-3 rounded-lg border-2 transition-all text-center ${
+                notificationRefreshInterval === 1
+                  ? 'border-primary bg-primary/5 dark:bg-primary/10 text-primary'
+                  : 'border-gray-200 dark:border-dark-border hover:border-gray-300 dark:hover:border-gray-600 text-gray-700 dark:text-gray-300'
+              }`}
+            >
+              <div className="font-semibold">1 minuto</div>
+              <div className="text-xs opacity-70">Frequente</div>
+            </button>
+            <button
+              onClick={() => setNotificationRefreshInterval(3)}
+              className={`p-3 rounded-lg border-2 transition-all text-center ${
+                notificationRefreshInterval === 3
+                  ? 'border-primary bg-primary/5 dark:bg-primary/10 text-primary'
+                  : 'border-gray-200 dark:border-dark-border hover:border-gray-300 dark:hover:border-gray-600 text-gray-700 dark:text-gray-300'
+              }`}
+            >
+              <div className="font-semibold">3 minuti</div>
+              <div className="text-xs opacity-70">Equilibrato</div>
+            </button>
+            <button
+              onClick={() => setNotificationRefreshInterval(5)}
+              className={`p-3 rounded-lg border-2 transition-all text-center ${
+                notificationRefreshInterval === 5
+                  ? 'border-primary bg-primary/5 dark:bg-primary/10 text-primary'
+                  : 'border-gray-200 dark:border-dark-border hover:border-gray-300 dark:hover:border-gray-600 text-gray-700 dark:text-gray-300'
+              }`}
+            >
+              <div className="font-semibold">5 minuti</div>
+              <div className="text-xs opacity-70">Risparmio</div>
+            </button>
+          </div>
         </div>
       </div>
 

@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, BarChart, Bar } from 'recharts';
 import { useData } from '../context/DataContext';
+import { useUserRole } from '../hooks/useUserRole';
 import { CashflowRecord, Invoice } from '../types';
 import { Plus, ArrowUpCircle, ArrowDownCircle, Calendar, Search, ChevronUp, ChevronDown, ChevronsUpDown, X, Edit2, Trash2, Wallet, Settings, RotateCcw, Check, Download, Upload } from 'lucide-react';
 import { formatCurrency } from '../lib/currency';
@@ -85,6 +86,7 @@ export const Cashflow: React.FC = () => {
     getBankBalance,
     setBankBalance
   } = useData();
+  const { canEdit, canDelete, canImport, canReconcile, isViewer, loading: roleLoading } = useUserRole();
 
   const [filterAnno, setFilterAnno] = useState<number | 'tutti'>(() => {
     const saved = localStorage.getItem('cashflow_filterAnno');
@@ -856,27 +858,31 @@ export const Cashflow: React.FC = () => {
             <span className="hidden sm:inline">Esporta</span>
           </button>
 
-          {/* Import Button */}
-          <label className="bg-white dark:bg-dark-card border border-gray-300 dark:border-dark-border text-dark dark:text-white px-4 py-2 rounded-lg font-medium hover:bg-gray-50 dark:hover:bg-gray-800 transition-all flex items-center gap-2 shadow-sm cursor-pointer">
-            <Upload size={18} />
-            <span className="hidden sm:inline">{importing ? 'Importando...' : 'Importa'}</span>
-            <input
-              type="file"
-              accept=".xlsx,.xls"
-              onChange={handleImport}
-              disabled={importing}
-              className="hidden"
-            />
-          </label>
+          {/* Import Button - Only for admin and manager */}
+          {!roleLoading && canImport && (
+            <label className="bg-white dark:bg-dark-card border border-gray-300 dark:border-dark-border text-dark dark:text-white px-4 py-2 rounded-lg font-medium hover:bg-gray-50 dark:hover:bg-gray-800 transition-all flex items-center gap-2 shadow-sm cursor-pointer">
+              <Upload size={18} />
+              <span className="hidden sm:inline">{importing ? 'Importando...' : 'Importa'}</span>
+              <input
+                type="file"
+                accept=".xlsx,.xls"
+                onChange={handleImport}
+                disabled={importing}
+                className="hidden"
+              />
+            </label>
+          )}
 
-          {/* Add New Button */}
-          <button
-            onClick={openNewModal}
-            className="bg-primary text-white px-6 py-2 rounded-lg font-medium hover:opacity-90 transition-all flex items-center gap-2 shadow-sm"
-          >
-            <Plus size={18} />
-            <span className="hidden sm:inline">Aggiungi Movimento</span>
-          </button>
+          {/* Add New Button - Hidden for viewers */}
+          {!roleLoading && canEdit && (
+            <button
+              onClick={openNewModal}
+              className="bg-primary text-white px-6 py-2 rounded-lg font-medium hover:opacity-90 transition-all flex items-center gap-2 shadow-sm"
+            >
+              <Plus size={18} />
+              <span className="hidden sm:inline">Aggiungi Movimento</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -1296,20 +1302,27 @@ export const Cashflow: React.FC = () => {
                       </td>
                       <td className="px-3 py-3 text-right">
                         <div className="flex justify-end gap-1">
-                          <button
-                            onClick={() => openEditModal(record)}
-                            className="p-1 text-gray-500 hover:text-dark transition-colors"
-                            title="Modifica"
-                          >
-                            <Edit2 size={14} />
-                          </button>
-                          <button
-                            onClick={() => handleDelete(record.id)}
-                            className="p-1 text-gray-500 hover:text-red-500 transition-colors"
-                            title="Elimina"
-                          >
-                            <Trash2 size={14} />
-                          </button>
+                          {!roleLoading && canEdit && (
+                            <button
+                              onClick={() => openEditModal(record)}
+                              className="p-1 text-gray-500 hover:text-dark transition-colors"
+                              title="Modifica"
+                            >
+                              <Edit2 size={14} />
+                            </button>
+                          )}
+                          {!roleLoading && canDelete && (
+                            <button
+                              onClick={() => handleDelete(record.id)}
+                              className="p-1 text-gray-500 hover:text-red-500 transition-colors"
+                              title="Elimina"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          )}
+                          {!canEdit && !canDelete && (
+                            <span className="text-gray-400 text-xs">-</span>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -1377,20 +1390,27 @@ export const Cashflow: React.FC = () => {
                     </td>
                     <td className="px-3 py-3 text-right">
                       <div className="flex justify-end gap-1">
-                        <button
-                          onClick={() => openEditModal(record)}
-                          className="p-1 text-gray-500 hover:text-dark transition-colors"
-                          title="Modifica"
-                        >
-                          <Edit2 size={14} />
-                        </button>
-                        <button
-                          onClick={() => handleDelete(record.id)}
-                          className="p-1 text-gray-500 hover:text-red-500 transition-colors"
-                          title="Elimina"
-                        >
-                          <Trash2 size={14} />
-                        </button>
+                        {!roleLoading && canEdit && (
+                          <button
+                            onClick={() => openEditModal(record)}
+                            className="p-1 text-gray-500 hover:text-dark transition-colors"
+                            title="Modifica"
+                          >
+                            <Edit2 size={14} />
+                          </button>
+                        )}
+                        {!roleLoading && canDelete && (
+                          <button
+                            onClick={() => handleDelete(record.id)}
+                            className="p-1 text-gray-500 hover:text-red-500 transition-colors"
+                            title="Elimina"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        )}
+                        {!canEdit && !canDelete && (
+                          <span className="text-gray-400 text-xs">-</span>
+                        )}
                       </div>
                     </td>
                   </tr>

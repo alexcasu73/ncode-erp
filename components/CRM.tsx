@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useRef } from 'react';
 import { useData } from '../context/DataContext';
+import { useUserRole } from '../hooks/useUserRole';
 import { Customer } from '../types';
 import { Search, Plus, Filter, Mail, Phone, MapPin, Edit2, Trash2, X, Check, Building2, ChevronUp, ChevronDown, ChevronsUpDown, Upload, Download, Image as ImageIcon } from 'lucide-react';
 import { formatCurrency } from '../lib/currency';
@@ -7,6 +8,7 @@ import { exportCustomersToExcel, importCustomersFromExcel } from '../lib/import-
 
 export const CRM: React.FC = () => {
   const { customers, loading, addCustomer, updateCustomer, deleteCustomer } = useData();
+  const { canEdit, canDelete, canImport, isViewer, loading: roleLoading } = useUserRole();
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStato, setFilterStato] = useState<'tutti' | 'Attivo' | 'Prospetto' | 'Inattivo'>('tutti');
   const [showModal, setShowModal] = useState(false);
@@ -221,27 +223,31 @@ export const CRM: React.FC = () => {
             <span className="hidden sm:inline">Esporta</span>
           </button>
 
-          {/* Import Button */}
-          <label className="bg-white dark:bg-dark-card border border-gray-300 dark:border-dark-border text-dark dark:text-white px-4 py-2 rounded-lg font-medium hover:bg-gray-50 dark:hover:bg-gray-800 transition-all flex items-center gap-2 shadow-sm cursor-pointer">
-            <Upload size={18} />
-            <span className="hidden sm:inline">{importing ? 'Importando...' : 'Importa'}</span>
-            <input
-              type="file"
-              accept=".xlsx,.xls"
-              onChange={handleImport}
-              disabled={importing}
-              className="hidden"
-            />
-          </label>
+          {/* Import Button - Only for admin and manager */}
+          {!roleLoading && canImport && (
+            <label className="bg-white dark:bg-dark-card border border-gray-300 dark:border-dark-border text-dark dark:text-white px-4 py-2 rounded-lg font-medium hover:bg-gray-50 dark:hover:bg-gray-800 transition-all flex items-center gap-2 shadow-sm cursor-pointer">
+              <Upload size={18} />
+              <span className="hidden sm:inline">{importing ? 'Importando...' : 'Importa'}</span>
+              <input
+                type="file"
+                accept=".xlsx,.xls"
+                onChange={handleImport}
+                disabled={importing}
+                className="hidden"
+              />
+            </label>
+          )}
 
-          {/* Add New Button */}
-          <button
-            onClick={() => { setEditingCustomer(null); setShowModal(true); }}
-            className="bg-primary text-white px-6 py-2 rounded-lg font-medium hover:opacity-90 transition-all flex items-center gap-2 shadow-sm"
-          >
-            <Plus size={18} />
-            <span className="hidden sm:inline">Aggiungi Cliente</span>
-          </button>
+          {/* Add New Button - Hidden for viewers */}
+          {!roleLoading && canEdit && (
+            <button
+              onClick={() => { setEditingCustomer(null); setShowModal(true); }}
+              className="bg-primary text-white px-6 py-2 rounded-lg font-medium hover:opacity-90 transition-all flex items-center gap-2 shadow-sm"
+            >
+              <Plus size={18} />
+              <span className="hidden sm:inline">Aggiungi Cliente</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -473,13 +479,15 @@ export const CRM: React.FC = () => {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex justify-center gap-2">
-                      <button
-                        onClick={() => { setEditingCustomer(customer); setShowModal(true); }}
-                        className="text-gray-500 dark:text-gray-400 hover:text-blue-500 dark:hover:text-blue-400 p-1"
-                        title="Modifica"
-                      >
-                        <Edit2 size={18} />
-                      </button>
+                      {!roleLoading && canEdit && (
+                        <button
+                          onClick={() => { setEditingCustomer(customer); setShowModal(true); }}
+                          className="text-gray-500 dark:text-gray-400 hover:text-blue-500 dark:hover:text-blue-400 p-1"
+                          title="Modifica"
+                        >
+                          <Edit2 size={18} />
+                        </button>
+                      )}
                       <button
                         onClick={() => window.location.href = `mailto:${customer.email}`}
                         className="text-gray-500 dark:text-gray-400 hover:text-green-500 dark:hover:text-green-400 p-1"
@@ -487,13 +495,15 @@ export const CRM: React.FC = () => {
                       >
                         <Mail size={18} />
                       </button>
-                      <button
-                        onClick={() => handleDelete(customer.id)}
-                        className="text-gray-500 dark:text-gray-400 hover:text-red-500 dark:hover:text-red-400 p-1"
-                        title="Elimina"
-                      >
-                        <Trash2 size={18} />
-                      </button>
+                      {!roleLoading && canDelete && (
+                        <button
+                          onClick={() => handleDelete(customer.id)}
+                          className="text-gray-500 dark:text-gray-400 hover:text-red-500 dark:hover:text-red-400 p-1"
+                          title="Elimina"
+                        >
+                          <Trash2 size={18} />
+                        </button>
+                      )}
                     </div>
                   </td>
                 </tr>

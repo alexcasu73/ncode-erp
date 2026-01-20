@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { Upload, FileSpreadsheet, AlertCircle, CheckCircle, Download } from 'lucide-react';
+import { Upload, FileSpreadsheet, AlertCircle, CheckCircle, Download, Lock } from 'lucide-react';
 import { useData } from '../context/DataContext';
 import { useAuth } from '../context/AuthContext';
+import { useUserRole } from '../hooks/useUserRole';
 import { supabase } from '../lib/supabase';
 import { unifiedImport } from '../lib/unified-import';
 import { exportUnifiedExcel } from '../lib/import-export';
@@ -23,12 +24,45 @@ const camelToSnake = (obj: any): any => {
 export const UnifiedImport: React.FC = () => {
   const { invoices, cashflowRecords, customers, deals, addCustomer, refreshData } = useData();
   const { companyId } = useAuth();
+  const { canImport, loading: roleLoading } = useUserRole();
   const [importing, setImporting] = useState(false);
   const [importResult, setImportResult] = useState<{
     success: boolean;
     stats: { invoicesImported: number; cashflowsImported: number; customersImported: number; dealsImported: number };
     errors: string[];
   } | null>(null);
+
+  // Access control: only ADMIN and MANAGER can import
+  if (roleLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-gray-500 dark:text-gray-400">Caricamento...</div>
+      </div>
+    );
+  }
+
+  if (!canImport) {
+    return (
+      <div className="p-6 max-w-6xl mx-auto">
+        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-8 text-center">
+          <Lock size={48} className="mx-auto mb-4 text-red-600 dark:text-red-400" />
+          <h2 className="text-2xl font-bold text-red-900 dark:text-red-300 mb-2">Accesso Negato</h2>
+          <p className="text-red-700 dark:text-red-400 mb-4">
+            Non hai i permessi necessari per accedere all'importazione dati.
+          </p>
+          <p className="text-sm text-red-600 dark:text-red-500 mb-6">
+            Solo gli amministratori e i manager possono importare dati nel sistema.
+          </p>
+          <button
+            onClick={() => window.history.back()}
+            className="px-6 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors"
+          >
+            Torna Indietro
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   const handleExport = () => {
     const filename = `export-completo_${new Date().toISOString().split('T')[0]}.xlsx`;

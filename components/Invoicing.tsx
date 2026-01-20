@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useData } from '../context/DataContext';
+import { useUserRole } from '../hooks/useUserRole';
 import { Invoice, Deal, DealStage } from '../types';
 import { Plus, Download, Upload, Filter, ArrowUpCircle, ArrowDownCircle, Search, Calendar, Eye, Edit2, Trash2, X, Check, ChevronUp, ChevronDown, ChevronsUpDown, RotateCcw } from 'lucide-react';
 import { formatCurrency } from '../lib/currency';
@@ -40,6 +41,7 @@ const formatInvoiceId = (id: string, anno: number): string => {
 
 export const Invoicing: React.FC = () => {
   const { invoices, deals, cashflowRecords, loading, addInvoice, updateInvoice, deleteInvoice } = useData();
+  const { canEdit, canDelete, canImport, isViewer, loading: roleLoading } = useUserRole();
   const [searchTerm, setSearchTerm] = useState('');
   const [filterTipo, setFilterTipo] = useState<'tutti' | 'Entrata' | 'Uscita'>(() => {
     const saved = localStorage.getItem('invoicing_filterTipo');
@@ -268,11 +270,15 @@ export const Invoicing: React.FC = () => {
           comparison = (a.statoFatturazione || '').localeCompare(b.statoFatturazione || '');
           break;
         case 'flusso':
-          comparison = (a.flusso || 0) - (b.flusso || 0);
+          // Considera il segno: Uscite = negative, Entrate = positive
+          const flussoA = a.tipo === 'Uscita' ? -(a.flusso || 0) : (a.flusso || 0);
+          const flussoB = b.tipo === 'Uscita' ? -(b.flusso || 0) : (b.flusso || 0);
+          comparison = flussoA - flussoB;
           break;
         case 'totale':
-          const totaleA = (a.flusso || 0) + (a.iva || 0);
-          const totaleB = (b.flusso || 0) + (b.iva || 0);
+          // Considera il segno: Uscite = negative, Entrate = positive
+          const totaleA = a.tipo === 'Uscita' ? -(a.flusso || 0) - (a.iva || 0) : (a.flusso || 0) + (a.iva || 0);
+          const totaleB = b.tipo === 'Uscita' ? -(b.flusso || 0) - (b.iva || 0) : (b.flusso || 0) + (b.iva || 0);
           comparison = totaleA - totaleB;
           break;
       }
@@ -442,27 +448,31 @@ export const Invoicing: React.FC = () => {
             <span className="hidden sm:inline">Esporta</span>
           </button>
 
-          {/* Import Button */}
-          <label className="bg-white dark:bg-dark-card border border-gray-300 dark:border-dark-border text-dark dark:text-white px-4 py-2 rounded-lg font-medium hover:bg-gray-50 dark:hover:bg-gray-800 transition-all flex items-center gap-2 shadow-sm cursor-pointer">
-            <Upload size={18} />
-            <span className="hidden sm:inline">{importing ? 'Importando...' : 'Importa'}</span>
-            <input
-              type="file"
-              accept=".xlsx,.xls"
-              onChange={handleImport}
-              disabled={importing}
-              className="hidden"
-            />
-          </label>
+          {/* Import Button - Only for admin and manager */}
+          {!roleLoading && canImport && (
+            <label className="bg-white dark:bg-dark-card border border-gray-300 dark:border-dark-border text-dark dark:text-white px-4 py-2 rounded-lg font-medium hover:bg-gray-50 dark:hover:bg-gray-800 transition-all flex items-center gap-2 shadow-sm cursor-pointer">
+              <Upload size={18} />
+              <span className="hidden sm:inline">{importing ? 'Importando...' : 'Importa'}</span>
+              <input
+                type="file"
+                accept=".xlsx,.xls"
+                onChange={handleImport}
+                disabled={importing}
+                className="hidden"
+              />
+            </label>
+          )}
 
-          {/* Add New Button */}
-          <button
-            onClick={() => { setEditingInvoice(null); setShowModal(true); }}
-            className="bg-primary text-white px-6 py-2 rounded-lg font-medium hover:opacity-90 transition-all flex items-center gap-2 shadow-sm"
-          >
-            <Plus size={18} />
-            <span className="hidden sm:inline">Nuova Voce</span>
-          </button>
+          {/* Add New Button - Hidden for viewers */}
+          {!roleLoading && canEdit && (
+            <button
+              onClick={() => { setEditingInvoice(null); setShowModal(true); }}
+              className="bg-primary text-white px-6 py-2 rounded-lg font-medium hover:opacity-90 transition-all flex items-center gap-2 shadow-sm"
+            >
+              <Plus size={18} />
+              <span className="hidden sm:inline">Nuova Voce</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -759,8 +769,8 @@ export const Invoicing: React.FC = () => {
         </div>
       </div>
 
-      {/* Bulk Actions Bar */}
-      {selectedIds.size > 0 && (
+      {/* Bulk Actions Bar - Hidden for viewers */}
+      {selectedIds.size > 0 && !roleLoading && canDelete && (
         <div className="bg-gradient-to-r from-primary/10 to-primary/5 dark:from-primary/20 dark:to-primary/10 border-2 border-primary/30 dark:border-primary/40 rounded-xl p-5 flex items-center justify-between shadow-lg animate-fade-in backdrop-blur-sm">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-primary/20 dark:bg-primary/30 rounded-full flex items-center justify-center">
@@ -800,25 +810,27 @@ export const Invoicing: React.FC = () => {
           <table className="w-full">
             <thead className="bg-gray-50 dark:bg-dark-bg">
               <tr className="text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                <th className="px-4 py-4 w-12">
-                  <div className="flex items-center justify-center">
-                    <label className="inline-flex items-center cursor-pointer group">
-                      <input
-                        type="checkbox"
-                        checked={selectedIds.size === sortedInvoices.length && sortedInvoices.length > 0}
-                        onChange={toggleSelectAll}
-                        className="sr-only peer"
-                      />
-                      <div className="relative w-4 h-4 bg-white dark:bg-gray-700 border-2 border-gray-300 dark:border-gray-600 rounded-md peer-checked:bg-primary peer-checked:border-primary transition-all duration-200 group-hover:border-primary/50 peer-focus:ring-2 peer-focus:ring-primary/20">
-                        <Check
-                          size={12}
-                          className="absolute inset-0 m-auto text-white opacity-0 peer-checked:opacity-100 transition-opacity duration-200"
-                          strokeWidth={3}
+                {!roleLoading && canDelete && (
+                  <th className="px-4 py-4 w-12">
+                    <div className="flex items-center justify-center">
+                      <label className="inline-flex items-center cursor-pointer group">
+                        <input
+                          type="checkbox"
+                          checked={selectedIds.size === sortedInvoices.length && sortedInvoices.length > 0}
+                          onChange={toggleSelectAll}
+                          className="sr-only peer"
                         />
-                      </div>
-                    </label>
-                  </div>
-                </th>
+                        <div className="relative w-4 h-4 bg-white dark:bg-gray-700 border-2 border-gray-300 dark:border-gray-600 rounded-md peer-checked:bg-primary peer-checked:border-primary transition-all duration-200 group-hover:border-primary/50 peer-focus:ring-2 peer-focus:ring-primary/20">
+                          <Check
+                            size={12}
+                            className="absolute inset-0 m-auto text-white opacity-0 peer-checked:opacity-100 transition-opacity duration-200"
+                            strokeWidth={3}
+                          />
+                        </div>
+                      </label>
+                    </div>
+                  </th>
+                )}
                 <th
                   className="px-6 py-4 whitespace-nowrap cursor-pointer hover:bg-gray-50 transition-colors"
                   onClick={() => handleSort('id')}
@@ -904,25 +916,27 @@ export const Invoicing: React.FC = () => {
             <tbody className="divide-y divide-gray-200 dark:divide-dark-border">
               {sortedInvoices.map((inv) => (
                 <tr key={inv.id} className={`hover:bg-gray-50 dark:hover:bg-dark-bg transition-colors ${inv.tipo === 'Uscita' ? 'bg-orange-50/30 dark:bg-orange-900/10' : ''}`}>
-                  <td className="px-4 py-4 whitespace-nowrap">
-                    <div className="flex items-center justify-center">
-                      <label className="inline-flex items-center cursor-pointer group">
-                        <input
-                          type="checkbox"
-                          checked={selectedIds.has(inv.id)}
-                          onChange={() => toggleSelect(inv.id)}
-                          className="sr-only peer"
-                        />
-                        <div className="relative w-4 h-4 bg-white dark:bg-gray-700 border-2 border-gray-300 dark:border-gray-600 rounded-md peer-checked:bg-primary peer-checked:border-primary transition-all duration-200 group-hover:border-primary/50 peer-focus:ring-2 peer-focus:ring-primary/20">
-                          <Check
-                            size={12}
-                            className="absolute inset-0 m-auto text-white opacity-0 peer-checked:opacity-100 transition-opacity duration-200"
-                            strokeWidth={3}
+                  {!roleLoading && canDelete && (
+                    <td className="px-4 py-4 whitespace-nowrap">
+                      <div className="flex items-center justify-center">
+                        <label className="inline-flex items-center cursor-pointer group">
+                          <input
+                            type="checkbox"
+                            checked={selectedIds.has(inv.id)}
+                            onChange={() => toggleSelect(inv.id)}
+                            className="sr-only peer"
                           />
-                        </div>
-                      </label>
-                    </div>
-                  </td>
+                          <div className="relative w-4 h-4 bg-white dark:bg-gray-700 border-2 border-gray-300 dark:border-gray-600 rounded-md peer-checked:bg-primary peer-checked:border-primary transition-all duration-200 group-hover:border-primary/50 peer-focus:ring-2 peer-focus:ring-primary/20">
+                            <Check
+                              size={12}
+                              className="absolute inset-0 m-auto text-white opacity-0 peer-checked:opacity-100 transition-opacity duration-200"
+                              strokeWidth={3}
+                            />
+                          </div>
+                        </label>
+                      </div>
+                    </td>
+                  )}
                   <td className="px-6 py-4 text-sm text-dark dark:text-white font-semibold">
                     {formatInvoiceId(inv.id, inv.anno)}
                   </td>
@@ -964,29 +978,36 @@ export const Invoicing: React.FC = () => {
                       {inv.statoFatturazione || 'Nessuno'}
                     </span>
                   </td>
-                  <td className={`px-6 py-4 whitespace-nowrap text-sm font-medium text-right ${inv.tipo === 'Uscita' ? 'text-orange-600 dark:text-orange-400' : 'text-dark dark:text-white'}`}>
-                    {inv.tipo === 'Uscita' ? '-' : ''}{formatCurrency(inv.flusso || 0)}
+                  <td className={`px-6 py-4 whitespace-nowrap text-sm font-medium text-right ${inv.tipo === 'Uscita' ? 'text-orange-600 dark:text-orange-400' : 'text-green-600 dark:text-green-400'}`}>
+                    {inv.tipo === 'Uscita' ? '-' : '+'}{formatCurrency(inv.flusso || 0)}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-right">
                     {formatCurrency(inv.iva || 0)}
                   </td>
                   <td className={`px-6 py-4 whitespace-nowrap text-sm font-bold text-right ${inv.tipo === 'Uscita' ? 'text-orange-600 dark:text-orange-400' : 'text-green-600 dark:text-green-400'}`}>
-                    {inv.tipo === 'Uscita' ? '-' : ''}{formatCurrency((inv.flusso || 0) + (inv.iva || 0))}
+                    {inv.tipo === 'Uscita' ? '-' : '+'}{formatCurrency((inv.flusso || 0) + (inv.iva || 0))}
                   </td>
                   <td className="px-6 py-4">
                     <div className="flex justify-center gap-2">
-                      <button
-                        onClick={() => { setEditingInvoice(inv); setShowModal(true); }}
-                        className="text-gray-500 hover:text-blue-500"
-                      >
-                        <Edit2 size={16} />
-                      </button>
-                      <button
-                        onClick={() => handleDelete(inv.id)}
-                        className="text-gray-500 hover:text-red-500"
-                      >
-                        <Trash2 size={16} />
-                      </button>
+                      {!roleLoading && canEdit && (
+                        <button
+                          onClick={() => { setEditingInvoice(inv); setShowModal(true); }}
+                          className="text-gray-500 hover:text-blue-500"
+                        >
+                          <Edit2 size={16} />
+                        </button>
+                      )}
+                      {!roleLoading && canDelete && (
+                        <button
+                          onClick={() => handleDelete(inv.id)}
+                          className="text-gray-500 hover:text-red-500"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      )}
+                      {!canEdit && !canDelete && (
+                        <span className="text-gray-400 text-xs">-</span>
+                      )}
                     </div>
                   </td>
                 </tr>
@@ -1233,17 +1254,29 @@ const InvoiceModal: React.FC<InvoiceModalProps> = ({ invoice, deals, invoices, o
                 </span>
               )}
             </label>
-            <input
-              type="date"
-              value={formData.dataScadenza ? new Date(formData.dataScadenza).toISOString().split('T')[0] : ''}
-              onChange={(e) => updateField('dataScadenza', e.target.value || undefined)}
-              disabled={formData.statoFatturazione === 'Effettivo'}
-              className={`w-full pl-4 pr-4 py-2 border border-gray-200 dark:border-dark-border rounded-lg focus:ring-2 focus:ring-primary focus:outline-none bg-white dark:bg-gray-800/30 text-dark dark:text-white ${
-                formData.statoFatturazione === 'Effettivo'
-                  ? 'opacity-50 cursor-not-allowed bg-gray-100 dark:bg-gray-800'
-                  : ''
-              }`}
-            />
+            <div className="relative">
+              <input
+                type="date"
+                value={formData.dataScadenza ? new Date(formData.dataScadenza).toISOString().split('T')[0] : ''}
+                onChange={(e) => updateField('dataScadenza', e.target.value || undefined)}
+                disabled={formData.statoFatturazione === 'Effettivo'}
+                className={`w-full pl-4 pr-10 py-2 border border-gray-200 dark:border-dark-border rounded-lg focus:ring-2 focus:ring-primary focus:outline-none bg-white dark:bg-gray-800/30 text-dark dark:text-white ${
+                  formData.statoFatturazione === 'Effettivo'
+                    ? 'opacity-50 cursor-not-allowed bg-gray-100 dark:bg-gray-800'
+                    : ''
+                }`}
+              />
+              {formData.dataScadenza && formData.statoFatturazione !== 'Effettivo' && (
+                <button
+                  type="button"
+                  onClick={() => updateField('dataScadenza', undefined)}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"
+                  title="Cancella data scadenza"
+                >
+                  <X size={16} className="text-gray-400 hover:text-red-500" />
+                </button>
+              )}
+            </div>
           </div>
 
           {/* Progetto (per Entrate) o Categoria (per Uscite) */}

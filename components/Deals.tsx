@@ -1,11 +1,13 @@
 import React, { useState, useMemo } from 'react';
 import { useData } from '../context/DataContext';
+import { useUserRole } from '../hooks/useUserRole';
 import { Deal, DealStage } from '../types';
 import { Plus, Calendar, DollarSign, Edit2, Trash2, X, Check, GripVertical, TrendingUp } from 'lucide-react';
 import { formatCurrency } from '../lib/currency';
 
 export const Deals: React.FC = () => {
   const { deals, customers, loading, addDeal, updateDeal, deleteDeal } = useData();
+  const { canEdit, canDelete, isViewer, loading: roleLoading } = useUserRole();
   const stages = Object.values(DealStage);
   const [showModal, setShowModal] = useState(false);
   const [editingDeal, setEditingDeal] = useState<Deal | null>(null);
@@ -167,18 +169,20 @@ export const Deals: React.FC = () => {
           <div className="bg-secondary px-4 py-2 rounded-lg text-body font-medium text-white">
             Vinto: <span className="font-bold">{formatCurrency(pipelineTotals.wonValue)}</span>
           </div>
-          <button
-            onClick={() => openNewDealModal()}
-            className="bg-primary text-white px-6 py-2 rounded-lg font-medium hover:opacity-90 transition-all flex items-center gap-2 shadow-sm"
-          >
-            <Plus size={18} />
-            Nuova Opportunità
-          </button>
+          {!roleLoading && canEdit && (
+            <button
+              onClick={() => openNewDealModal()}
+              className="bg-primary text-white px-6 py-2 rounded-lg font-medium hover:opacity-90 transition-all flex items-center gap-2 shadow-sm"
+            >
+              <Plus size={18} />
+              Nuova Opportunità
+            </button>
+          )}
         </div>
       </div>
 
-      {/* Bulk Actions Bar */}
-      {selectedIds.size > 0 && (
+      {/* Bulk Actions Bar - Hidden for viewers */}
+      {selectedIds.size > 0 && canDelete && (
         <div className="bg-gradient-to-r from-primary/10 to-primary/5 dark:from-primary/20 dark:to-primary/10 border-2 border-primary/30 dark:border-primary/40 rounded-xl p-5 flex items-center justify-between shadow-lg animate-fade-in backdrop-blur-sm mb-6">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-primary/20 dark:bg-primary/30 rounded-full flex items-center justify-center">
@@ -290,29 +294,35 @@ export const Deals: React.FC = () => {
                         </div>
                       </div>
 
-                      {/* Action Buttons */}
-                      <div className="flex gap-1 justify-end mb-2">
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setEditingDeal(deal);
-                            setPreselectedStage(null);
-                            setShowModal(true);
-                          }}
-                          className="text-gray-300 dark:text-gray-600 hover:text-primary dark:hover:text-primary p-1"
-                        >
-                          <Edit2 size={14} />
-                        </button>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleDelete(deal.id);
-                          }}
-                          className="text-gray-300 dark:text-gray-600 hover:text-red-500 p-1"
-                        >
-                          <Trash2 size={14} />
-                        </button>
-                      </div>
+                      {/* Action Buttons - Hidden for viewers */}
+                      {!roleLoading && (canEdit || canDelete) && (
+                        <div className="flex gap-1 justify-end mb-2">
+                          {!roleLoading && canEdit && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setEditingDeal(deal);
+                                setPreselectedStage(null);
+                                setShowModal(true);
+                              }}
+                              className="text-gray-300 dark:text-gray-600 hover:text-primary dark:hover:text-primary p-1"
+                            >
+                              <Edit2 size={14} />
+                            </button>
+                          )}
+                          {!roleLoading && canDelete && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDelete(deal.id);
+                              }}
+                              className="text-gray-300 dark:text-gray-600 hover:text-red-500 p-1"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          )}
+                        </div>
+                      )}
 
                       {/* Deal Title */}
                       <h4 className="font-bold text-dark dark:text-white text-base mb-3 leading-snug">{deal.title}</h4>
@@ -354,13 +364,15 @@ export const Deals: React.FC = () => {
                     </div>
                   ))}
 
-                  {/* Add Deal Button */}
-                  <button
-                    onClick={() => openNewDealModal(stage)}
-                    className="w-full py-3 border border-dashed border-gray-200 dark:border-dark-border text-gray-500 dark:text-gray-400 hover:border-primary hover:text-primary transition-colors rounded-lg flex items-center justify-center gap-2 text-sm font-medium"
-                  >
-                    <Plus size={16} /> Aggiungi
-                  </button>
+                  {/* Add Deal Button - Hidden for viewers */}
+                  {!roleLoading && canEdit && (
+                    <button
+                      onClick={() => openNewDealModal(stage)}
+                      className="w-full py-3 border border-dashed border-gray-200 dark:border-dark-border text-gray-500 dark:text-gray-400 hover:border-primary hover:text-primary transition-colors rounded-lg flex items-center justify-center gap-2 text-sm font-medium"
+                    >
+                      <Plus size={16} /> Aggiungi
+                    </button>
+                  )}
                 </div>
               </div>
             );

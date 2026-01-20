@@ -3,6 +3,7 @@ import { NavItem } from '../types';
 import { MAIN_NAV_ITEMS, SETTINGS_NAV_ITEMS, APP_NAME } from '../constants';
 import { LogOut } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { useUserRole } from '../hooks/useUserRole';
 import { supabase } from '../lib/supabase';
 
 interface SidebarProps {
@@ -12,6 +13,7 @@ interface SidebarProps {
 
 export const Sidebar: React.FC<SidebarProps> = ({ currentView, onChangeView }) => {
   const { user, companyId, signOut } = useAuth();
+  const { canManageUsers, canImport, canReconcile, loading: roleLoading } = useUserRole();
   const [companyLogo, setCompanyLogo] = useState<string>('');
   const [userName, setUserName] = useState<string>('');
   const [userAvatar, setUserAvatar] = useState<string>('');
@@ -97,7 +99,11 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, onChangeView }) =
           </div>
 
           {/* Main Navigation Section */}
-          {MAIN_NAV_ITEMS.map((item) => {
+          {MAIN_NAV_ITEMS.filter((item) => {
+            // Hide Reconciliation from USER and VIEWER (only ADMIN and MANAGER can see it)
+            if (item.id === 'reconciliation' && !canReconcile) return false;
+            return true;
+          }).map((item) => {
             const isActive = currentView === item.id;
             return (
               <button
@@ -129,7 +135,15 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, onChangeView }) =
           </div>
 
           {/* Settings Navigation Section */}
-          {SETTINGS_NAV_ITEMS.map((item) => {
+          {SETTINGS_NAV_ITEMS.filter((item) => {
+            // Hide Import from USER and VIEWER (only ADMIN and MANAGER can see it)
+            if (item.id === 'import' && !canImport) return false;
+            // Hide Users from non-ADMIN (only ADMIN can see it)
+            if (item.id === 'users' && !canManageUsers) return false;
+            // Hide Settings from non-ADMIN (only ADMIN can see it)
+            if (item.id === 'settings' && !canManageUsers) return false;
+            return true;
+          }).map((item) => {
             const isActive = currentView === item.id;
             return (
               <button
