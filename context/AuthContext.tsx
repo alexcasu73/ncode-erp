@@ -218,17 +218,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return { error: new Error('Errore nel completamento della registrazione: ' + (registrationError?.message || 'Unknown error')) };
       }
 
-      // 6. Auto-confirm email and sign in (for local development)
-      // In production, you'd want to send a confirmation email
-      const { error: updateError } = await supabase.auth.updateUser({
-        email_confirmed_at: new Date().toISOString(),
-      });
-
-      if (updateError) {
-        console.warn('Could not auto-confirm email:', updateError);
-      }
-
-      // Success! The auth state change will handle the redirect
+      // Success! Email is already confirmed by server-side user creation
+      // The auth state change will handle the redirect
       return { error: null };
     } catch (err) {
       console.error('Unexpected error during signup:', err);

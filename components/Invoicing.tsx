@@ -20,14 +20,22 @@ const formatDate = (date: Date | string): string => {
   return d.toLocaleDateString('it-IT');
 };
 
-// Helper per formattare ID fattura: "Fattura_xyz" -> "xyz/anno"
+// Helper per formattare ID fattura: "Fattura_123/2026" -> "N. 123/2026"
 const formatInvoiceId = (id: string, anno: number): string => {
   const numero = id.replace('Fattura_', '');
-  // Se il numero contiene già l'anno (es. "180/2026"), non duplicarlo
+
+  // Se il numero contiene già l'anno (es. "123/2026"), usa quello
   if (numero.includes('/')) {
-    return numero;
+    return `N. ${numero}`;
   }
-  return `${numero}/${anno}`;
+
+  // Altrimenti, se è solo un numero o un UUID, aggiungi l'anno
+  // Per UUID molto lunghi, mostra solo le prime 8 cifre
+  if (numero.length > 10) {
+    return `N. ${numero.substring(0, 8)}.../${anno}`;
+  }
+
+  return `N. ${numero}/${anno}`;
 };
 
 export const Invoicing: React.FC = () => {
@@ -356,15 +364,39 @@ export const Invoicing: React.FC = () => {
 
       for (const invoice of importedInvoices) {
         try {
-          // Check if ID already exists and skip if it does
-          let invoiceId = invoice.id || `Fattura_${crypto.randomUUID()}`;
-          const existingInvoice = invoices.find(inv => inv.id === invoiceId);
+          let invoiceId: string;
 
-          if (existingInvoice) {
-            // Skip duplicate ID
-            errorCount++;
-            console.error(`ID duplicato ${invoice.id}, riga saltata`);
-            continue;
+          // Se l'invoice ha già un ID valido, usalo
+          if (invoice.id && invoice.id.startsWith('Fattura_')) {
+            invoiceId = invoice.id;
+
+            // Check if ID already exists
+            const existingInvoice = invoices.find(inv => inv.id === invoiceId);
+            if (existingInvoice) {
+              // Skip duplicate ID
+              errorCount++;
+              console.error(`ID duplicato ${invoice.id}, riga saltata`);
+              continue;
+            }
+          } else {
+            // Genera numero progressivo per l'anno della fattura
+            const anno = invoice.anno || new Date().getFullYear();
+
+            // Trova il numero più alto per quest'anno (incluse le fatture già importate in questo batch)
+            const fattureAnno = [...invoices, ...importedInvoices.slice(0, importedInvoices.indexOf(invoice))]
+              .filter(inv => inv.anno === anno);
+
+            let maxNumero = 0;
+            fattureAnno.forEach(inv => {
+              const match = inv.id?.match(/Fattura_(\d+)/);
+              if (match) {
+                const num = parseInt(match[1], 10);
+                if (num > maxNumero) maxNumero = num;
+              }
+            });
+
+            const nuovoNumero = maxNumero + 1;
+            invoiceId = `Fattura_${nuovoNumero}/${anno}`;
           }
 
           await addInvoice({ ...invoice, id: invoiceId } as Invoice);
@@ -974,6 +1006,7 @@ export const Invoicing: React.FC = () => {
         <InvoiceModal
           invoice={editingInvoice}
           deals={deals}
+          invoices={invoices}
           onClose={() => setShowModal(false)}
           onSave={async (data) => {
             if (editingInvoice) {
@@ -1023,11 +1056,12 @@ export const Invoicing: React.FC = () => {
 interface InvoiceModalProps {
   invoice: Invoice | null;
   deals: Deal[];
+  invoices: Invoice[];
   onClose: () => void;
   onSave: (data: Partial<Invoice>) => void;
 }
 
-const InvoiceModal: React.FC<InvoiceModalProps> = ({ invoice, deals, onClose, onSave }) => {
+const InvoiceModal: React.FC<InvoiceModalProps> = ({ invoice, deals, invoices, onClose, onSave }) => {
   // Filtra le opportunità per stato: Proposta, Negoziazione, Vinto
   const availableProjects = useMemo(() => {
     return deals.filter(d =>
@@ -1061,7 +1095,37 @@ const InvoiceModal: React.FC<InvoiceModalProps> = ({ invoice, deals, onClose, on
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const id = invoice?.id || `Fattura_${Date.now()}`;
+    console.log('🔵 [Invoicing] handleSubmit called', { invoice, formData });
+
+    // Se stiamo modificando una fattura esistente, mantieni l'ID
+    if (invoice?.id) {
+      console.log('🔵 [Invoicing] Updating existing invoice:', invoice.id);
+      onSave({ ...formData, id: invoice.id });
+      return;
+    }
+
+    // Per nuove fatture, genera numero progressivo
+    const anno = formData.anno || new Date().getFullYear();
+    console.log('🔵 [Invoicing] Creating new invoice for year:', anno);
+
+    // Trova il numero più alto per quest'anno
+    const fattureAnno = invoices.filter(inv => inv.anno === anno);
+    console.log('🔵 [Invoicing] Existing invoices for year:', fattureAnno.length);
+    let maxNumero = 0;
+
+    fattureAnno.forEach(inv => {
+      // Estrai numero da ID come "Fattura_123/2026" o "Fattura_123"
+      const match = inv.id.match(/Fattura_(\d+)/);
+      if (match) {
+        const num = parseInt(match[1], 10);
+        if (num > maxNumero) maxNumero = num;
+      }
+    });
+
+    const nuovoNumero = maxNumero + 1;
+    const id = `Fattura_${nuovoNumero}/${anno}`;
+    console.log('✅ [Invoicing] Generated new invoice ID:', id);
+
     onSave({ ...formData, id });
   };
 

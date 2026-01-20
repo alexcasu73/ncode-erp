@@ -37,7 +37,8 @@
       "Bash(supabase functions serve:*)",
       "Bash(ls:*)",
       "Bash(jq:*)",
-      "Bash(node --watch src/index.js:*)"
+      "Bash(node --watch src/index.js:*)",
+      "Bash(PORT=3000 npm run dev:*)"
     ]
   }
 }

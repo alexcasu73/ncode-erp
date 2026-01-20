@@ -1,5 +1,6 @@
 import * as XLSX from 'xlsx';
-import type { Invoice, CashflowRecord, Customer, Deal, DealStage } from '../types';
+import type { Invoice, CashflowRecord, Customer, Deal } from '../types';
+import { DealStage } from '../types';
 
 // Helper functions (copied from import-export.ts for standalone parsing)
 function parseDate(value: any): string | undefined {

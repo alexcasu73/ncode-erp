@@ -141,67 +141,46 @@ function getInvitationEmailHtml(name, setupUrl, inviterName, companyName, role, 
   };
   const roleLabel = roleLabels[role] || role;
 
-  // Build content sections separately to avoid nesting issues
-  let credentialsSection = '';
-  let actionSection = '';
-  let instructionsSection = '';
-
-  if (tempPassword) {
-    credentialsSection = `
+  // Build content sections - always use magic link approach
+  const credentialsSection = `
           <div class="credentials-box">
             <div class="title">
-              🔑 Le tue credenziali di accesso
+              📧 Il tuo account è pronto!
             </div>
             <div class="credential-item">
               <span class="credential-label">Email:</span> <span class="credential-value">${email}</span>
             </div>
-            <div class="credential-item">
-              <span class="credential-label">Password temporanea:</span> <span class="credential-value">${tempPassword}</span>
-            </div>
-            <div class="warning-box">
-              ⚠️ <strong>Importante:</strong> Cambia questa password al primo accesso per motivi di sicurezza.
-            </div>
+            <p style="margin: 16px 0 0 0; color: #78350F; font-size: 14px;">
+              Clicca sul pulsante qui sotto per impostare la tua password e completare la registrazione.
+            </p>
           </div>`;
 
-    actionSection = `
+  const actionSection = `
           <p class="intro-text">
-            Il tuo account è già stato creato e pronto all'uso.
-            Clicca sul pulsante qui sotto per accedere alla piattaforma:
+            Per completare la configurazione del tuo account e impostare la password,
+            clicca sul pulsante qui sotto:
           </p>
           <div style="text-align: center;">
-            <a href="${setupUrl}" class="button">🚀 Accedi Ora</a>
+            <a href="${setupUrl}" class="button">🔐 Imposta Password</a>
           </div>
           <p class="link-text">
             Oppure copia e incolla questo link nel tuo browser:<br>
             <a href="${setupUrl}" class="link-url">${setupUrl}</a>
           </p>`;
 
-    instructionsSection = `
+  const instructionsSection = `
           <div class="tip-box">
-            <div class="tip-title">💡 Come accedere</div>
+            <div class="tip-title">💡 Prossimi passi</div>
             <div class="tip-text">
-              1. Clicca sul pulsante "Accedi Ora" qui sopra<br>
-              2. Inserisci la tua email e la password temporanea<br>
-              3. Una volta dentro, vai su "Profilo" per cambiare la password<br>
+              1. Clicca sul pulsante "Imposta Password" qui sopra<br>
+              2. Scegli una password sicura per il tuo account<br>
+              3. Accedi con la tua email e la password scelta<br>
               4. Inizia ad utilizzare la piattaforma!
             </div>
-          </div>`;
-  } else {
-    actionSection = `
-          <p class="intro-text">
-            Per completare la registrazione, clicca sul pulsante qui sotto:
-          </p>
-          <div style="text-align: center;">
-            <a href="${setupUrl}" class="button">Accetta Invito</a>
           </div>
-          <p class="link-text">
-            Oppure copia e incolla questo link nel tuo browser:<br>
-            <a href="${setupUrl}" class="link-url">${setupUrl}</a>
-          </p>
           <p class="link-text" style="margin-top: 24px;">
-            ⏰ Questo invito scadrà tra 7 giorni.
+            ⏰ Questo link è valido per 7 giorni.
           </p>`;
-  }
 
   return `
     <!DOCTYPE html>
@@ -379,7 +358,7 @@ function getInvitationEmailHtml(name, setupUrl, inviterName, companyName, role, 
           <div class="subtitle">Sistema di gestione aziendale</div>
         </div>
 
-        <h1>Ciao ${name}! 👋</h1>
+        <h1>${name === 'Nuovo Utente' ? 'Benvenuto! 👋' : `Ciao ${name}! 👋`}</h1>
 
         <div class="content">
           <p class="intro-text">

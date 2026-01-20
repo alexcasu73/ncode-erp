@@ -13,6 +13,7 @@ import { Profile } from './components/Profile';
 import { Login } from './components/Login';
 import { Register } from './components/Register';
 import { ResetPassword } from './components/ResetPassword';
+import { SetupPassword } from './components/SetupPassword';
 import { InvoiceNotifications } from './components/InvoiceNotifications';
 import { UnifiedImport } from './components/UnifiedImport';
 import { Bell, Menu, X, Sun, Moon, RefreshCw } from 'lucide-react';
@@ -24,21 +25,28 @@ const App: React.FC = () => {
   const [currentView, setCurrentView] = useState('dashboard');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
-  const [authView, setAuthView] = useState<'login' | 'register' | 'reset-password'>('login');
+  const [authView, setAuthView] = useState<'login' | 'register' | 'reset-password' | 'setup-password'>('login');
   const [isResetPasswordFlow, setIsResetPasswordFlow] = useState(false);
+  const [isSetupPasswordFlow, setIsSetupPasswordFlow] = useState(false);
   const { theme, toggleTheme } = useTheme();
   const { aiProcessing, stopAiProcessing, invoiceNotifications } = useData();
   const { user, loading, signOut } = useAuth();
 
-  // Check for password reset flow on mount
+  // Check for password reset or setup flow on mount
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const email = params.get('email');
     const type = params.get('type');
     const accessToken = params.get('access_token');
+    const token = params.get('token');
 
+    // Check if this is a setup password flow (magic link)
+    if (token && window.location.pathname.includes('setup')) {
+      setIsSetupPasswordFlow(true);
+      setAuthView('setup-password');
+    }
     // Check if this is a password reset flow
-    if (email || type === 'recovery' || accessToken) {
+    else if (email || type === 'recovery' || accessToken) {
       setIsResetPasswordFlow(true);
       setAuthView('reset-password');
     }
@@ -57,7 +65,15 @@ const App: React.FC = () => {
   }
 
   // Show login/register if not authenticated
-  if (!user || isResetPasswordFlow) {
+  if (!user || isResetPasswordFlow || isSetupPasswordFlow) {
+    if (authView === 'setup-password') {
+      return <SetupPassword onComplete={() => {
+        setAuthView('login');
+        setIsSetupPasswordFlow(false);
+        // Clear URL parameters
+        window.history.replaceState({}, '', window.location.pathname);
+      }} />;
+    }
     if (authView === 'reset-password') {
       return <ResetPassword onBackToLogin={() => {
         setAuthView('login');

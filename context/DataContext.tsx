@@ -313,30 +313,47 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Customer CRUD
   const addCustomer = async (customer: Omit<Customer, 'id'>): Promise<Customer | null> => {
+    console.log('🔵 [addCustomer] START - Customer data:', customer);
+
     if (!isSupabaseConfigured) {
+      console.log('🔵 [addCustomer] Supabase not configured, using local state');
       const newCustomer = { ...customer, id: `C-${Date.now()}` } as Customer;
       setCustomers(prev => [...prev, newCustomer]);
       return newCustomer;
     }
 
     if (!companyId) {
-      console.error('No company ID available');
+      console.error('❌ [addCustomer] FAILED: No company ID available');
+      alert('Errore: Nessuna azienda selezionata. Riprova a fare il login.');
       return null;
     }
 
+    console.log('🔵 [addCustomer] Company ID:', companyId);
+    console.log('🔵 [addCustomer] User:', user?.id, user?.email);
+
+    const customerData = { ...camelToSnake(customer), company_id: companyId };
+    console.log('🔵 [addCustomer] Data to insert:', customerData);
+
     const { data, error } = await supabase
       .from('customers')
-      .insert({ ...camelToSnake(customer), company_id: companyId })
+      .insert(customerData)
       .select()
       .single();
 
     if (error) {
-      console.error('Error adding customer:', error);
+      console.error('❌ [addCustomer] FAILED:', error);
+      console.error('❌ [addCustomer] Error details:', JSON.stringify(error, null, 2));
+      alert(`Errore nel salvataggio del cliente: ${error.message}`);
       return null;
     }
 
+    console.log('✅ [addCustomer] SUCCESS - Data from DB:', data);
     const newCustomer = snakeToCamel(data) as Customer;
-    setCustomers(prev => [...prev, newCustomer]);
+    setCustomers(prev => {
+      const updated = [...prev, newCustomer];
+      console.log('✅ [addCustomer] Updated customers count:', updated.length);
+      return updated;
+    });
     return newCustomer;
   };
 
@@ -1306,37 +1323,51 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const updateSettings = async (newSettings: Partial<Omit<AppSettings, 'id'>>): Promise<boolean> => {
+    console.log('🔧 [updateSettings] Starting update with:', newSettings);
+
     if (!isSupabaseConfigured) {
-      // Update local state if Supabase not configured
+      console.log('⚠️ [updateSettings] Supabase not configured, updating local state only');
       setSettings(prev => prev ? { ...prev, ...newSettings } : null);
       return true;
     }
 
     if (!companyId) {
-      console.error('No company ID available for updating settings');
+      console.error('❌ [updateSettings] No company ID available');
       return false;
     }
 
+    console.log('📝 [updateSettings] Company ID:', companyId);
+
     try {
-      const { error } = await supabase
+      const dataToUpsert = {
+        id: 'default',
+        company_id: companyId,
+        ...camelToSnake(newSettings),
+        updated_at: new Date().toISOString()
+      };
+
+      console.log('📤 [updateSettings] Upserting data:', dataToUpsert);
+
+      const { data, error } = await supabase
         .from('settings')
-        .upsert({
-          id: 'default',
-          company_id: companyId,
-          ...camelToSnake(newSettings),
-          updated_at: new Date().toISOString()
-        });
+        .upsert(dataToUpsert, {
+          onConflict: 'id,company_id'
+        })
+        .select();
 
       if (error) {
-        console.error('Error updating settings:', error);
+        console.error('❌ [updateSettings] Supabase error:', error);
+        console.error('❌ [updateSettings] Error details:', JSON.stringify(error, null, 2));
         return false;
       }
+
+      console.log('✅ [updateSettings] Settings updated successfully:', data);
 
       // Update local state
       setSettings(prev => prev ? { ...prev, ...newSettings } : null);
       return true;
     } catch (err) {
-      console.error('Error in updateSettings:', err);
+      console.error('❌ [updateSettings] Exception:', err);
       return false;
     }
   };
@@ -1344,14 +1375,15 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // User Management Functions
   const getCompanyUsers = async (): Promise<any[]> => {
     if (!companyId) {
-      console.error('[getCompanyUsers] No company ID available');
+      console.error('❌ [getCompanyUsers] No company ID available');
       return [];
     }
 
-    console.log('[getCompanyUsers] Fetching users for company:', companyId);
+    console.log('🔵 [getCompanyUsers] Fetching users for company:', companyId);
 
     try {
-      const { data, error } = await supabase
+      // Fetch active users
+      const { data: usersData, error: usersError } = await supabase
         .from('company_users')
         .select(`
           user_id,
@@ -1366,43 +1398,72 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         `)
         .eq('company_id', companyId);
 
-      if (error) {
-        console.error('[getCompanyUsers] Error fetching company users:', error);
+      if (usersError) {
+        console.error('❌ [getCompanyUsers] Error fetching company users:', usersError);
         return [];
       }
 
-      console.log('[getCompanyUsers] Raw data from Supabase:', JSON.stringify(data, null, 2));
-      console.log('[getCompanyUsers] Number of records returned:', data?.length);
+      console.log('🔵 [getCompanyUsers] Raw users data:', JSON.stringify(usersData, null, 2));
 
-      // Check each record
-      data?.forEach((cu: any, index: number) => {
-        console.log(`[getCompanyUsers] Record ${index + 1}:`, {
+      // Fetch pending invitations (not yet accepted)
+      const { data: invitationsData, error: invitationsError } = await supabase
+        .from('user_invitations')
+        .select('id, email, role, created_at, expires_at')
+        .eq('company_id', companyId)
+        .is('used_at', null)
+        .gt('expires_at', new Date().toISOString());
+
+      if (invitationsError) {
+        console.error('❌ [getCompanyUsers] Error fetching invitations:', invitationsError);
+      }
+
+      console.log('🔵 [getCompanyUsers] Active users count:', usersData?.length);
+      console.log('🔵 [getCompanyUsers] Pending invitations count:', invitationsData?.length);
+
+      // Transform active users with detailed logging
+      const transformedUsers = (usersData || []).map((cu: any, index: number) => {
+        console.log(`🔵 [getCompanyUsers] User ${index + 1}:`, {
           user_id: cu.user_id,
+          has_users_object: !!cu.users,
+          users_email: cu.users?.email,
+          users_full_name: cu.users?.full_name,
+          role: cu.role,
+        });
+
+        return {
+          id: cu.user_id,
+          email: cu.users?.email || 'unknown',
+          name: cu.users?.full_name || 'Unknown',
           role: cu.role,
           is_active: cu.is_active,
-          users_object: cu.users,
-          has_users: !!cu.users,
-          users_email: cu.users?.email,
-          users_full_name: cu.users?.full_name
-        });
+          created_at: cu.created_at,
+          status: 'active' as const,
+        };
       });
 
-      // Transform the data to a flatter structure
-      const transformedUsers = (data || []).map((cu: any) => ({
-        id: cu.user_id,
-        email: cu.users?.email || 'unknown',
-        name: cu.users?.full_name || 'Unknown',
-        role: cu.role,
-        is_active: cu.is_active,
-        created_at: cu.created_at,
+      // Transform pending invitations
+      const transformedInvitations = (invitationsData || []).map((inv: any) => ({
+        id: inv.id,
+        email: inv.email,
+        name: inv.email.split('@')[0], // Use email prefix as display name
+        role: inv.role,
+        is_active: false,
+        created_at: inv.created_at,
+        expires_at: inv.expires_at,
+        status: 'pending' as const,
       }));
 
-      console.log('[getCompanyUsers] Transformed users:', transformedUsers);
-      console.log('[getCompanyUsers] Total users found:', transformedUsers.length);
+      // Combine and sort by created_at
+      const allUsers = [...transformedUsers, ...transformedInvitations].sort(
+        (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      );
 
-      return transformedUsers;
+      console.log('✅ [getCompanyUsers] Final users list:', allUsers);
+      console.log('✅ [getCompanyUsers] Total users + invitations:', allUsers.length);
+
+      return allUsers;
     } catch (err) {
-      console.error('[getCompanyUsers] Error in getCompanyUsers:', err);
+      console.error('❌ [getCompanyUsers] Error in getCompanyUsers:', err);
       return [];
     }
   };
@@ -1410,9 +1471,9 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const createUser = async (userData: {
     email: string;
     name: string;
-    password: string;
+    password?: string; // Optional for magic link flow
     role: string;
-  }): Promise<{ error: Error | null }> => {
+  }): Promise<{ error: Error | null; data?: any }> => {
     if (!companyId) {
       return { error: new Error('No company ID available') };
     }
@@ -1452,7 +1513,6 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         },
         body: JSON.stringify({
           email: userData.email,
-          password: userData.password,
           full_name: userData.name,
           company_id: companyId,
           role: userData.role,
@@ -1462,14 +1522,15 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const result = await response.json();
 
       if (!response.ok) {
-        console.error('❌ Server error creating user:', result);
-        return { error: new Error(result.message || result.error || 'Errore nella creazione dell\'utente') };
+        console.error('❌ Server error creating invitation:', result);
+        return { error: new Error(result.message || result.error || 'Errore nella creazione dell\'invito') };
       }
 
-      console.log('✅ User created successfully on server:', result.userId);
-      console.log('🎉 User created successfully!');
+      console.log('✅ Invitation created successfully:', result.invitationId);
+      console.log('🎉 Magic link token:', result.token);
 
-      return { error: null };
+      // Return the invitation data including token for email
+      return { error: null, data: result };
     } catch (err) {
       console.error('❌ Unexpected error creating user:', err);
       return { error: err as Error };

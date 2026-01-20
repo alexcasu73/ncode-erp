@@ -11,7 +11,6 @@ const Settings: React.FC = () => {
   const [defaultProvider, setDefaultProvider] = useState<'anthropic' | 'openai'>('anthropic');
   const [anthropicApiKey, setAnthropicApiKey] = useState('');
   const [openaiApiKey, setOpenaiApiKey] = useState('');
-  const [notificationRefreshInterval, setNotificationRefreshInterval] = useState<1 | 3 | 5>(5);
   const [showAnthropicKey, setShowAnthropicKey] = useState(false);
   const [showOpenAIKey, setShowOpenAIKey] = useState(false);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
@@ -63,9 +62,6 @@ const Settings: React.FC = () => {
         setDefaultProvider(settings.defaultAiProvider);
         setAnthropicApiKey(settings.anthropicApiKey);
         setOpenaiApiKey(settings.openaiApiKey);
-        // Cast to correct type
-        const interval = settings.notificationRefreshInterval || 5;
-        setNotificationRefreshInterval([1, 3, 5].includes(interval) ? interval as 1 | 3 | 5 : 5);
 
         // Load email provider
         const provider = settings.emailProvider || 'smtp';
@@ -107,11 +103,6 @@ const Settings: React.FC = () => {
 
   // Removed second useEffect to prevent conflicts with user input
 
-  // Debug: log when notificationRefreshInterval changes
-  useEffect(() => {
-    console.log(`[Settings] notificationRefreshInterval state changed to:`, notificationRefreshInterval);
-  }, [notificationRefreshInterval]);
-
   const handleSave = async () => {
     setSaveStatus('saving');
     try {
@@ -119,7 +110,6 @@ const Settings: React.FC = () => {
         defaultAiProvider: defaultProvider,
         anthropicApiKey,
         openaiApiKey,
-        notificationRefreshInterval,
         emailProvider,
         smtpEnabled,
         smtpHost,
@@ -180,13 +170,6 @@ const Settings: React.FC = () => {
 
   const isAnthropicKeyValid = anthropicApiKey.length > 0;
   const isOpenAIKeyValid = openaiApiKey.length > 0;
-
-  const handleIntervalChange = (interval: 1 | 3 | 5) => {
-    console.log(`[Settings] Changing notification interval to ${interval} minutes`);
-    console.log(`[Settings] Current value before change:`, notificationRefreshInterval, typeof notificationRefreshInterval);
-    setNotificationRefreshInterval(interval);
-    console.log(`[Settings] Called setNotificationRefreshInterval with:`, interval);
-  };
 
   return (
     <div className="p-6 max-w-4xl mx-auto">
@@ -369,86 +352,6 @@ const Settings: React.FC = () => {
 
         <div className="mt-3 text-xs text-gray-500 dark:text-gray-400">
           <strong>Modelli disponibili:</strong> GPT-4o (~$0.50/100 tx), GPT-4o-mini (~$0.05/100 tx), GPT-4 Turbo (~$2/100 tx), GPT-3.5 Turbo (~$0.15/100 tx)
-        </div>
-      </div>
-
-      {/* Notification Refresh Interval */}
-      <div className="bg-white dark:bg-dark-card rounded-lg border border-gray-200 dark:border-dark-border p-6 mb-6 shadow-sm">
-        <h2 className="text-xl font-semibold text-dark dark:text-white mb-4 flex items-center gap-2">
-          <Bell size={20} />
-          Notifiche Fatture
-        </h2>
-        <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
-          Configura ogni quanto controllare le scadenze delle fatture
-        </p>
-
-        <div className="grid grid-cols-3 gap-4">
-          <button
-            type="button"
-            onClick={() => handleIntervalChange(1)}
-            className={`p-4 rounded-lg border-2 transition-all ${
-              Number(notificationRefreshInterval) === 1
-                ? 'border-primary bg-primary/5 dark:bg-primary/10'
-                : 'border-gray-200 dark:border-dark-border hover:border-gray-300 dark:hover:border-gray-600'
-            }`}
-          >
-            <div className="text-center">
-              <div className="text-2xl font-bold text-dark dark:text-white mb-1">1</div>
-              <div className="text-sm text-gray-500 dark:text-gray-400">minuto</div>
-            </div>
-            {Number(notificationRefreshInterval) === 1 && (
-              <div className="flex items-center justify-center gap-1 text-primary text-sm font-medium mt-2">
-                <CheckCircle size={14} />
-                Attivo
-              </div>
-            )}
-          </button>
-
-          <button
-            type="button"
-            onClick={() => handleIntervalChange(3)}
-            className={`p-4 rounded-lg border-2 transition-all ${
-              Number(notificationRefreshInterval) === 3
-                ? 'border-primary bg-primary/5 dark:bg-primary/10'
-                : 'border-gray-200 dark:border-dark-border hover:border-gray-300 dark:hover:border-gray-600'
-            }`}
-          >
-            <div className="text-center">
-              <div className="text-2xl font-bold text-dark dark:text-white mb-1">3</div>
-              <div className="text-sm text-gray-500 dark:text-gray-400">minuti</div>
-            </div>
-            {Number(notificationRefreshInterval) === 3 && (
-              <div className="flex items-center justify-center gap-1 text-primary text-sm font-medium mt-2">
-                <CheckCircle size={14} />
-                Attivo
-              </div>
-            )}
-          </button>
-
-          <button
-            type="button"
-            onClick={() => handleIntervalChange(5)}
-            className={`p-4 rounded-lg border-2 transition-all ${
-              Number(notificationRefreshInterval) === 5
-                ? 'border-primary bg-primary/5 dark:bg-primary/10'
-                : 'border-gray-200 dark:border-dark-border hover:border-gray-300 dark:hover:border-gray-600'
-            }`}
-          >
-            <div className="text-center">
-              <div className="text-2xl font-bold text-dark dark:text-white mb-1">5</div>
-              <div className="text-sm text-gray-500 dark:text-gray-400">minuti</div>
-            </div>
-            {Number(notificationRefreshInterval) === 5 && (
-              <div className="flex items-center justify-center gap-1 text-primary text-sm font-medium mt-2">
-                <CheckCircle size={14} />
-                Attivo
-              </div>
-            )}
-          </button>
-        </div>
-
-        <div className="mt-4 text-xs text-gray-500 dark:text-gray-400">
-          Il sistema controllerà automaticamente le scadenze delle fatture ogni {notificationRefreshInterval} {notificationRefreshInterval === 1 ? 'minuto' : 'minuti'}
         </div>
       </div>
 

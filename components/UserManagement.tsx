@@ -13,6 +13,8 @@ interface User {
   role: 'admin' | 'manager' | 'user' | 'viewer';
   is_active: boolean;
   created_at: string;
+  status?: 'active' | 'pending';
+  expires_at?: string;
 }
 
 export const UserManagement: React.FC = () => {
@@ -30,11 +32,9 @@ export const UserManagement: React.FC = () => {
   // Form state
   const [formEmail, setFormEmail] = useState('');
   const [formName, setFormName] = useState('');
-  const [formPassword, setFormPassword] = useState('');
   const [formRole, setFormRole] = useState<'admin' | 'manager' | 'user' | 'viewer'>('user');
   const [formError, setFormError] = useState('');
   const [formLoading, setFormLoading] = useState(false);
-  const [sendEmailInvite, setSendEmailInvite] = useState(true); // Default to email invite
 
   useEffect(() => {
     loadUsers();
@@ -60,87 +60,51 @@ export const UserManagement: React.FC = () => {
     setFormLoading(true);
 
     try {
-      // Validate
-      if (!formEmail || !formName) {
-        setFormError('Email e nome sono obbligatori');
+      // Validate - only email is required now
+      if (!formEmail) {
+        setFormError('L\'email è obbligatoria');
         setFormLoading(false);
         return;
       }
 
-      if (!sendEmailInvite && !formPassword) {
-        setFormError('La password è obbligatoria se non invii un invito via email');
+      // Use email prefix as temporary name for invitation email
+      const tempName = formEmail.split('@')[0];
+
+      // Create invitation with magic link
+      const { error: createError, data: inviteData } = await createUser({
+        email: formEmail,
+        name: tempName, // Temporary name, user will provide real name during setup
+        role: formRole,
+      });
+
+      if (createError) {
+        setFormError(createError.message || 'Errore nella creazione dell\'invito');
         setFormLoading(false);
         return;
       }
 
-      if (!sendEmailInvite && formPassword.length < 8) {
-        setFormError('La password deve essere di almeno 8 caratteri');
-        setFormLoading(false);
-        return;
-      }
+      // Get company name for email
+      const companyName = 'Ncode ERP'; // TODO: Get from context/settings
 
-      if (sendEmailInvite) {
-        // Send email invite
-        // Generate a readable temporary password
-        const tempPassword = `Welcome${Math.random().toString(36).substring(2, 10)}!`;
+      // Build magic link with token
+      const magicLink = `${window.location.origin}/setup-account?token=${inviteData.token}`;
 
-        const { error: createError } = await createUser({
-          email: formEmail,
-          name: formName,
-          password: tempPassword,
-          role: formRole,
-        });
+      const emailResult = await sendInvitationEmail(companyId!, {
+        toEmail: formEmail,
+        toName: 'Nuovo Utente', // Generic greeting, user will provide real name
+        inviterName: currentUser?.email || 'Admin',
+        companyName,
+        inviteLink: magicLink,
+        role: formRole,
+      });
 
-        if (createError) {
-          setFormError(createError.message || 'Errore nella creazione dell\'utente');
-          setFormLoading(false);
-          return;
-        }
-
-        // User created successfully - reload list immediately
-        await loadUsers();
-
-        // Get company name for email
-        const companyName = 'Ncode ERP'; // TODO: Get from context/settings
-
-        // Send invitation email with temporary password
-        // Include email in URL to pre-fill the login form
-        const inviteLink = `${window.location.origin}?invited=true&email=${encodeURIComponent(formEmail)}`;
-
-        const emailResult = await sendInvitationEmail(companyId!, {
-          toEmail: formEmail,
-          toName: formName,
-          inviterName: currentUser?.email || 'Admin',
-          companyName,
-          inviteLink,
-          role: formRole,
-          tempPassword, // Include temp password in email
-        });
-
-        if (!emailResult.success) {
-          setFormError(`Utente creato ma errore invio email: ${emailResult.error}`);
-        } else {
-          // Success - close modal
-          setShowAddModal(false);
-          resetForm();
-        }
+      if (!emailResult.success) {
+        setFormError(`Invito creato ma errore invio email: ${emailResult.error}`);
       } else {
-        // Create with password
-        const { error } = await createUser({
-          email: formEmail,
-          name: formName,
-          password: formPassword,
-          role: formRole,
-        });
-
-        if (error) {
-          setFormError(error.message || 'Errore nella creazione dell\'utente');
-        } else {
-          // Success
-          setShowAddModal(false);
-          resetForm();
-          loadUsers();
-        }
+        // Success - close modal
+        setShowAddModal(false);
+        resetForm();
+        // Note: user won't appear in list until they complete setup
       }
     } catch (err) {
       setFormError('Errore imprevisto');
@@ -222,7 +186,19 @@ export const UserManagement: React.FC = () => {
 
     setDeleteLoading(true);
     try {
-      await deleteUser(userToDelete.id);
+      if (userToDelete.status === 'pending') {
+        // Delete pending invitation from user_invitations table
+        const { error } = await supabase
+          .from('user_invitations')
+          .delete()
+          .eq('id', userToDelete.id);
+
+        if (error) throw error;
+      } else {
+        // Delete active user
+        await deleteUser(userToDelete.id);
+      }
+
       setShowDeleteModal(false);
       setUserToDelete(null);
       loadUsers();
@@ -237,10 +213,8 @@ export const UserManagement: React.FC = () => {
   const resetForm = () => {
     setFormEmail('');
     setFormName('');
-    setFormPassword('');
     setFormRole('user');
     setFormError('');
-    setSendEmailInvite(true); // Reset to default (send invite)
   };
 
   const openAddModal = () => {
@@ -402,55 +376,74 @@ export const UserManagement: React.FC = () => {
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <button
-                      onClick={() => handleToggleActive(user)}
-                      disabled={user.id === currentUser?.id}
-                      className={`flex items-center gap-2 ${
-                        user.id === currentUser?.id ? 'opacity-50 cursor-not-allowed' : ''
-                      }`}
-                      title={user.id === currentUser?.id ? "Non puoi disattivare te stesso" : ""}
-                    >
-                      {user.is_active ? (
-                        <>
-                          <ToggleRight className="text-green-600 dark:text-green-400" size={24} />
-                          <span className="text-xs text-green-600 dark:text-green-400 font-medium">Attivo</span>
-                        </>
-                      ) : (
-                        <>
-                          <ToggleLeft className="text-gray-400" size={24} />
-                          <span className="text-xs text-gray-400 font-medium">Disattivo</span>
-                        </>
-                      )}
-                    </button>
+                    {user.status === 'pending' ? (
+                      <div className="flex items-center gap-2">
+                        <Mail className="text-yellow-600 dark:text-yellow-400" size={20} />
+                        <span className="text-xs text-yellow-600 dark:text-yellow-400 font-medium">
+                          Invito pendente
+                        </span>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => handleToggleActive(user)}
+                        disabled={user.id === currentUser?.id}
+                        className={`flex items-center gap-2 ${
+                          user.id === currentUser?.id ? 'opacity-50 cursor-not-allowed' : ''
+                        }`}
+                        title={user.id === currentUser?.id ? "Non puoi disattivare te stesso" : ""}
+                      >
+                        {user.is_active ? (
+                          <>
+                            <ToggleRight className="text-green-600 dark:text-green-400" size={24} />
+                            <span className="text-xs text-green-600 dark:text-green-400 font-medium">Attivo</span>
+                          </>
+                        ) : (
+                          <>
+                            <ToggleLeft className="text-gray-400" size={24} />
+                            <span className="text-xs text-gray-400 font-medium">Disattivo</span>
+                          </>
+                        )}
+                      </button>
+                    )}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                     <div className="flex items-center justify-end gap-2">
-                      <button
-                        onClick={() => openEditModal(user)}
-                        disabled={isOnlyAdmin(user)}
-                        className={`${
-                          isOnlyAdmin(user)
-                            ? 'text-gray-400 dark:text-gray-600 cursor-not-allowed opacity-50'
-                            : 'text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300'
-                        }`}
-                        title={
-                          isOnlyAdmin(user)
-                            ? "Non puoi modificare l'unico amministratore attivo"
-                            : "Modifica"
-                        }
-                      >
-                        <Edit2 size={16} />
-                      </button>
+                      {/* Edit button - only for active users, not for pending invitations */}
+                      {user.status !== 'pending' && (
+                        <button
+                          onClick={() => openEditModal(user)}
+                          disabled={user.id === currentUser?.id || isOnlyAdmin(user)}
+                          className={`${
+                            user.id === currentUser?.id || isOnlyAdmin(user)
+                              ? 'text-gray-400 dark:text-gray-600 cursor-not-allowed opacity-50'
+                              : 'text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300'
+                          }`}
+                          title={
+                            user.id === currentUser?.id
+                              ? "Non puoi modificare te stesso. Usa la sezione Profilo"
+                              : isOnlyAdmin(user)
+                              ? "Non puoi modificare l'unico amministratore attivo"
+                              : "Modifica"
+                          }
+                        >
+                          <Edit2 size={16} />
+                        </button>
+                      )}
+                      {/* Delete button - for both active users and pending invitations */}
                       <button
                         onClick={() => handleDeleteUser(user)}
-                        disabled={isOnlyAdmin(user)}
+                        disabled={user.status !== 'pending' && (user.id === currentUser?.id || isOnlyAdmin(user))}
                         className={`${
-                          isOnlyAdmin(user)
+                          user.status !== 'pending' && (user.id === currentUser?.id || isOnlyAdmin(user))
                             ? 'text-gray-400 dark:text-gray-600 cursor-not-allowed opacity-50'
                             : 'text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300'
                         }`}
                         title={
-                          isOnlyAdmin(user)
+                          user.status === 'pending'
+                            ? "Cancella invito"
+                            : user.id === currentUser?.id
+                            ? "Non puoi eliminare te stesso. Usa la sezione Profilo > Zona Pericolosa"
+                            : isOnlyAdmin(user)
                             ? "Non puoi eliminare l'unico amministratore attivo"
                             : "Elimina"
                         }
@@ -504,79 +497,56 @@ export const UserManagement: React.FC = () => {
 
               {/* Email (only for new users) */}
               {!editingUser && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Email
-                  </label>
-                  <input
-                    type="email"
-                    required
-                    value={formEmail}
-                    onChange={(e) => setFormEmail(e.target.value)}
-                    className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-dark-border bg-white dark:bg-dark-bg text-dark dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
-                    placeholder="utente@example.com"
-                  />
-                </div>
-              )}
-
-              {/* Name */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Nome
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={formName}
-                  onChange={(e) => setFormName(e.target.value)}
-                  className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-dark-border bg-white dark:bg-dark-bg text-dark dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
-                  placeholder="Mario Rossi"
-                />
-              </div>
-
-              {/* Invite method (only for new users) */}
-              {!editingUser && (
                 <>
-                  <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
-                    <label className="flex items-center gap-3 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={sendEmailInvite}
-                        onChange={(e) => setSendEmailInvite(e.target.checked)}
-                        className="w-5 h-5 text-primary rounded focus:ring-2 focus:ring-primary"
-                      />
-                      <div className="flex items-center gap-2">
-                        <Mail size={18} className="text-blue-600 dark:text-blue-400" />
-                        <span className="font-medium text-blue-900 dark:text-blue-300">
-                          Invia invito via email
-                        </span>
-                      </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Email
                     </label>
-                    <p className="text-xs text-blue-700 dark:text-blue-300 mt-2 ml-8">
-                      {sendEmailInvite
-                        ? 'L\'utente riceverà un\'email con il link per impostare la password'
-                        : 'Imposterai manualmente la password per l\'utente'}
-                    </p>
+                    <input
+                      type="email"
+                      required
+                      value={formEmail}
+                      onChange={(e) => setFormEmail(e.target.value)}
+                      className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-dark-border bg-white dark:bg-dark-bg text-dark dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
+                      placeholder="utente@example.com"
+                    />
                   </div>
 
-                  {/* Password (only if not sending invite) */}
-                  {!sendEmailInvite && (
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                        Password
-                      </label>
-                      <input
-                        type="password"
-                        required={!sendEmailInvite}
-                        value={formPassword}
-                        onChange={(e) => setFormPassword(e.target.value)}
-                        className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-dark-border bg-white dark:bg-dark-bg text-dark dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
-                        placeholder="Minimo 8 caratteri"
-                        minLength={8}
-                      />
+                  {/* Info box about name and password */}
+                  <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+                    <div className="flex items-start gap-3">
+                      <Mail size={20} className="text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" />
+                      <div>
+                        <p className="font-medium text-blue-900 dark:text-blue-300 mb-1">
+                          Invito via Magic Link
+                        </p>
+                        <p className="text-sm text-blue-700 dark:text-blue-300 mb-2">
+                          L'utente riceverà un'email con un link sicuro per impostare il proprio <strong>nome</strong> e <strong>password</strong>. Il link è valido per 7 giorni.
+                        </p>
+                        <p className="text-xs text-blue-600 dark:text-blue-400">
+                          💡 Non è necessario inserire nome o password: li sceglierà l'invitato durante la registrazione.
+                        </p>
+                      </div>
                     </div>
-                  )}
+                  </div>
                 </>
+              )}
+
+              {/* Name (only for editing existing users) */}
+              {editingUser && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Nome
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={formName}
+                    onChange={(e) => setFormName(e.target.value)}
+                    className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-dark-border bg-white dark:bg-dark-bg text-dark dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
+                    placeholder="Mario Rossi"
+                  />
+                </div>
               )}
 
               {/* Role */}
@@ -639,7 +609,7 @@ export const UserManagement: React.FC = () => {
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-2xl font-bold text-red-600 dark:text-red-400 flex items-center gap-2">
                 <Trash2 size={24} />
-                Elimina Utente
+                {userToDelete.status === 'pending' ? 'Cancella Invito' : 'Elimina Utente'}
               </h2>
               <button
                 onClick={() => {
@@ -655,12 +625,30 @@ export const UserManagement: React.FC = () => {
 
             <div className="space-y-4">
               {/* Warning Message */}
-              <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
-                <p className="text-sm text-red-800 dark:text-red-300 font-medium mb-2">
-                  ⚠️ Attenzione: questa azione non può essere annullata!
+              <div className={`p-4 border rounded-lg ${
+                userToDelete.status === 'pending'
+                  ? 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800'
+                  : 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800'
+              }`}>
+                <p className={`text-sm font-medium mb-2 ${
+                  userToDelete.status === 'pending'
+                    ? 'text-yellow-800 dark:text-yellow-300'
+                    : 'text-red-800 dark:text-red-300'
+                }`}>
+                  {userToDelete.status === 'pending'
+                    ? '📧 Stai per cancellare questo invito'
+                    : '⚠️ Attenzione: questa azione non può essere annullata!'
+                  }
                 </p>
-                <p className="text-sm text-red-700 dark:text-red-400">
-                  Stai per eliminare definitivamente l'utente:
+                <p className={`text-sm ${
+                  userToDelete.status === 'pending'
+                    ? 'text-yellow-700 dark:text-yellow-400'
+                    : 'text-red-700 dark:text-red-400'
+                }`}>
+                  {userToDelete.status === 'pending'
+                    ? 'L\'invito verrà rimosso e l\'utente non potrà più completare la registrazione con questo link.'
+                    : 'Stai per eliminare definitivamente l\'utente:'
+                  }
                 </p>
               </div>
 
@@ -685,10 +673,12 @@ export const UserManagement: React.FC = () => {
               </div>
 
               {/* Confirmation text */}
-              <p className="text-sm text-gray-600 dark:text-gray-400">
-                L'utente verrà rimosso dalla piattaforma e non potrà più accedere al sistema.
-                Tutti i dati associati verranno eliminati.
-              </p>
+              {userToDelete.status !== 'pending' && (
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  L'utente verrà rimosso dalla piattaforma e non potrà più accedere al sistema.
+                  Tutti i dati associati verranno eliminati.
+                </p>
+              )}
 
               {/* Action Buttons */}
               <div className="flex gap-3 mt-6">
@@ -707,17 +697,21 @@ export const UserManagement: React.FC = () => {
                   type="button"
                   onClick={confirmDeleteUser}
                   disabled={deleteLoading}
-                  className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium flex items-center justify-center gap-2 disabled:opacity-50"
+                  className={`flex-1 px-4 py-2 text-white rounded-lg transition-colors font-medium flex items-center justify-center gap-2 disabled:opacity-50 ${
+                    userToDelete.status === 'pending'
+                      ? 'bg-yellow-600 hover:bg-yellow-700'
+                      : 'bg-red-600 hover:bg-red-700'
+                  }`}
                 >
                   {deleteLoading ? (
                     <>
                       <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                      Eliminazione...
+                      {userToDelete.status === 'pending' ? 'Cancellazione...' : 'Eliminazione...'}
                     </>
                   ) : (
                     <>
                       <Trash2 size={16} />
-                      Elimina Definitivamente
+                      {userToDelete.status === 'pending' ? 'Cancella Invito' : 'Elimina Definitivamente'}
                     </>
                   )}
                 </button>
