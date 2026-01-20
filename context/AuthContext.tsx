@@ -65,6 +65,53 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return () => subscription.unsubscribe();
   }, []);
 
+  // SECURITY: Periodically check if user is still active (every 30 seconds)
+  // If user is disabled or deleted, automatically sign them out
+  useEffect(() => {
+    if (!user) return;
+
+    const checkUserStatus = async () => {
+      try {
+        console.log('🔍 Checking user status...');
+
+        const { data, error } = await supabase
+          .from('company_users')
+          .select('is_active')
+          .eq('user_id', user.id)
+          .eq('is_active', true)
+          .maybeSingle();
+
+        // If user is not found or not active, sign them out
+        if (error || !data) {
+          console.log('🚫 User is disabled or deleted - forcing sign out');
+
+          // Show alert to user before signing out
+          alert('Il tuo account è stato disabilitato o eliminato. Verrai disconnesso.');
+
+          // Sign out and clear everything
+          await supabase.auth.signOut();
+          localStorage.clear();
+          sessionStorage.clear();
+
+          // Force page reload to login
+          window.location.href = '/';
+        } else {
+          console.log('✅ User is still active');
+        }
+      } catch (err) {
+        console.error('Error checking user status:', err);
+      }
+    };
+
+    // Check immediately on mount
+    checkUserStatus();
+
+    // Then check every 30 seconds
+    const intervalId = setInterval(checkUserStatus, 30000);
+
+    return () => clearInterval(intervalId);
+  }, [user]);
+
   const fetchUserCompany = async (userId: string) => {
     try {
       // Get user's company from company_users table
