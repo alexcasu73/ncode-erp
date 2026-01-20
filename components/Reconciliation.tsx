@@ -2889,7 +2889,7 @@ export const Reconciliation: React.FC = () => {
   }
 
   return (
-    <div className="p-0">
+    <div className="pb-8">
       {/* Header */}
       <div className="mb-6">
         {/* Title Row */}
