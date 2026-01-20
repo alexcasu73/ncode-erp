@@ -1344,9 +1344,11 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // User Management Functions
   const getCompanyUsers = async (): Promise<any[]> => {
     if (!companyId) {
-      console.error('No company ID available');
+      console.error('[getCompanyUsers] No company ID available');
       return [];
     }
+
+    console.log('[getCompanyUsers] Fetching users for company:', companyId);
 
     try {
       const { data, error } = await supabase
@@ -1365,23 +1367,42 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         .eq('company_id', companyId);
 
       if (error) {
-        console.error('Error fetching company users:', error);
+        console.error('[getCompanyUsers] Error fetching company users:', error);
         return [];
       }
+
+      console.log('[getCompanyUsers] Raw data from Supabase:', JSON.stringify(data, null, 2));
+      console.log('[getCompanyUsers] Number of records returned:', data?.length);
+
+      // Check each record
+      data?.forEach((cu: any, index: number) => {
+        console.log(`[getCompanyUsers] Record ${index + 1}:`, {
+          user_id: cu.user_id,
+          role: cu.role,
+          is_active: cu.is_active,
+          users_object: cu.users,
+          has_users: !!cu.users,
+          users_email: cu.users?.email,
+          users_full_name: cu.users?.full_name
+        });
+      });
 
       // Transform the data to a flatter structure
       const transformedUsers = (data || []).map((cu: any) => ({
         id: cu.user_id,
-        email: cu.users.email,
-        name: cu.users.full_name,
+        email: cu.users?.email || 'unknown',
+        name: cu.users?.full_name || 'Unknown',
         role: cu.role,
         is_active: cu.is_active,
         created_at: cu.created_at,
       }));
 
+      console.log('[getCompanyUsers] Transformed users:', transformedUsers);
+      console.log('[getCompanyUsers] Total users found:', transformedUsers.length);
+
       return transformedUsers;
     } catch (err) {
-      console.error('Error in getCompanyUsers:', err);
+      console.error('[getCompanyUsers] Error in getCompanyUsers:', err);
       return [];
     }
   };
@@ -1419,91 +1440,34 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       console.log('✅ Permission check passed: User is admin');
 
-      // CRITICAL: Save current admin session before creating new user
-      // This prevents the new user from "taking over" the current session
-      const { data: currentSession } = await supabase.auth.getSession();
+      // Call backend API to create user server-side
+      // This avoids session hijacking issues with supabase.auth.signUp()
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
+      console.log('📡 Calling server API to create user...');
 
-      if (!currentSession.session) {
-        return { error: new Error('Nessuna sessione attiva. Effettua il login e riprova.') };
-      }
-
-      const adminSession = currentSession.session;
-      console.log('💾 Saved admin session:', adminSession.user.email);
-
-      // 1. Create user in Supabase Auth
-      // WARNING: This will AUTO-LOGIN the new user and replace current session!
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email: userData.email,
-        password: userData.password,
-        options: {
-          data: {
-            name: userData.name,
-            company_id: companyId,
-          },
-          emailRedirectTo: undefined,
+      const response = await fetch(`${apiUrl}/users/create`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
         },
+        body: JSON.stringify({
+          email: userData.email,
+          password: userData.password,
+          full_name: userData.name,
+          company_id: companyId,
+          role: userData.role,
+        }),
       });
 
-      if (authError) {
-        console.error('❌ Error creating auth user:', authError);
-        return { error: new Error('Errore nella creazione dell\'utente: ' + authError.message) };
+      const result = await response.json();
+
+      if (!response.ok) {
+        console.error('❌ Server error creating user:', result);
+        return { error: new Error(result.message || result.error || 'Errore nella creazione dell\'utente') };
       }
 
-      if (!authData.user) {
-        return { error: new Error('Errore: utente non creato') };
-      }
-
-      const userId = authData.user.id;
-      console.log('✅ Created auth user:', userId);
-
-      // 2. Create user in users table
-      const { error: userError } = await supabase.from('users').insert({
-        id: userId,
-        email: userData.email,
-        full_name: userData.name,
-        is_active: true,
-      });
-
-      if (userError) {
-        console.error('❌ Error creating user record:', userError);
-        // Try to restore admin session even on error
-        await supabase.auth.setSession(adminSession);
-        return { error: new Error('Errore nella creazione del profilo utente: ' + userError.message) };
-      }
-
-      console.log('✅ Created user record');
-
-      // 3. Link user to company
-      const { error: linkError } = await supabase.from('company_users').insert({
-        user_id: userId,
-        company_id: companyId,
-        role: userData.role,
-        is_active: true,
-      });
-
-      if (linkError) {
-        console.error('❌ Error linking user to company:', linkError);
-        // Try to restore admin session even on error
-        await supabase.auth.setSession(adminSession);
-        return { error: new Error('Errore nel collegamento utente-azienda: ' + linkError.message) };
-      }
-
-      console.log('✅ Linked user to company');
-
-      // 4. CRITICAL: Restore admin session
-      // The signUp above replaced our session with the new user's session
-      // We need to restore the admin's session to prevent "impersonation"
-      console.log('🔄 Restoring admin session...');
-      const { error: restoreError } = await supabase.auth.setSession(adminSession);
-
-      if (restoreError) {
-        console.error('❌ Failed to restore admin session:', restoreError);
-        // This is critical - if we can't restore, the admin is now logged in as the new user!
-        return { error: new Error('Utente creato ma impossibile ripristinare la sessione admin. Fai logout e login per continuare.') };
-      }
-
-      console.log('✅ Admin session restored:', adminSession.user.email);
-      console.log('🎉 User created successfully without impersonation!');
+      console.log('✅ User created successfully on server:', result.userId);
+      console.log('🎉 User created successfully!');
 
       return { error: null };
     } catch (err) {
@@ -1627,31 +1591,29 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         throw new Error('Non puoi eliminare l\'ultimo amministratore dell\'azienda');
       }
 
-      // 1. Delete from company_users (this removes the link)
-      const { error: linkError } = await supabase
-        .from('company_users')
-        .delete()
-        .eq('user_id', userId)
-        .eq('company_id', companyId);
+      // Call backend API to delete user server-side
+      // This avoids RLS policy issues
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
+      console.log('📡 Calling server API to delete user...');
 
-      if (linkError) {
-        console.error('Error deleting company_users link:', linkError);
-        throw new Error('Errore nell\'eliminazione del collegamento utente-azienda');
+      const response = await fetch(`${apiUrl}/users/${userId}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          company_id: companyId,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        console.error('❌ Server error deleting user:', result);
+        throw new Error(result.message || result.error || 'Errore nell\'eliminazione dell\'utente');
       }
 
-      // 2. Delete from users table
-      // This will trigger the database trigger to delete from auth.users automatically
-      const { error: userError } = await supabase
-        .from('users')
-        .delete()
-        .eq('id', userId);
-
-      if (userError) {
-        console.error('Error deleting user record:', userError);
-        throw new Error('Errore nell\'eliminazione del profilo utente');
-      }
-
-      console.log('✅ User deleted successfully. Database triggers will handle auth cleanup.');
+      console.log('✅ User deleted successfully via server API');
 
       // If deleting current user, sign out
       if (userId === user?.id) {

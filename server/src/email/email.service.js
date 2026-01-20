@@ -130,7 +130,7 @@ export async function sendEmail(to, subject, htmlBody) {
 /**
  * Generate invitation email HTML
  */
-function getInvitationEmailHtml(name, setupUrl, inviterName, companyName, role) {
+function getInvitationEmailHtml(name, setupUrl, inviterName, companyName, role, email, tempPassword) {
   const { appName, primaryColor } = emailConfig;
 
   const roleLabels = {
@@ -140,6 +140,68 @@ function getInvitationEmailHtml(name, setupUrl, inviterName, companyName, role) 
     viewer: 'Visualizzatore'
   };
   const roleLabel = roleLabels[role] || role;
+
+  // Build content sections separately to avoid nesting issues
+  let credentialsSection = '';
+  let actionSection = '';
+  let instructionsSection = '';
+
+  if (tempPassword) {
+    credentialsSection = `
+          <div class="credentials-box">
+            <div class="title">
+              🔑 Le tue credenziali di accesso
+            </div>
+            <div class="credential-item">
+              <span class="credential-label">Email:</span> <span class="credential-value">${email}</span>
+            </div>
+            <div class="credential-item">
+              <span class="credential-label">Password temporanea:</span> <span class="credential-value">${tempPassword}</span>
+            </div>
+            <div class="warning-box">
+              ⚠️ <strong>Importante:</strong> Cambia questa password al primo accesso per motivi di sicurezza.
+            </div>
+          </div>`;
+
+    actionSection = `
+          <p class="intro-text">
+            Il tuo account è già stato creato e pronto all'uso.
+            Clicca sul pulsante qui sotto per accedere alla piattaforma:
+          </p>
+          <div style="text-align: center;">
+            <a href="${setupUrl}" class="button">🚀 Accedi Ora</a>
+          </div>
+          <p class="link-text">
+            Oppure copia e incolla questo link nel tuo browser:<br>
+            <a href="${setupUrl}" class="link-url">${setupUrl}</a>
+          </p>`;
+
+    instructionsSection = `
+          <div class="tip-box">
+            <div class="tip-title">💡 Come accedere</div>
+            <div class="tip-text">
+              1. Clicca sul pulsante "Accedi Ora" qui sopra<br>
+              2. Inserisci la tua email e la password temporanea<br>
+              3. Una volta dentro, vai su "Profilo" per cambiare la password<br>
+              4. Inizia ad utilizzare la piattaforma!
+            </div>
+          </div>`;
+  } else {
+    actionSection = `
+          <p class="intro-text">
+            Per completare la registrazione, clicca sul pulsante qui sotto:
+          </p>
+          <div style="text-align: center;">
+            <a href="${setupUrl}" class="button">Accetta Invito</a>
+          </div>
+          <p class="link-text">
+            Oppure copia e incolla questo link nel tuo browser:<br>
+            <a href="${setupUrl}" class="link-url">${setupUrl}</a>
+          </p>
+          <p class="link-text" style="margin-top: 24px;">
+            ⏰ Questo invito scadrà tra 7 giorni.
+          </p>`;
+  }
 
   return `
     <!DOCTYPE html>
@@ -152,61 +214,161 @@ function getInvitationEmailHtml(name, setupUrl, inviterName, companyName, role) 
         body {
           font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
           line-height: 1.6;
-          color: #333;
+          color: #374151;
           max-width: 600px;
           margin: 0 auto;
           padding: 20px;
+          background: #F9FAFB;
         }
         .container {
           background: #ffffff;
-          border-radius: 8px;
-          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-          padding: 40px;
+          border-radius: 12px;
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+          padding: 48px 40px;
+          margin: 20px 0;
         }
         .header {
           text-align: center;
-          margin-bottom: 30px;
+          margin-bottom: 40px;
+          padding-bottom: 30px;
+          border-bottom: 2px solid #E5E7EB;
         }
         .logo {
-          font-size: 32px;
-          font-weight: bold;
+          font-size: 36px;
+          font-weight: 700;
           color: ${primaryColor};
-          margin-bottom: 10px;
+          margin-bottom: 8px;
+          letter-spacing: -0.5px;
+        }
+        .subtitle {
+          color: #6B7280;
+          font-size: 15px;
+          margin-top: 8px;
         }
         h1 {
-          color: #1F2937;
-          font-size: 24px;
-          margin-bottom: 20px;
+          color: #111827;
+          font-size: 28px;
+          font-weight: 600;
+          margin: 0 0 16px 0;
+          line-height: 1.3;
         }
         .content {
-          margin-bottom: 30px;
+          margin-bottom: 32px;
+        }
+        .intro-text {
+          font-size: 16px;
+          color: #4B5563;
+          margin: 24px 0;
+          line-height: 1.7;
         }
         .button {
           display: inline-block;
           background: ${primaryColor};
-          color: #ffffff;
-          padding: 14px 32px;
+          color: #ffffff !important;
+          padding: 16px 40px;
           text-decoration: none;
-          border-radius: 6px;
-          font-weight: 500;
-          margin: 20px 0;
+          border-radius: 8px;
+          font-weight: 600;
+          font-size: 16px;
+          margin: 24px 0;
+          box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
+          transition: all 0.2s;
         }
         .button:hover {
-          opacity: 0.9;
+          background: #2563EB;
+          box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
         }
         .info-box {
-          background: #F3F4F6;
+          background: #F9FAFB;
           border-left: 4px solid ${primaryColor};
-          padding: 15px;
+          border-radius: 6px;
+          padding: 20px 24px;
+          margin: 24px 0;
+        }
+        .credentials-box {
+          background: #FFFBEB;
+          border: 2px solid #FCD34D;
+          border-radius: 8px;
+          padding: 24px;
+          margin: 28px 0;
+        }
+        .credentials-box .title {
+          font-size: 18px;
+          font-weight: 700;
+          color: #92400E;
+          margin: 0 0 20px 0;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
+        .credential-item {
+          margin: 14px 0;
+          font-size: 16px;
+          line-height: 1.8;
+          color: #1F2937;
+        }
+        .credential-label {
+          font-weight: 600;
+          color: #78350F;
+          display: inline;
+        }
+        .credential-value {
+          font-family: 'SF Mono', Monaco, 'Courier New', monospace;
+          font-size: 16px;
+          color: #1F2937;
+          display: inline;
+          font-weight: 600;
+        }
+        .warning-box {
+          background: #FEF3C7;
+          border-radius: 6px;
+          padding: 12px 16px;
+          margin-top: 16px;
+          font-size: 14px;
+          color: #92400E;
+          font-weight: 500;
+        }
+        .tip-box {
+          background: #EFF6FF;
+          border-left: 4px solid #3B82F6;
+          border-radius: 6px;
+          padding: 20px 24px;
+          margin: 28px 0;
+        }
+        .tip-box .tip-title {
+          font-weight: 700;
+          color: #1E40AF;
+          margin: 0 0 8px 0;
+          font-size: 15px;
+        }
+        .tip-box .tip-text {
+          color: #1E3A8A;
+          margin: 0;
+          font-size: 14px;
+          line-height: 1.6;
+        }
+        .link-text {
+          color: #6B7280;
+          font-size: 14px;
           margin: 20px 0;
+          line-height: 1.6;
+        }
+        .link-url {
+          color: ${primaryColor};
+          word-break: break-all;
+          font-size: 14px;
         }
         .footer {
           text-align: center;
-          margin-top: 40px;
-          padding-top: 20px;
-          border-top: 1px solid #E5E7EB;
-          color: #6B7280;
-          font-size: 14px;
+          margin-top: 48px;
+          padding-top: 24px;
+          border-top: 2px solid #E5E7EB;
+          color: #9CA3AF;
+          font-size: 13px;
+          line-height: 1.6;
+        }
+        .footer p {
+          margin: 8px 0;
         }
       </style>
     </head>
@@ -214,36 +376,31 @@ function getInvitationEmailHtml(name, setupUrl, inviterName, companyName, role) 
       <div class="container">
         <div class="header">
           <div class="logo">${appName}</div>
+          <div class="subtitle">Sistema di gestione aziendale</div>
         </div>
 
-        <h1>Ciao ${name}!</h1>
+        <h1>Ciao ${name}! 👋</h1>
 
         <div class="content">
-          <p><strong>${inviterName}</strong> ti ha invitato a unirti a <strong>${companyName}</strong> su ${appName}.</p>
+          <p class="intro-text">
+            <strong>${inviterName}</strong> ti ha invitato a unirti al team di <strong>${companyName}</strong> sulla piattaforma ${appName}.
+          </p>
 
           <div class="info-box">
-            <p style="margin: 0;"><strong>Ruolo assegnato:</strong> ${roleLabel}</p>
+            <p style="margin: 0; font-size: 15px;"><strong>👤 Ruolo assegnato:</strong> <span style="color: ${primaryColor}; font-weight: 600;">${roleLabel}</span></p>
           </div>
 
-          <p>Clicca sul pulsante qui sotto per accettare l'invito e completare la registrazione:</p>
-
-          <div style="text-align: center;">
-            <a href="${setupUrl}" class="button">Accetta Invito</a>
-          </div>
-
-          <p style="color: #6B7280; font-size: 14px;">
-            Oppure copia e incolla questo link nel tuo browser:<br>
-            <a href="${setupUrl}" style="color: ${primaryColor};">${setupUrl}</a>
-          </p>
-
-          <p style="color: #6B7280; font-size: 14px; margin-top: 30px;">
-            Questo invito scadrà tra 7 giorni.
-          </p>
+          ${credentialsSection}
+          ${actionSection}
+          ${instructionsSection}
         </div>
 
         <div class="footer">
-          <p>${appName} - Sistema di gestione aziendale</p>
-          <p>Se non hai richiesto questo invito, puoi ignorare questa email.</p>
+          <p><strong>${appName}</strong> - Gestione aziendale semplificata</p>
+          <p>Se non hai richiesto questo invito, puoi ignorare questa email in sicurezza.</p>
+          <p style="margin-top: 16px; font-size: 12px; color: #D1D5DB;">
+            Questo messaggio è stato generato automaticamente, per favore non rispondere.
+          </p>
         </div>
       </div>
     </body>
@@ -259,12 +416,14 @@ function getInvitationEmailHtml(name, setupUrl, inviterName, companyName, role) 
  * @param {string} inviterName - Name of the person who invited this user
  * @param {string} companyName - Company name
  * @param {string} role - User role
+ * @param {string} [tempPassword] - Optional temporary password for first login
  * @returns {Promise<boolean>}
  */
-export async function sendInvitationEmail(email, name, token, inviterName, companyName, role) {
-  const setupUrl = `${emailConfig.frontendUrl}/setup-account?token=${token}`;
+export async function sendInvitationEmail(email, name, token, inviterName, companyName, role, tempPassword) {
+  // If tempPassword is provided, link directly to the app; otherwise use setup page
+  const setupUrl = tempPassword ? emailConfig.frontendUrl : `${emailConfig.frontendUrl}/setup-account?token=${token}`;
   const subject = `Sei stato invitato su ${emailConfig.appName}`;
-  const html = getInvitationEmailHtml(name, setupUrl, inviterName, companyName, role);
+  const html = getInvitationEmailHtml(name, setupUrl, inviterName, companyName, role, email, tempPassword);
   return sendEmail(email, subject, html);
 }
 

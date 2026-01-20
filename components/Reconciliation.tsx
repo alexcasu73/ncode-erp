@@ -1832,6 +1832,22 @@ export const Reconciliation: React.FC = () => {
         openaiKeyLength: settings.openaiApiKey?.length
       });
 
+      // CRITICAL: Sync AI keys from database to localStorage
+      // reconciliation-ai.ts reads ONLY from localStorage, not from database
+      if (isConfigured) {
+        const aiSettings = {
+          defaultProvider: settings.defaultAiProvider,
+          anthropicApiKey: settings.anthropicApiKey || '',
+          openaiApiKey: settings.openaiApiKey || ''
+        };
+        localStorage.setItem('ai_settings', JSON.stringify(aiSettings));
+        console.log('[Reconciliation] Synced AI keys from database to localStorage:', {
+          defaultProvider: aiSettings.defaultProvider,
+          hasAnthropicKey: !!aiSettings.anthropicApiKey,
+          hasOpenaiKey: !!aiSettings.openaiApiKey
+        });
+      }
+
       return isConfigured;
     } catch (err) {
       console.error('[Reconciliation] Error checking AI keys:', err);

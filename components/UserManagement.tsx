@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { useData } from '../context/DataContext';
 import { useUserRole } from '../hooks/useUserRole';
 import { sendInvitationEmail } from '../lib/email';
+import { supabase } from '../lib/supabase';
 
 interface User {
   id: string;
@@ -22,6 +23,9 @@ export const UserManagement: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [userToDelete, setUserToDelete] = useState<User | null>(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
 
   // Form state
   const [formEmail, setFormEmail] = useState('');
@@ -77,8 +81,8 @@ export const UserManagement: React.FC = () => {
 
       if (sendEmailInvite) {
         // Send email invite
-        // Generate temporary password for account creation
-        const tempPassword = crypto.randomUUID();
+        // Generate a readable temporary password
+        const tempPassword = `Welcome${Math.random().toString(36).substring(2, 10)}!`;
 
         const { error: createError } = await createUser({
           email: formEmail,
@@ -93,11 +97,15 @@ export const UserManagement: React.FC = () => {
           return;
         }
 
+        // User created successfully - reload list immediately
+        await loadUsers();
+
         // Get company name for email
         const companyName = 'Ncode ERP'; // TODO: Get from context/settings
 
-        // Send invitation email
-        const inviteLink = `${window.location.origin}/reset-password?email=${encodeURIComponent(formEmail)}`;
+        // Send invitation email with temporary password
+        // Include email in URL to pre-fill the login form
+        const inviteLink = `${window.location.origin}?invited=true&email=${encodeURIComponent(formEmail)}`;
 
         const emailResult = await sendInvitationEmail(companyId!, {
           toEmail: formEmail,
@@ -106,15 +114,15 @@ export const UserManagement: React.FC = () => {
           companyName,
           inviteLink,
           role: formRole,
+          tempPassword, // Include temp password in email
         });
 
         if (!emailResult.success) {
           setFormError(`Utente creato ma errore invio email: ${emailResult.error}`);
         } else {
-          // Success
+          // Success - close modal
           setShowAddModal(false);
           resetForm();
-          loadUsers();
         }
       } else {
         // Create with password
@@ -197,24 +205,32 @@ export const UserManagement: React.FC = () => {
     }
   };
 
-  const handleDeleteUser = async (userId: string) => {
+  const handleDeleteUser = (user: User) => {
     // SECURITY: Users cannot delete themselves from User Management
     // They must use Profile > Danger Zone instead
-    if (userId === currentUser?.id) {
+    if (user.id === currentUser?.id) {
       alert("Non puoi eliminare te stesso da questo pannello. Usa la sezione Profilo > Zona Pericolosa per eliminare il tuo account.");
       return;
     }
 
-    if (!confirm('Sei sicuro di voler eliminare questo utente? Questa azione non può essere annullata.')) {
-      return;
-    }
+    setUserToDelete(user);
+    setShowDeleteModal(true);
+  };
 
+  const confirmDeleteUser = async () => {
+    if (!userToDelete) return;
+
+    setDeleteLoading(true);
     try {
-      await deleteUser(userId);
+      await deleteUser(userToDelete.id);
+      setShowDeleteModal(false);
+      setUserToDelete(null);
       loadUsers();
     } catch (err) {
       console.error('Error deleting user:', err);
       alert('Errore nell\'eliminazione dell\'utente');
+    } finally {
+      setDeleteLoading(false);
     }
   };
 
@@ -411,23 +427,30 @@ export const UserManagement: React.FC = () => {
                     <div className="flex items-center justify-end gap-2">
                       <button
                         onClick={() => openEditModal(user)}
-                        className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300"
-                        title="Modifica"
+                        disabled={isOnlyAdmin(user)}
+                        className={`${
+                          isOnlyAdmin(user)
+                            ? 'text-gray-400 dark:text-gray-600 cursor-not-allowed opacity-50'
+                            : 'text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300'
+                        }`}
+                        title={
+                          isOnlyAdmin(user)
+                            ? "Non puoi modificare l'unico amministratore attivo"
+                            : "Modifica"
+                        }
                       >
                         <Edit2 size={16} />
                       </button>
                       <button
-                        onClick={() => handleDeleteUser(user.id)}
-                        disabled={isOnlyAdmin(user) || user.id === currentUser?.id}
+                        onClick={() => handleDeleteUser(user)}
+                        disabled={isOnlyAdmin(user)}
                         className={`${
-                          isOnlyAdmin(user) || user.id === currentUser?.id
+                          isOnlyAdmin(user)
                             ? 'text-gray-400 dark:text-gray-600 cursor-not-allowed opacity-50'
                             : 'text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300'
                         }`}
                         title={
-                          user.id === currentUser?.id
-                            ? "Non puoi eliminare te stesso da questo pannello"
-                            : isOnlyAdmin(user)
+                          isOnlyAdmin(user)
                             ? "Non puoi eliminare l'unico amministratore attivo"
                             : "Elimina"
                         }
@@ -605,6 +628,101 @@ export const UserManagement: React.FC = () => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteModal && userToDelete && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-dark-card rounded-xl shadow-2xl max-w-md w-full p-6">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl font-bold text-red-600 dark:text-red-400 flex items-center gap-2">
+                <Trash2 size={24} />
+                Elimina Utente
+              </h2>
+              <button
+                onClick={() => {
+                  setShowDeleteModal(false);
+                  setUserToDelete(null);
+                }}
+                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                disabled={deleteLoading}
+              >
+                <X size={24} />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              {/* Warning Message */}
+              <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+                <p className="text-sm text-red-800 dark:text-red-300 font-medium mb-2">
+                  ⚠️ Attenzione: questa azione non può essere annullata!
+                </p>
+                <p className="text-sm text-red-700 dark:text-red-400">
+                  Stai per eliminare definitivamente l'utente:
+                </p>
+              </div>
+
+              {/* User Info */}
+              <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-red-400 to-red-600 flex items-center justify-center text-white font-bold text-lg">
+                    {userToDelete.name.charAt(0).toUpperCase()}
+                  </div>
+                  <div>
+                    <p className="font-semibold text-dark dark:text-white">
+                      {userToDelete.name}
+                    </p>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                      {userToDelete.email}
+                    </p>
+                    <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
+                      Ruolo: {userToDelete.role}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Confirmation text */}
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                L'utente verrà rimosso dalla piattaforma e non potrà più accedere al sistema.
+                Tutti i dati associati verranno eliminati.
+              </p>
+
+              {/* Action Buttons */}
+              <div className="flex gap-3 mt-6">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowDeleteModal(false);
+                    setUserToDelete(null);
+                  }}
+                  disabled={deleteLoading}
+                  className="flex-1 px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors font-medium disabled:opacity-50"
+                >
+                  Annulla
+                </button>
+                <button
+                  type="button"
+                  onClick={confirmDeleteUser}
+                  disabled={deleteLoading}
+                  className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium flex items-center justify-center gap-2 disabled:opacity-50"
+                >
+                  {deleteLoading ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                      Eliminazione...
+                    </>
+                  ) : (
+                    <>
+                      <Trash2 size={16} />
+                      Elimina Definitivamente
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

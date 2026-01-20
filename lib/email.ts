@@ -11,6 +11,7 @@ interface EmailInvitation {
   companyName: string;
   inviteLink: string;
   role: string;
+  tempPassword?: string; // Optional temporary password for first login
 }
 
 // Helper function to convert snake_case to camelCase
@@ -208,7 +209,15 @@ function generateInviteEmailHtml(invitation: EmailInvitation): string {
             <p style="margin: 0;"><strong>Ruolo assegnato:</strong> ${roleLabel}</p>
           </div>
 
-          <p>Clicca sul pulsante qui sotto per accettare l'invito e completare la registrazione:</p>
+          ${invitation.tempPassword ? `
+          <div class="info-box" style="background: #FEF3C7; border-left-color: #F59E0B;">
+            <p style="margin: 0;"><strong>Email:</strong> ${invitation.toEmail}</p>
+            <p style="margin: 10px 0 0 0;"><strong>Password temporanea:</strong> <code style="background: #fff; padding: 4px 8px; border-radius: 4px; font-family: monospace;">${invitation.tempPassword}</code></p>
+            <p style="margin: 10px 0 0 0; font-size: 13px; color: #92400E;">⚠️ Cambia questa password al primo accesso</p>
+          </div>
+          ` : ''}
+
+          <p>Clicca sul pulsante qui sotto per ${invitation.tempPassword ? 'accedere' : 'accettare l\'invito e completare la registrazione'}:</p>
 
           <div style="text-align: center;">
             <a href="${invitation.inviteLink}" class="button">Accetta Invito</a>
@@ -247,14 +256,23 @@ function generateInviteEmailText(invitation: EmailInvitation): string {
 
   const roleLabel = roleLabels[invitation.role] || invitation.role;
 
+  const credentialsText = invitation.tempPassword ? `
+
+CREDENZIALI DI ACCESSO:
+Email: ${invitation.toEmail}
+Password temporanea: ${invitation.tempPassword}
+
+⚠️ IMPORTANTE: Cambia questa password al primo accesso!
+` : '';
+
   return `
 Ciao ${invitation.toName}!
 
 ${invitation.inviterName} ti ha invitato a unirti a ${invitation.companyName} su Ncode ERP.
 
 Ruolo assegnato: ${roleLabel}
-
-Clicca sul link qui sotto per accettare l'invito e completare la registrazione:
+${credentialsText}
+Clicca sul link qui sotto per ${invitation.tempPassword ? 'accedere' : 'accettare l\'invito e completare la registrazione'}:
 ${invitation.inviteLink}
 
 Questo invito scadrà tra 7 giorni.
@@ -305,7 +323,8 @@ export async function sendInvitationEmail(
         inviterName: invitation.inviterName,
         companyName: invitation.companyName,
         inviteToken,
-        role: invitation.role
+        role: invitation.role,
+        tempPassword: invitation.tempPassword, // Include temp password if provided
       }),
     });
 

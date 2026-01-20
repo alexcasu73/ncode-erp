@@ -9,6 +9,7 @@ import dotenv from 'dotenv';
 import { createPool } from './db/pool.js';
 import { initEmailClient } from './email/email.service.js';
 import { errorHandler } from './middleware/errorHandler.js';
+import { supabaseAdmin } from './supabase/admin.js';
 
 // Load environment variables
 dotenv.config();
@@ -103,7 +104,8 @@ app.post('/api/email/send-invitation', async (req, res) => {
       inviterName,
       companyName,
       inviteToken,
-      role
+      role,
+      tempPassword // Optional temporary password
     } = req.body;
 
     // Validate required fields
@@ -124,14 +126,15 @@ app.post('/api/email/send-invitation', async (req, res) => {
       });
     }
 
-    // Send invitation email
+    // Send invitation email (with optional tempPassword)
     await emailClient.sendInvitationEmail(
       toEmail,
       toName,
       inviteToken,
       inviterName,
       companyName,
-      role
+      role,
+      tempPassword // Pass temp password if provided
     );
 
     res.json({
@@ -194,6 +197,171 @@ app.post('/api/email/test', async (req, res) => {
   }
 });
 
+// Create user (server-side with admin privileges)
+app.post('/api/users/create', async (req, res) => {
+  try {
+    const {
+      email,
+      password,
+      full_name,
+      company_id,
+      role
+    } = req.body;
+
+    // Validate required fields
+    if (!email || !password || !full_name || !company_id || !role) {
+      return res.status(400).json({
+        error: 'Missing required fields',
+        required: ['email', 'password', 'full_name', 'company_id', 'role']
+      });
+    }
+
+    console.log('🔐 [Server] Creating user:', email, 'for company:', company_id);
+
+    // 1. Create user in Supabase Auth using admin client
+    // This doesn't affect the current session since it's server-side
+    const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
+      email,
+      password,
+      email_confirm: true, // Auto-confirm email
+      user_metadata: {
+        full_name,
+        company_id
+      }
+    });
+
+    if (authError) {
+      console.error('❌ [Server] Error creating auth user:', authError);
+      return res.status(500).json({
+        error: 'Failed to create auth user',
+        message: authError.message
+      });
+    }
+
+    if (!authData.user) {
+      return res.status(500).json({
+        error: 'Auth user not created'
+      });
+    }
+
+    const userId = authData.user.id;
+    console.log('✅ [Server] Created auth user:', userId);
+
+    // 2. Create user record in users table
+    const { error: userError } = await pool.query(
+      'INSERT INTO users (id, email, full_name, is_active) VALUES ($1, $2, $3, $4)',
+      [userId, email, full_name, true]
+    );
+
+    if (userError) {
+      console.error('❌ [Server] Error creating user record:', userError);
+      // Rollback: delete auth user
+      await supabaseAdmin.auth.admin.deleteUser(userId);
+      return res.status(500).json({
+        error: 'Failed to create user record',
+        message: userError.message
+      });
+    }
+
+    console.log('✅ [Server] Created user record');
+
+    // 3. Link user to company
+    const { error: linkError } = await pool.query(
+      'INSERT INTO company_users (user_id, company_id, role, is_active) VALUES ($1, $2, $3, $4)',
+      [userId, company_id, role, true]
+    );
+
+    if (linkError) {
+      console.error('❌ [Server] Error linking user to company:', linkError);
+      // Rollback: delete user and auth user
+      await pool.query('DELETE FROM users WHERE id = $1', [userId]);
+      await supabaseAdmin.auth.admin.deleteUser(userId);
+      return res.status(500).json({
+        error: 'Failed to link user to company',
+        message: linkError.message
+      });
+    }
+
+    console.log('✅ [Server] Linked user to company');
+
+    res.json({
+      success: true,
+      userId,
+      message: 'User created successfully'
+    });
+
+  } catch (err) {
+    console.error('❌ [Server] Unexpected error creating user:', err);
+    res.status(500).json({
+      error: 'Failed to create user',
+      message: err.message
+    });
+  }
+});
+
+// Delete user (server-side with admin privileges)
+app.delete('/api/users/:userId', async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { company_id } = req.body;
+
+    // Validate required fields
+    if (!userId || !company_id) {
+      return res.status(400).json({
+        error: 'Missing required fields',
+        required: ['userId (in URL)', 'company_id (in body)']
+      });
+    }
+
+    console.log('🗑️ [Server] Deleting user:', userId, 'from company:', company_id);
+
+    // 1. Delete company_users link
+    const { error: linkError } = await pool.query(
+      'DELETE FROM company_users WHERE user_id = $1 AND company_id = $2',
+      [userId, company_id]
+    );
+
+    if (linkError) {
+      console.error('❌ [Server] Error deleting company_users link:', linkError);
+      return res.status(500).json({
+        error: 'Failed to delete company link',
+        message: linkError.message
+      });
+    }
+
+    console.log('✅ [Server] Deleted company_users link');
+
+    // 2. Delete from users table
+    // This will trigger the database trigger to delete from auth.users automatically
+    const { error: userError } = await pool.query(
+      'DELETE FROM users WHERE id = $1',
+      [userId]
+    );
+
+    if (userError) {
+      console.error('❌ [Server] Error deleting user record:', userError);
+      return res.status(500).json({
+        error: 'Failed to delete user record',
+        message: userError.message
+      });
+    }
+
+    console.log('✅ [Server] Deleted user record (trigger will delete from auth.users)');
+
+    res.json({
+      success: true,
+      message: 'User deleted successfully'
+    });
+
+  } catch (err) {
+    console.error('❌ [Server] Unexpected error deleting user:', err);
+    res.status(500).json({
+      error: 'Failed to delete user',
+      message: err.message
+    });
+  }
+});
+
 // === ERROR HANDLING ===
 app.use(errorHandler());
 
@@ -218,9 +386,11 @@ async function start() {
 ║  API Base URL: http://localhost:${PORT}/api              ║
 ╠═══════════════════════════════════════════════════════╣
 ║  Endpoints:                                           ║
-║  - GET  /api/health                Health check       ║
-║  - POST /api/email/send-invitation Send invite       ║
-║  - POST /api/email/test            Test email        ║
+║  - GET    /api/health              Health check      ║
+║  - POST   /api/email/send-invitation Send invite     ║
+║  - POST   /api/email/test          Test email        ║
+║  - POST   /api/users/create        Create user       ║
+║  - DELETE /api/users/:userId       Delete user       ║
 ╚═══════════════════════════════════════════════════════╝
       `);
     });

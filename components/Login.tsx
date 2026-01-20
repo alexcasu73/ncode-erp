@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { LogIn, Building2 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
@@ -11,7 +11,20 @@ export const Login: React.FC<LoginProps> = ({ onRegisterClick }) => {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [isInvited, setIsInvited] = useState(false);
   const { signIn, loginError, clearLoginError } = useAuth();
+
+  // Check for invitation link parameters
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const invitedEmail = params.get('email');
+    const invited = params.get('invited');
+
+    if (invited === 'true' && invitedEmail) {
+      setEmail(decodeURIComponent(invitedEmail));
+      setIsInvited(true);
+    }
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -44,6 +57,16 @@ export const Login: React.FC<LoginProps> = ({ onRegisterClick }) => {
               Accedi a Ncode ERP
             </p>
           </div>
+
+          {/* Welcome message for invited users */}
+          {isInvited && (
+            <div className="mb-6 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+              <p className="text-sm text-blue-800 dark:text-blue-300">
+                <span className="font-semibold">🎉 Benvenuto!</span> La tua email è stata pre-compilata.
+                Usa la <strong>password temporanea</strong> che hai ricevuto via email per accedere.
+              </p>
+            </div>
+          )}
 
           {/* Login Form */}
           <form onSubmit={handleSubmit} className="space-y-6">

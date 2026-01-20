@@ -36,7 +36,8 @@
       "Bash(docker ps:*)",
       "Bash(supabase functions serve:*)",
       "Bash(ls:*)",
-      "Bash(jq:*)"
+      "Bash(jq:*)",
+      "Bash(node --watch src/index.js:*)"
     ]
   }
 }

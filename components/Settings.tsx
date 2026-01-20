@@ -88,6 +88,17 @@ const Settings: React.FC = () => {
         setGoogleRefreshToken(settings.googleRefreshToken || '');
         setGoogleUserEmail(settings.googleUserEmail || '');
         setGoogleFromName(settings.googleFromName || '');
+
+        // IMPORTANT: Also save AI keys to localStorage for reconciliation-ai.ts to use
+        // reconciliation-ai.ts reads from localStorage only, not from database
+        if (settings.anthropicApiKey || settings.openaiApiKey) {
+          localStorage.setItem('ai_settings', JSON.stringify({
+            defaultProvider: settings.defaultAiProvider,
+            anthropicApiKey: settings.anthropicApiKey,
+            openaiApiKey: settings.openaiApiKey
+          }));
+          console.log('[Settings] Synced AI keys from database to localStorage');
+        }
       }
     };
     loadSettings();

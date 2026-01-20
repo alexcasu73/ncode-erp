@@ -1083,6 +1083,11 @@ const InvoiceModal: React.FC<InvoiceModalProps> = ({ invoice, deals, onClose, on
         updated.anno = d.getFullYear();
       }
 
+      // Clear dataScadenza when status changes to "Effettivo"
+      if (field === 'statoFatturazione' && value === 'Effettivo') {
+        updated.dataScadenza = undefined;
+      }
+
       return updated;
     });
   };
@@ -1154,14 +1159,26 @@ const InvoiceModal: React.FC<InvoiceModalProps> = ({ invoice, deals, onClose, on
             </div>
           </div>
 
-          {/* Data Scadenza (opzionale) */}
+          {/* Data Scadenza (opzionale) - disabled when status is Effettivo */}
           <div>
-            <label className="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Data Scadenza (opzionale)</label>
+            <label className="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">
+              Data Scadenza (opzionale)
+              {formData.statoFatturazione === 'Effettivo' && (
+                <span className="ml-2 text-xs text-gray-400 dark:text-gray-500 italic">
+                  (Non disponibile per fatture effettive)
+                </span>
+              )}
+            </label>
             <input
               type="date"
               value={formData.dataScadenza ? new Date(formData.dataScadenza).toISOString().split('T')[0] : ''}
               onChange={(e) => updateField('dataScadenza', e.target.value || undefined)}
-              className="w-full pl-4 pr-4 py-2 border border-gray-200 dark:border-dark-border rounded-lg focus:ring-2 focus:ring-primary focus:outline-none bg-white dark:bg-gray-800/30 text-dark dark:text-white"
+              disabled={formData.statoFatturazione === 'Effettivo'}
+              className={`w-full pl-4 pr-4 py-2 border border-gray-200 dark:border-dark-border rounded-lg focus:ring-2 focus:ring-primary focus:outline-none bg-white dark:bg-gray-800/30 text-dark dark:text-white ${
+                formData.statoFatturazione === 'Effettivo'
+                  ? 'opacity-50 cursor-not-allowed bg-gray-100 dark:bg-gray-800'
+                  : ''
+              }`}
             />
           </div>
 
