@@ -69,6 +69,10 @@ export const Invoicing: React.FC = () => {
     const saved = localStorage.getItem('invoicing_filterSenzaCashflow');
     return saved === 'true';
   });
+  const [filterConScadenza, setFilterConScadenza] = useState<boolean>(() => {
+    const saved = localStorage.getItem('invoicing_filterConScadenza');
+    return saved === 'true';
+  });
   const [showModal, setShowModal] = useState(false);
   const [editingInvoice, setEditingInvoice] = useState<Invoice | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -104,6 +108,10 @@ export const Invoicing: React.FC = () => {
     localStorage.setItem('invoicing_filterSenzaCashflow', String(filterSenzaCashflow));
   }, [filterSenzaCashflow]);
 
+  React.useEffect(() => {
+    localStorage.setItem('invoicing_filterConScadenza', String(filterConScadenza));
+  }, [filterConScadenza]);
+
   // Reset tutti i filtri
   const resetAllFilters = () => {
     setFilterAnno('tutti');
@@ -115,6 +123,7 @@ export const Invoicing: React.FC = () => {
     setFilterMeseTabella('tutti');
     setFilterAnnoTabella('tutti');
     setFilterSenzaCashflow(false);
+    setFilterConScadenza(false);
   };
 
   // Anni disponibili
@@ -240,9 +249,13 @@ export const Invoicing: React.FC = () => {
       const hasCashflow = cashflowRecords.some(cf => cf.invoiceId === inv.id);
       const matchesSenzaCashflow = !filterSenzaCashflow || !hasCashflow;
 
-      return matchesSearch && matchesTipo && matchesStato && matchesMeseTabella && matchesAnnoTabella && matchesSenzaCashflow;
+      // Filtra fatture con scadenza (verifica anche stringhe vuote)
+      const hasScadenza = inv.dataScadenza !== undefined && inv.dataScadenza !== null && inv.dataScadenza !== '';
+      const matchesConScadenza = !filterConScadenza || hasScadenza;
+
+      return matchesSearch && matchesTipo && matchesStato && matchesMeseTabella && matchesAnnoTabella && matchesSenzaCashflow && matchesConScadenza;
     });
-  }, [invoices, cashflowRecords, searchTerm, filterTipo, filterStato, filterMeseTabella, filterAnnoTabella, filterSenzaCashflow]);
+  }, [invoices, cashflowRecords, searchTerm, filterTipo, filterStato, filterMeseTabella, filterAnnoTabella, filterSenzaCashflow, filterConScadenza]);
 
   // Ordina fatture
   const sortedInvoices = useMemo(() => {
@@ -562,7 +575,7 @@ export const Invoicing: React.FC = () => {
               Entrate {vistaStato !== 'tutti' && `(${vistaStato === 'effettivo' ? 'Effettive' : 'Stimate'})`}
             </h3>
           </div>
-          <p className="text-kpi-value text-dark dark:text-white">{formatCurrency(activeData.entrate)}</p>
+          <p className="text-base sm:text-lg md:text-xl xl:text-2xl font-bold text-dark dark:text-white whitespace-nowrap">{formatCurrency(activeData.entrate)}</p>
           <p className="text-small mt-1">{activeData.countEntrate} voci</p>
         </div>
         <div className="bg-white dark:bg-dark-card p-5 rounded-xl border-l-4 border-red-600 shadow-sm">
@@ -572,28 +585,28 @@ export const Invoicing: React.FC = () => {
               Uscite {vistaStato !== 'tutti' && `(${vistaStato === 'effettivo' ? 'Effettive' : 'Stimate'})`}
             </h3>
           </div>
-          <p className="text-kpi-value text-dark dark:text-white">{formatCurrency(activeData.uscite)}</p>
+          <p className="text-base sm:text-lg md:text-xl xl:text-2xl font-bold text-dark dark:text-white whitespace-nowrap">{formatCurrency(activeData.uscite)}</p>
           <p className="text-small mt-1">{activeData.countUscite} voci</p>
         </div>
         <div className="bg-white dark:bg-dark-card p-5 rounded-xl border-l-4 border-primary shadow-sm">
           <h3 className="text-card-title mb-1">
             Margine {vistaStato !== 'tutti' && `(${vistaStato === 'effettivo' ? 'Effettivo' : 'Stimato'})`}
           </h3>
-          <p className={`text-kpi-value ${activeData.margine >= 0 ? 'text-secondary' : 'text-red-600'}`}>
+          <p className={`text-base sm:text-lg md:text-xl xl:text-2xl font-bold whitespace-nowrap ${activeData.margine >= 0 ? 'text-secondary' : 'text-red-600'}`}>
             {formatCurrency(activeData.margine)}
           </p>
-          <p className="text-small mt-1">IVA: {formatCurrency(activeData.ivaBalance)}</p>
+          <p className="text-xs mt-1 truncate">IVA: {formatCurrency(activeData.ivaBalance)}</p>
         </div>
         <div className="bg-white dark:bg-dark-card p-5 rounded-xl border-l-4 border-gray-400 dark:border-gray-500 shadow-sm">
           <h3 className="text-card-title mb-3">Riepilogo per Stato</h3>
-          <div className="flex justify-around">
-            <div className="text-center px-4">
-              <p className="text-kpi-small text-secondary">{totals.countEffettive}</p>
+          <div className="flex justify-around items-center gap-2">
+            <div className="text-center flex-1 min-w-0">
+              <p className="text-base sm:text-lg md:text-xl font-bold text-secondary">{totals.countEffettive}</p>
               <p className="text-small">Effettive</p>
             </div>
-            <div className="w-px bg-gray-200 dark:bg-dark-border self-stretch"></div>
-            <div className="text-center px-4">
-              <p className="text-kpi-small text-primary">{totals.countStimate}</p>
+            <div className="w-px bg-gray-200 dark:bg-dark-border h-12"></div>
+            <div className="text-center flex-1 min-w-0">
+              <p className="text-base sm:text-lg md:text-xl font-bold text-primary">{totals.countStimate}</p>
               <p className="text-small">Stimate</p>
             </div>
           </div>
@@ -691,9 +704,9 @@ export const Invoicing: React.FC = () => {
 
       {/* Filters */}
       <div className="bg-white dark:bg-dark-card rounded-lg p-4 shadow-sm border border-gray-200 dark:border-dark-border">
-        <div className="flex gap-4 items-center justify-between">
-          <h3 className="text-section-title text-dark dark:text-white whitespace-nowrap">Dettaglio Fatture</h3>
-          <div className="flex gap-3 items-center flex-nowrap">
+        <div className="flex flex-col gap-4">
+          <h3 className="text-section-title text-dark dark:text-white">Dettaglio Fatture</h3>
+          <div className="flex gap-3 items-center flex-wrap">
             {/* Ricerca */}
             <div className="relative">
               <Search size={16} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 dark:text-gray-400" />
@@ -765,6 +778,23 @@ export const Invoicing: React.FC = () => {
               </div>
               <span className="text-sm text-dark dark:text-white whitespace-nowrap">Senza flusso</span>
             </label>
+            {/* Filtro Con Scadenza */}
+            <label className="inline-flex items-center gap-2 px-3 py-2 border border-gray-200 dark:border-dark-border rounded-lg bg-white dark:bg-gray-800/30 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors group">
+              <input
+                type="checkbox"
+                checked={filterConScadenza}
+                onChange={(e) => setFilterConScadenza(e.target.checked)}
+                className="sr-only peer"
+              />
+              <div className="relative w-4 h-4 bg-white dark:bg-gray-700 border-2 border-gray-300 dark:border-gray-600 rounded-md peer-checked:bg-primary peer-checked:border-primary transition-all duration-200 group-hover:border-primary/50 peer-focus:ring-2 peer-focus:ring-primary/20">
+                <Check
+                  size={12}
+                  className="absolute inset-0 m-auto text-white opacity-0 peer-checked:opacity-100 transition-opacity duration-200"
+                  strokeWidth={3}
+                />
+              </div>
+              <span className="text-sm text-dark dark:text-white whitespace-nowrap">Con scadenza</span>
+            </label>
           </div>
         </div>
       </div>
@@ -811,7 +841,7 @@ export const Invoicing: React.FC = () => {
             <thead className="bg-gray-50 dark:bg-dark-bg">
               <tr className="text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                 {!roleLoading && canDelete && (
-                  <th className="px-4 py-4 w-12">
+                  <th className="px-6 py-4">
                     <div className="flex items-center justify-center">
                       <label className="inline-flex items-center cursor-pointer group">
                         <input
@@ -832,7 +862,7 @@ export const Invoicing: React.FC = () => {
                   </th>
                 )}
                 <th
-                  className="px-6 py-4 whitespace-nowrap cursor-pointer hover:bg-gray-50 transition-colors"
+                  className="px-6 py-4 whitespace-nowrap cursor-pointer hover:bg-gray-50 dark:hover:bg-dark-bg transition-colors"
                   onClick={() => handleSort('id')}
                 >
                   <div className="flex items-center gap-1">
@@ -843,7 +873,7 @@ export const Invoicing: React.FC = () => {
                   </div>
                 </th>
                 <th
-                  className="px-6 py-4 cursor-pointer hover:bg-gray-50 transition-colors"
+                  className="px-6 py-4 cursor-pointer hover:bg-gray-50 dark:hover:bg-dark-bg transition-colors"
                   onClick={() => handleSort('tipo')}
                 >
                   <div className="flex items-center gap-1">
@@ -854,7 +884,7 @@ export const Invoicing: React.FC = () => {
                   </div>
                 </th>
                 <th
-                  className="px-6 py-4 cursor-pointer hover:bg-gray-50 transition-colors"
+                  className="px-6 py-4 cursor-pointer hover:bg-gray-50 dark:hover:bg-dark-bg transition-colors"
                   onClick={() => handleSort('data')}
                 >
                   <div className="flex items-center gap-1">
@@ -865,7 +895,7 @@ export const Invoicing: React.FC = () => {
                   </div>
                 </th>
                 <th
-                  className="px-6 py-4 cursor-pointer hover:bg-gray-50 transition-colors"
+                  className="px-6 py-4 cursor-pointer hover:bg-gray-50 dark:hover:bg-dark-bg transition-colors"
                   onClick={() => handleSort('progetto')}
                 >
                   <div className="flex items-center gap-1">
@@ -877,7 +907,7 @@ export const Invoicing: React.FC = () => {
                 </th>
                 <th className="px-6 py-4 whitespace-nowrap">Descrizione</th>
                 <th
-                  className="px-6 py-4 cursor-pointer hover:bg-gray-50 transition-colors"
+                  className="px-6 py-4 cursor-pointer hover:bg-gray-50 dark:hover:bg-dark-bg transition-colors"
                   onClick={() => handleSort('stato')}
                 >
                   <div className="flex items-center gap-1">
@@ -888,7 +918,7 @@ export const Invoicing: React.FC = () => {
                   </div>
                 </th>
                 <th
-                  className="px-6 py-4 text-right cursor-pointer hover:bg-gray-50 transition-colors"
+                  className="px-6 py-4 text-right cursor-pointer hover:bg-gray-50 dark:hover:bg-dark-bg transition-colors"
                   onClick={() => handleSort('flusso')}
                 >
                   <div className="flex items-center justify-end gap-1">
@@ -900,7 +930,7 @@ export const Invoicing: React.FC = () => {
                 </th>
                 <th className="px-6 py-4 whitespace-nowrap text-right">IVA</th>
                 <th
-                  className="px-6 py-4 text-right cursor-pointer hover:bg-gray-50 transition-colors"
+                  className="px-6 py-4 text-right cursor-pointer hover:bg-gray-50 dark:hover:bg-dark-bg transition-colors"
                   onClick={() => handleSort('totale')}
                 >
                   <div className="flex items-center justify-end gap-1">
@@ -917,7 +947,7 @@ export const Invoicing: React.FC = () => {
               {sortedInvoices.map((inv) => (
                 <tr key={inv.id} className={`hover:bg-gray-50 dark:hover:bg-dark-bg transition-colors ${inv.tipo === 'Uscita' ? 'bg-orange-50/30 dark:bg-orange-900/10' : ''}`}>
                   {!roleLoading && canDelete && (
-                    <td className="px-4 py-4 whitespace-nowrap">
+                    <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center justify-center">
                         <label className="inline-flex items-center cursor-pointer group">
                           <input

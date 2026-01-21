@@ -972,7 +972,7 @@ export const Cashflow: React.FC = () => {
               Entrate Totali {vistaStato !== 'tutti' && `(${vistaStato === 'effettivo' ? 'Effettive' : 'Stimate'})`}
             </h3>
           </div>
-          <p className="text-kpi-value text-dark dark:text-white">{formatCurrency(totals.entrate)}</p>
+          <p className="text-base sm:text-lg md:text-xl xl:text-2xl font-bold text-dark dark:text-white whitespace-nowrap">{formatCurrency(totals.entrate)}</p>
           <p className="text-small mt-1">{totals.countEntrate} voci</p>
         </div>
         <div className="bg-white dark:bg-dark-card p-5 rounded-xl border-l-4 border-red-600 shadow-sm">
@@ -982,14 +982,14 @@ export const Cashflow: React.FC = () => {
               Uscite Totali {vistaStato !== 'tutti' && `(${vistaStato === 'effettivo' ? 'Effettive' : 'Stimate'})`}
             </h3>
           </div>
-          <p className="text-kpi-value text-dark dark:text-white">{formatCurrency(totals.uscite)}</p>
+          <p className="text-base sm:text-lg md:text-xl xl:text-2xl font-bold text-dark dark:text-white whitespace-nowrap">{formatCurrency(totals.uscite)}</p>
           <p className="text-small mt-1">{totals.countUscite} voci</p>
         </div>
         <div className="bg-white dark:bg-dark-card p-5 rounded-xl border-l-4 border-primary shadow-sm">
           <h3 className="text-card-title mb-1">
             Saldo Netto {vistaStato !== 'tutti' && `(${vistaStato === 'effettivo' ? 'Effettivo' : 'Stimato'})`}
           </h3>
-          <p className={`text-kpi-value ${totals.saldo >= 0 ? 'text-secondary' : 'text-red-600'}`}>
+          <p className={`text-base sm:text-lg md:text-xl xl:text-2xl font-bold whitespace-nowrap ${totals.saldo >= 0 ? 'text-secondary' : 'text-red-600'}`}>
             {formatCurrency(totals.saldo)}
           </p>
           <p className="text-small mt-1">Entrate - Uscite</p>
@@ -1013,15 +1013,15 @@ export const Cashflow: React.FC = () => {
           </div>
           {filterAnno === 'tutti' ? (
             <>
-              <p className="text-kpi-value text-gray-500 dark:text-gray-400">-</p>
+              <p className="text-base sm:text-lg md:text-xl xl:text-2xl font-bold text-gray-500 dark:text-gray-400 whitespace-nowrap">-</p>
               <p className="text-small mt-1">Seleziona un anno</p>
             </>
           ) : (
             <>
-              <p className={`text-kpi-value ${saldoInBanca >= 0 ? 'text-accent' : 'text-red-600'}`}>
+              <p className={`text-base sm:text-lg md:text-xl xl:text-2xl font-bold whitespace-nowrap ${saldoInBanca >= 0 ? 'text-accent' : 'text-red-600'}`}>
                 {formatCurrency(saldoInBanca)}
               </p>
-              <p className="text-small mt-1">
+              <p className="text-xs mt-1 truncate">
                 Iniziale: {formatCurrency(currentBankBalance?.saldoIniziale || 0)}
               </p>
             </>
@@ -1029,14 +1029,14 @@ export const Cashflow: React.FC = () => {
         </div>
         <div className="bg-white dark:bg-dark-card p-5 rounded-xl border-l-4 border-gray-400 dark:border-gray-500 shadow-sm">
           <h3 className="text-card-title mb-3">Riepilogo per Stato</h3>
-          <div className="flex justify-around">
-            <div className="text-center px-4">
-              <p className="text-kpi-small text-secondary">{countByStato.effettive}</p>
+          <div className="flex justify-around items-center gap-2">
+            <div className="text-center flex-1 min-w-0">
+              <p className="text-base sm:text-lg md:text-xl font-bold text-secondary">{countByStato.effettive}</p>
               <p className="text-small">Effettive</p>
             </div>
-            <div className="w-px bg-gray-200 dark:bg-dark-border self-stretch"></div>
-            <div className="text-center px-4">
-              <p className="text-kpi-small text-primary">{countByStato.stimate}</p>
+            <div className="w-px bg-gray-200 dark:bg-dark-border h-12"></div>
+            <div className="text-center flex-1 min-w-0">
+              <p className="text-base sm:text-lg md:text-xl font-bold text-primary">{countByStato.stimate}</p>
               <p className="text-small">Stimate</p>
             </div>
           </div>
@@ -1096,9 +1096,9 @@ export const Cashflow: React.FC = () => {
         <div className="overflow-x-auto">
           <div>
             {/* Header tabella con ricerca e filtri */}
-            <div className="p-4 border-b border-gray-200 dark:border-dark-border flex gap-4 items-center justify-between">
-              <h3 className="text-section-title text-dark dark:text-white whitespace-nowrap">Dettaglio Movimenti</h3>
-              <div className="flex gap-3 items-center flex-nowrap">
+            <div className="p-4 border-b border-gray-200 dark:border-dark-border flex flex-col gap-4">
+              <h3 className="text-section-title text-dark dark:text-white">Dettaglio Movimenti</h3>
+              <div className="flex gap-3 items-center flex-wrap">
             {/* Ricerca */}
             <div className="relative">
               <Search size={16} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 dark:text-gray-400" />
