@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useRef } from 'react';
 import { Upload, FileCheck, AlertCircle, Check, X, RefreshCw, ChevronDown, ChevronUp, Search, Eye, Link2, Trash2, FilePlus, PlusCircle, StopCircle, Lock } from 'lucide-react';
 import { useData } from '../context/DataContext';
+import { useAuth } from '../context/AuthContext';
 import { useUserRole } from '../hooks/useUserRole';
 import { parseBankStatementExcel, formatPeriodo, type ParsedBankStatement, type ParsedTransaction } from '../lib/excel-parser';
 import { suggestMatch, quickMatch, type MatchSuggestion } from '../lib/reconciliation-ai';
@@ -22,11 +23,18 @@ const formatDate = (dateStr: string): string => {
 // Format invoice ID: "Fattura_xyz" -> "xyz/anno"
 const formatInvoiceId = (id: string, anno: number): string => {
   const numero = id.replace('Fattura_', '');
-  // Se il numero contiene già l'anno (es. "180/2026"), non duplicarlo
+  // Se il numero contiene già l'anno (es. "NCO-IN-180/2026"), non duplicarlo
   if (numero.includes('/')) {
-    return numero;
+    // Rimuovi il prefisso aziendale (es. "NCO-IN-001/2025" -> "IN-001/2025")
+    const withoutCompanyPrefix = numero.replace(/^[A-Z0-9]+-/, '');
+    return withoutCompanyPrefix;
   }
   return `${numero}/${anno}`;
+};
+
+const formatCashflowId = (id: string): string => {
+  // Rimuovi il prefisso aziendale dagli ID dei cashflow (es. "NCO-CF-001/2025" -> "CF-001/2025")
+  return id.replace(/^[A-Z0-9]+-/, '');
 };
 
 // Helper per verificare match tra descrizione transazione e note/spesa del cashflow
@@ -457,7 +465,7 @@ const TransactionRow: React.FC<{
                         <div className="space-y-1 text-xs text-gray-900 dark:text-white">
                           <div>
                             <span className="font-medium text-gray-600 dark:text-gray-400">ID:</span>{' '}
-                            <span className="font-mono font-semibold">{candidate.cashflow.id}</span>
+                            <span className="font-mono font-semibold">{formatCashflowId(candidate.cashflow.id)}</span>
                           </div>
                           {candidate.cashflow.dataPagamento && (
                             <div>
@@ -1777,6 +1785,7 @@ const ReportView: React.FC<ReportViewProps> = ({ report }) => {
 
 export const Reconciliation: React.FC = () => {
   const { invoices, cashflowRecords, reconciliationSessions, bankTransactions, addReconciliationSession, addBankTransaction, updateBankTransaction, updateReconciliationSession, deleteBankTransaction, deleteReconciliationSession, clearAllReconciliationSessions, addInvoice, addCashflowRecord, updateCashflowRecord, updateInvoice, deleteCashflowRecord, deleteInvoice, aiProcessing, setAiProcessing, stopAiProcessing, refreshData, getSettings } = useData();
+  const { companyId } = useAuth();
   const { canReconcile, loading: roleLoading } = useUserRole();
 
   const [isUploading, setIsUploading] = useState(false);
@@ -2033,6 +2042,11 @@ export const Reconciliation: React.FC = () => {
     console.log('File selected:', file?.name);
     if (!file) return;
 
+    if (!companyId) {
+      setError('Errore: company ID non disponibile');
+      return;
+    }
+
     setIsUploading(true);
     setError(null);
 
@@ -2074,7 +2088,7 @@ export const Reconciliation: React.FC = () => {
         status: 'open',
         periodoDal: parsed.periodoDal,
         periodoAl: parsed.periodoAl,
-        companyId: '00000000-0000-0000-0000-000000000001' // Ncode Studio
+        companyId: companyId!
       };
 
       console.log('Adding session:', session);
@@ -2103,7 +2117,7 @@ export const Reconciliation: React.FC = () => {
           tipo: tx.tipo,
           saldo: tx.saldo,
           matchStatus: tx.hasErrors ? 'ignored' : 'pending',
-          companyId: '00000000-0000-0000-0000-000000000001' // Ncode Studio
+          companyId: companyId!
         };
 
         // Save the transaction without AI processing

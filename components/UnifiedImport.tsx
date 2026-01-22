@@ -101,20 +101,33 @@ export const UnifiedImport: React.FC = () => {
         }
       }
 
-      // 3. Importa le fatture (con ID specifici, bypassando addInvoice)
+      // 3. Importa le fatture (rimuovendo l'ID per lasciare che il trigger lo generi nel nuovo formato)
+      // Crea mappatura tra ID vecchi e nuovi per aggiornare i riferimenti nei flussi di cassa
+      const invoiceIdMapping = new Map<string, string>();
       let invoicesSuccess = 0;
       let invoicesErrors = 0;
       for (const invoice of result.invoices) {
         try {
           const invoiceWithCompany = { ...invoice, companyId };
-          const dataToInsert = camelToSnake(invoiceWithCompany);
+          const oldInvoiceId = invoice.id;
+          // Remove ID to let the trigger generate it in the new format (IN-001/2025)
+          const { id, ...invoiceWithoutId } = invoiceWithCompany;
+          const dataToInsert = camelToSnake(invoiceWithoutId);
 
-          const { error } = await supabase
+          // Insert and get the newly generated ID
+          const { data, error } = await supabase
             .from('invoices')
-            .insert(dataToInsert);
+            .insert(dataToInsert)
+            .select('id')
+            .single();
 
           if (error) {
             throw error;
+          }
+
+          // Store mapping from old ID to new ID
+          if (data && oldInvoiceId) {
+            invoiceIdMapping.set(oldInvoiceId, data.id);
           }
 
           invoicesSuccess++;
@@ -124,13 +137,23 @@ export const UnifiedImport: React.FC = () => {
         }
       }
 
-      // 4. Importa i flussi (con ID specifici e invoice_id mappati, bypassando addCashflowRecord)
+      // 4. Importa i flussi (rimuovendo l'ID per lasciare che il trigger lo generi nel nuovo formato)
+      // Aggiorna invoice_id con i nuovi ID generati
       let cashflowsSuccess = 0;
       let cashflowsErrors = 0;
       for (const cashflow of result.cashflows) {
         try {
           const cashflowWithCompany = { ...cashflow, companyId };
-          const dataToInsert = camelToSnake(cashflowWithCompany);
+
+          // Remove ID to let the trigger generate it in the new format (CF-001/2025)
+          const { id, ...cashflowWithoutId } = cashflowWithCompany;
+
+          // Update invoice_id with the new mapped ID if it exists
+          if (cashflowWithoutId.invoiceId && invoiceIdMapping.has(cashflowWithoutId.invoiceId)) {
+            cashflowWithoutId.invoiceId = invoiceIdMapping.get(cashflowWithoutId.invoiceId);
+          }
+
+          const dataToInsert = camelToSnake(cashflowWithoutId);
 
           const { error } = await supabase
             .from('cashflow_records')
@@ -143,9 +166,11 @@ export const UnifiedImport: React.FC = () => {
           cashflowsSuccess++;
         } catch (err) {
           cashflowsErrors++;
-          console.error('Errore import flusso:', err);
+          console.error('Errore import flusso:', err, cashflow);
         }
       }
+
+      console.log(`📊 Importazione completata: ${invoicesSuccess} fatture, ${cashflowsSuccess} flussi, ${invoiceIdMapping.size} mappature ID create`);
 
       // 5. Importa le opportunità (con ID specifici, bypassando addDeal)
       let dealsSuccess = 0;

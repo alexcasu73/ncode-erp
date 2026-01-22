@@ -190,86 +190,36 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const signUp = async (data: SignUpData) => {
     try {
-      // Generate a unique slug from company name
-      const generateSlug = (name: string): string => {
-        const baseSlug = name
-          .toLowerCase()
-          .trim()
-          .replace(/[àáâãäå]/g, 'a')
-          .replace(/[èéêë]/g, 'e')
-          .replace(/[ìíîï]/g, 'i')
-          .replace(/[òóôõö]/g, 'o')
-          .replace(/[ùúûü]/g, 'u')
-          .replace(/[^a-z0-9\s-]/g, '') // Remove special chars
-          .replace(/\s+/g, '-') // Replace spaces with hyphens
-          .replace(/-+/g, '-') // Replace multiple hyphens with single
-          .replace(/^-|-$/g, ''); // Remove leading/trailing hyphens
+      console.log('📝 Starting registration via backend...');
 
-        // Add timestamp to ensure uniqueness
-        const timestamp = Date.now().toString(36);
-        return `${baseSlug}-${timestamp}`;
-      };
-
-      const companySlug = generateSlug(data.companyName);
-
-      // 1. Create company using database function (bypasses RLS during registration)
-      const { data: newCompanyId, error: companyError } = await supabase
-        .rpc('create_company_for_registration', {
-          company_name: data.companyName,
-          company_slug: companySlug,
-        });
-
-      if (companyError || !newCompanyId) {
-        console.error('Error creating company:', companyError);
-        return { error: new Error('Errore nella creazione dell\'azienda: ' + (companyError?.message || 'Unknown error')) };
-      }
-
-      // 2. Create user in Supabase Auth
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email: data.email,
-        password: data.password,
-        options: {
-          data: {
-            name: data.adminName,
-            company_id: newCompanyId,
-          },
-          emailRedirectTo: undefined, // Skip email confirmation for now
+      // Call backend API to handle registration
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
+      const response = await fetch(`${apiUrl}/auth/register`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
         },
+        body: JSON.stringify({
+          email: data.email,
+          password: data.password,
+          adminName: data.adminName,
+          companyName: data.companyName,
+        }),
       });
 
-      if (authError) {
-        console.error('Error creating auth user:', authError);
-        // Try to cleanup the company
-        await supabase.from('companies').delete().eq('id', newCompanyId);
-        return { error: new Error('Errore nella creazione dell\'utente: ' + authError.message) };
+      const result = await response.json();
+
+      if (!response.ok) {
+        console.error('❌ Registration error:', result);
+        return { error: new Error(result.error || 'Errore durante la registrazione') };
       }
 
-      if (!authData.user) {
-        await supabase.from('companies').delete().eq('id', newCompanyId);
-        return { error: new Error('Errore: utente non creato') };
-      }
+      console.log('✅ Registration successful:', result);
+      console.log('📧 Confirmation email sent via Gmail API');
 
-      const userId = authData.user.id;
-
-      // 3. Complete user registration (users table, company_users, settings)
-      const { data: registrationSuccess, error: registrationError } = await supabase
-        .rpc('complete_user_registration', {
-          p_user_id: userId,
-          p_email: data.email,
-          p_full_name: data.adminName,
-          p_company_id: newCompanyId,
-        });
-
-      if (registrationError || !registrationSuccess) {
-        console.error('Error completing user registration:', registrationError);
-        return { error: new Error('Errore nel completamento della registrazione: ' + (registrationError?.message || 'Unknown error')) };
-      }
-
-      // Success! Email is already confirmed by server-side user creation
-      // The auth state change will handle the redirect
       return { error: null };
     } catch (err) {
-      console.error('Unexpected error during signup:', err);
+      console.error('❌ Unexpected error during signup:', err);
       return { error: err as Error };
     }
   };

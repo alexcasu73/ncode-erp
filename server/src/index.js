@@ -526,6 +526,201 @@ app.delete('/api/users/:userId', async (req, res) => {
   }
 });
 
+// === AUTH ROUTES ===
+
+/**
+ * Register new user with email confirmation
+ * Creates user in Supabase (unconfirmed) and sends confirmation email via Gmail API
+ */
+app.post('/api/auth/register', async (req, res) => {
+  try {
+    const { email, password, adminName, companyName } = req.body;
+
+    if (!email || !password || !adminName || !companyName) {
+      return res.status(400).json({ error: 'Missing required fields' });
+    }
+
+    console.log(`📝 [Auth] Registration request for: ${email}`);
+
+    // Initialize email service from env (for registration emails)
+    const tempEmailService = initEmailClient({
+      gmailUser: process.env.GMAIL_USER,
+      gmailRefreshToken: process.env.GMAIL_REFRESH_TOKEN,
+      googleClientId: process.env.GOOGLE_CLIENT_ID,
+      googleClientSecret: process.env.GOOGLE_CLIENT_SECRET,
+      frontendUrl: process.env.FRONTEND_URL || 'http://localhost:3000',
+      appName: 'Ncode ERP',
+      primaryColor: '#3B82F6'
+    });
+
+    if (!tempEmailService.isConfigured()) {
+      console.error('❌ Email service not configured');
+      return res.status(500).json({ error: 'Email service not configured' });
+    }
+
+    // 1. Create company
+    const generateSlug = (name) => {
+      const baseSlug = name
+        .toLowerCase()
+        .trim()
+        .replace(/[àáâãäå]/g, 'a')
+        .replace(/[èéêë]/g, 'e')
+        .replace(/[ìíîï]/g, 'i')
+        .replace(/[òóôõö]/g, 'o')
+        .replace(/[ùúûü]/g, 'u')
+        .replace(/[^a-z0-9\s-]/g, '')
+        .replace(/\s+/g, '-')
+        .replace(/-+/g, '-')
+        .replace(/^-|-$/g, '');
+      const timestamp = Date.now().toString(36);
+      return `${baseSlug}-${timestamp}`;
+    };
+
+    const companySlug = generateSlug(companyName);
+
+    const { data: newCompanyId, error: companyError } = await supabaseAdmin
+      .rpc('create_company_for_registration', {
+        company_name: companyName,
+        company_slug: companySlug,
+      });
+
+    if (companyError || !newCompanyId) {
+      console.error('❌ Error creating company:', companyError);
+      return res.status(500).json({ error: 'Failed to create company' });
+    }
+
+    console.log(`✅ Company created: ${newCompanyId}`);
+
+    // 2. Create user in Supabase Auth (email NOT confirmed)
+    const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
+      email,
+      password,
+      email_confirm: false, // User must confirm email
+      user_metadata: {
+        name: adminName,
+        company_id: newCompanyId,
+      }
+    });
+
+    if (authError || !authData.user) {
+      console.error('❌ Error creating auth user:', authError);
+      // Cleanup company
+      await supabaseAdmin.from('companies').delete().eq('id', newCompanyId);
+      return res.status(500).json({ error: 'Failed to create user' });
+    }
+
+    const userId = authData.user.id;
+    console.log(`✅ User created: ${userId} (unconfirmed)`);
+
+    // 3. Complete user registration in DB
+    const { error: registrationError } = await supabaseAdmin
+      .rpc('complete_user_registration', {
+        p_user_id: userId,
+        p_email: email,
+        p_full_name: adminName,
+        p_company_id: newCompanyId,
+      });
+
+    if (registrationError) {
+      console.error('❌ Error completing registration:', registrationError);
+      return res.status(500).json({ error: 'Failed to complete registration' });
+    }
+
+    console.log(`✅ User registration completed in DB`);
+
+    // 4. Generate confirmation token
+    const { data: tokenData, error: tokenError } = await supabaseAdmin.auth.admin.generateLink({
+      type: 'signup',
+      email: email
+    });
+
+    if (tokenError || !tokenData) {
+      console.error('❌ Error generating confirmation token:', tokenError);
+      return res.status(500).json({ error: 'Failed to generate confirmation token' });
+    }
+
+    // Extract token from the generated link
+    const confirmationToken = new URL(tokenData.properties.action_link).searchParams.get('token');
+
+    // 5. Send confirmation email via Gmail API
+    try {
+      await tempEmailService.sendRegistrationConfirmationEmail(
+        email,
+        adminName,
+        companyName,
+        confirmationToken
+      );
+      console.log(`✅ Confirmation email sent to: ${email}`);
+    } catch (emailError) {
+      console.error('❌ Error sending confirmation email:', emailError);
+      // Don't fail the registration if email fails
+      return res.status(201).json({
+        success: true,
+        message: 'Account created but email sending failed. Please contact support.',
+        emailSent: false
+      });
+    }
+
+    res.status(201).json({
+      success: true,
+      message: 'Registration successful. Please check your email to confirm your account.',
+      emailSent: true
+    });
+
+  } catch (err) {
+    console.error('❌ [Auth] Unexpected error during registration:', err);
+    res.status(500).json({
+      error: 'Registration failed',
+      message: err.message
+    });
+  }
+});
+
+/**
+ * Confirm email address
+ * Verifies the token and confirms the user's email
+ */
+app.post('/api/auth/confirm-email', async (req, res) => {
+  try {
+    const { token } = req.body;
+
+    if (!token) {
+      return res.status(400).json({ error: 'Missing confirmation token' });
+    }
+
+    console.log(`✉️ [Auth] Email confirmation request`);
+
+    // Verify the token and confirm the user
+    const { data, error } = await supabaseAdmin.auth.verifyOtp({
+      token_hash: token,
+      type: 'signup'
+    });
+
+    if (error) {
+      console.error('❌ Error confirming email:', error);
+      return res.status(400).json({ error: 'Invalid or expired confirmation token' });
+    }
+
+    console.log(`✅ Email confirmed for user: ${data.user.email}`);
+
+    res.json({
+      success: true,
+      message: 'Email confirmed successfully. You can now log in.',
+      user: {
+        email: data.user.email,
+        confirmed: true
+      }
+    });
+
+  } catch (err) {
+    console.error('❌ [Auth] Unexpected error confirming email:', err);
+    res.status(500).json({
+      error: 'Email confirmation failed',
+      message: err.message
+    });
+  }
+});
+
 // === ERROR HANDLING ===
 app.use(errorHandler());
 

@@ -43,11 +43,13 @@ const formatDate = (dateStr?: string): string => {
 // Formatta ID fattura: "Fattura_xyz" -> "N. xyz/anno"
 const formatInvoiceNumber = (id: string, anno?: number): string => {
   const numero = id.replace('Fattura_', '');
-  // Se il numero contiene già l'anno (es. "180/2026"), non duplicarlo
+  // Se il numero contiene già l'anno (es. "NCO-IN-180/2026"), non duplicarlo
   if (numero.includes('/')) {
-    return `N. ${numero}`;
+    // Rimuovi il prefisso aziendale (es. "NCO-IN-001/2025" -> "IN-001/2025")
+    const withoutCompanyPrefix = numero.replace(/^[A-Z0-9]+-/, '');
+    return withoutCompanyPrefix;
   }
-  return anno ? `N. ${numero}/${anno}` : `N. ${numero}`;
+  return anno ? `${numero}/${anno}` : numero;
 };
 
 // Ottiene l'importo effettivo del movimento (importo personalizzato o totale fattura)

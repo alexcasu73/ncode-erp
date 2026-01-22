@@ -333,7 +333,9 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     console.log('🔵 [addCustomer] Company ID:', companyId);
     console.log('🔵 [addCustomer] User:', user?.id, user?.email);
 
-    const customerData = { ...camelToSnake(customer), company_id: companyId };
+    // Remove avatar field (not in database schema) before inserting
+    const { avatar, ...customerWithoutAvatar } = customer;
+    const customerData = { ...camelToSnake(customerWithoutAvatar), company_id: companyId };
     console.log('🔵 [addCustomer] Data to insert:', customerData);
 
     const { data, error } = await supabase

@@ -94,10 +94,19 @@ export const InvoiceNotifications: React.FC<InvoiceNotificationsProps> = ({ isOp
                       <div className="font-medium text-dark dark:text-white">
                         {invoice.nomeProgetto || invoice.spesa || 'N/D'}
                       </div>
+                      {invoice.note && (
+                        <div className="text-gray-600 dark:text-gray-400 italic text-[11px] mt-0.5">
+                          {invoice.note}
+                        </div>
+                      )}
+                      <div className="text-gray-500 dark:text-gray-400 flex items-center gap-1">
+                        <span className={`inline-block w-1.5 h-1.5 rounded-full ${invoice.tipo === 'Entrata' ? 'bg-green-500' : 'bg-orange-500'}`} />
+                        {invoice.tipo} - {invoice.spesa}
+                      </div>
                       <div className="text-gray-500 dark:text-gray-400">
                         Scadenza: {new Date(notif.dataScadenza).toLocaleDateString('it-IT')}
                       </div>
-                      <div className="text-gray-500 dark:text-gray-400">
+                      <div className="text-gray-500 dark:text-gray-400 font-medium">
                         Importo: €{((invoice.flusso || 0) + (invoice.iva || 0)).toFixed(2)}
                       </div>
                     </>

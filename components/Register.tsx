@@ -4,9 +4,10 @@ import { useAuth } from '../context/AuthContext';
 
 interface RegisterProps {
   onBackToLogin: () => void;
+  onRegistrationSuccess: (email: string) => void;
 }
 
-export const Register: React.FC<RegisterProps> = ({ onBackToLogin }) => {
+export const Register: React.FC<RegisterProps> = ({ onBackToLogin, onRegistrationSuccess }) => {
   const [companyName, setCompanyName] = useState('');
   const [adminName, setAdminName] = useState('');
   const [email, setEmail] = useState('');
@@ -54,8 +55,10 @@ export const Register: React.FC<RegisterProps> = ({ onBackToLogin }) => {
     if (signUpError) {
       setError(signUpError.message || 'Errore durante la registrazione');
       setLoading(false);
+    } else {
+      // Redirect to success page
+      onRegistrationSuccess(email.trim());
     }
-    // If successful, the auth state change will redirect automatically
   };
 
   return (

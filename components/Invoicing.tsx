@@ -25,18 +25,20 @@ const formatDate = (date: Date | string): string => {
 const formatInvoiceId = (id: string, anno: number): string => {
   const numero = id.replace('Fattura_', '');
 
-  // Se il numero contiene già l'anno (es. "123/2026"), usa quello
+  // Se il numero contiene già l'anno (es. "NCO-IN-123/2026"), usa quello
   if (numero.includes('/')) {
-    return `N. ${numero}`;
+    // Rimuovi il prefisso aziendale (es. "NCO-IN-001/2025" -> "IN-001/2025")
+    const withoutCompanyPrefix = numero.replace(/^[A-Z0-9]+-/, '');
+    return withoutCompanyPrefix;
   }
 
   // Altrimenti, se è solo un numero o un UUID, aggiungi l'anno
   // Per UUID molto lunghi, mostra solo le prime 8 cifre
   if (numero.length > 10) {
-    return `N. ${numero.substring(0, 8)}.../${anno}`;
+    return `${numero.substring(0, 8)}.../${anno}`;
   }
 
-  return `N. ${numero}/${anno}`;
+  return `${numero}/${anno}`;
 };
 
 export const Invoicing: React.FC = () => {

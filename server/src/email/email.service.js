@@ -62,6 +62,7 @@ export function initEmailClient(config) {
   return {
     sendEmail,
     sendInvitationEmail,
+    sendRegistrationConfirmationEmail,
     isConfigured: () => !!(gmailClient || smtpTransporter)
   };
 }
@@ -406,8 +407,166 @@ export async function sendInvitationEmail(email, name, token, inviterName, compa
   return sendEmail(email, subject, html);
 }
 
+/**
+ * Generate confirmation email HTML for new user registration
+ */
+function getConfirmationEmailHtml(name, companyName, confirmUrl) {
+  const { appName, primaryColor } = emailConfig;
+
+  return `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Conferma la tua registrazione</title>
+      <style>
+        body {
+          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+          line-height: 1.6;
+          color: #374151;
+          max-width: 600px;
+          margin: 0 auto;
+          padding: 20px;
+          background: #F9FAFB;
+        }
+        .container {
+          background: #ffffff;
+          border-radius: 12px;
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+          padding: 48px 40px;
+          margin: 20px 0;
+        }
+        .header {
+          text-align: center;
+          margin-bottom: 40px;
+          padding-bottom: 30px;
+          border-bottom: 2px solid #E5E7EB;
+        }
+        .logo {
+          font-size: 36px;
+          font-weight: 700;
+          color: ${primaryColor};
+          margin-bottom: 8px;
+          letter-spacing: -0.5px;
+        }
+        .subtitle {
+          color: #6B7280;
+          font-size: 15px;
+          margin-top: 8px;
+        }
+        h1 {
+          color: #111827;
+          font-size: 28px;
+          font-weight: 600;
+          margin: 0 0 16px 0;
+          line-height: 1.3;
+        }
+        .content {
+          margin-bottom: 32px;
+        }
+        .intro-text {
+          font-size: 16px;
+          color: #4B5563;
+          margin: 24px 0;
+          line-height: 1.7;
+        }
+        .button {
+          display: inline-block;
+          background: ${primaryColor};
+          color: #ffffff !important;
+          padding: 16px 40px;
+          text-decoration: none;
+          border-radius: 8px;
+          font-weight: 600;
+          font-size: 16px;
+          margin: 24px 0;
+          box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
+          transition: all 0.2s;
+        }
+        .info-box {
+          background: #ECFDF5;
+          border-left: 4px solid #10B981;
+          border-radius: 6px;
+          padding: 20px 24px;
+          margin: 24px 0;
+        }
+        .link-text {
+          color: #6B7280;
+          font-size: 14px;
+          margin: 20px 0;
+          line-height: 1.6;
+        }
+        .link-url {
+          color: ${primaryColor};
+          word-break: break-all;
+          font-size: 14px;
+        }
+        .footer {
+          text-align: center;
+          margin-top: 48px;
+          padding-top: 24px;
+          border-top: 2px solid #E5E7EB;
+          color: #9CA3AF;
+          font-size: 13px;
+          line-height: 1.6;
+        }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <div class="header">
+          <div class="logo">${appName}</div>
+          <div class="subtitle">Sistema di gestione aziendale</div>
+        </div>
+
+        <h1>Conferma la tua email</h1>
+
+        <div class="content">
+          <p class="intro-text">
+            Ciao <strong>${name}</strong>, conferma il tuo indirizzo email per completare la registrazione.
+          </p>
+
+          <div style="text-align: center;">
+            <a href="${confirmUrl}" class="button">Conferma Email</a>
+          </div>
+
+          <p class="link-text" style="margin-top: 24px;">
+            Questo link è valido per 24 ore.
+          </p>
+        </div>
+
+        <div class="footer">
+          <p><strong>${appName}</strong> - Gestione aziendale semplificata</p>
+          <p>Se non hai richiesto questa registrazione, puoi ignorare questa email in sicurezza.</p>
+          <p style="margin-top: 16px; font-size: 12px; color: #D1D5DB;">
+            Questo messaggio è stato generato automaticamente, per favore non rispondere.
+          </p>
+        </div>
+      </div>
+    </body>
+    </html>
+  `;
+}
+
+/**
+ * Send email confirmation for new user registration
+ * @param {string} email - Recipient email
+ * @param {string} name - User name
+ * @param {string} companyName - Company name
+ * @param {string} token - Confirmation token
+ * @returns {Promise<boolean>}
+ */
+export async function sendRegistrationConfirmationEmail(email, name, companyName, token) {
+  const confirmUrl = `${emailConfig.frontendUrl}/confirm-email?token=${token}`;
+  const subject = `Conferma la tua registrazione su ${emailConfig.appName}`;
+  const html = getConfirmationEmailHtml(name, companyName, confirmUrl);
+  return sendEmail(email, subject, html);
+}
+
 export default {
   initEmailClient,
   sendEmail,
-  sendInvitationEmail
+  sendInvitationEmail,
+  sendRegistrationConfirmationEmail
 };

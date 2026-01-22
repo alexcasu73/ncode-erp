@@ -12,8 +12,10 @@ import { UserManagement } from './components/UserManagement';
 import { Profile } from './components/Profile';
 import { Login } from './components/Login';
 import { Register } from './components/Register';
+import { RegistrationSuccess } from './components/RegistrationSuccess';
 import { ResetPassword } from './components/ResetPassword';
 import { SetupPassword } from './components/SetupPassword';
+import { ConfirmEmail } from './components/ConfirmEmail';
 import { InvoiceNotifications } from './components/InvoiceNotifications';
 import { UnifiedImport } from './components/UnifiedImport';
 import { Bell, Menu, X, Sun, Moon, RefreshCw } from 'lucide-react';
@@ -25,14 +27,16 @@ const App: React.FC = () => {
   const [currentView, setCurrentView] = useState('dashboard');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
-  const [authView, setAuthView] = useState<'login' | 'register' | 'reset-password' | 'setup-password'>('login');
+  const [authView, setAuthView] = useState<'login' | 'register' | 'registration-success' | 'reset-password' | 'setup-password' | 'confirm-email'>('login');
   const [isResetPasswordFlow, setIsResetPasswordFlow] = useState(false);
   const [isSetupPasswordFlow, setIsSetupPasswordFlow] = useState(false);
+  const [isConfirmEmailFlow, setIsConfirmEmailFlow] = useState(false);
+  const [registeredEmail, setRegisteredEmail] = useState('');
   const { theme, toggleTheme } = useTheme();
   const { aiProcessing, stopAiProcessing, invoiceNotifications } = useData();
   const { user, loading, signOut } = useAuth();
 
-  // Check for password reset or setup flow on mount
+  // Check for password reset, setup, or email confirmation flow on mount
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const email = params.get('email');
@@ -40,8 +44,13 @@ const App: React.FC = () => {
     const accessToken = params.get('access_token');
     const token = params.get('token');
 
+    // Check if this is an email confirmation flow
+    if (token && window.location.pathname.includes('confirm-email')) {
+      setIsConfirmEmailFlow(true);
+      setAuthView('confirm-email');
+    }
     // Check if this is a setup password flow (magic link)
-    if (token && window.location.pathname.includes('setup')) {
+    else if (token && window.location.pathname.includes('setup')) {
       setIsSetupPasswordFlow(true);
       setAuthView('setup-password');
     }
@@ -65,7 +74,15 @@ const App: React.FC = () => {
   }
 
   // Show login/register if not authenticated
-  if (!user || isResetPasswordFlow || isSetupPasswordFlow) {
+  if (!user || isResetPasswordFlow || isSetupPasswordFlow || isConfirmEmailFlow) {
+    if (authView === 'confirm-email') {
+      return <ConfirmEmail onBackToLogin={() => {
+        setAuthView('login');
+        setIsConfirmEmailFlow(false);
+        // Clear URL and redirect to root
+        window.history.replaceState({}, '', '/');
+      }} />;
+    }
     if (authView === 'setup-password') {
       return <SetupPassword onComplete={() => {
         setAuthView('login');
@@ -82,8 +99,23 @@ const App: React.FC = () => {
         window.history.replaceState({}, '', window.location.pathname);
       }} />;
     }
+    if (authView === 'registration-success') {
+      return <RegistrationSuccess
+        email={registeredEmail}
+        onBackToLogin={() => {
+          setAuthView('login');
+          setRegisteredEmail('');
+        }}
+      />;
+    }
     if (authView === 'register') {
-      return <Register onBackToLogin={() => setAuthView('login')} />;
+      return <Register
+        onBackToLogin={() => setAuthView('login')}
+        onRegistrationSuccess={(email) => {
+          setRegisteredEmail(email);
+          setAuthView('registration-success');
+        }}
+      />;
     }
     return <Login onRegisterClick={() => setAuthView('register')} />;
   }
