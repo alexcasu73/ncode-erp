@@ -537,7 +537,7 @@ app.post('/api/auth/register', async (req, res) => {
     const { email, password, adminName, companyName } = req.body;
 
     if (!email || !password || !adminName || !companyName) {
-      return res.status(400).json({ error: 'Missing required fields' });
+      return res.status(400).json({ error: 'Tutti i campi sono obbligatori' });
     }
 
     console.log(`📝 [Auth] Registration request for: ${email}`);
@@ -555,7 +555,7 @@ app.post('/api/auth/register', async (req, res) => {
 
     if (!tempEmailService.isConfigured()) {
       console.error('❌ Email service not configured');
-      return res.status(500).json({ error: 'Email service not configured' });
+      return res.status(500).json({ error: 'Servizio email non configurato. Contatta l\'amministratore.' });
     }
 
     // 1. Create company
@@ -586,7 +586,7 @@ app.post('/api/auth/register', async (req, res) => {
 
     if (companyError || !newCompanyId) {
       console.error('❌ Error creating company:', companyError);
-      return res.status(500).json({ error: 'Failed to create company' });
+      return res.status(500).json({ error: 'Errore nella creazione dell\'azienda. Riprova.' });
     }
 
     console.log(`✅ Company created: ${newCompanyId}`);
@@ -604,9 +604,38 @@ app.post('/api/auth/register', async (req, res) => {
 
     if (authError || !authData.user) {
       console.error('❌ Error creating auth user:', authError);
+      console.error('❌ Error details:', JSON.stringify(authError, null, 2));
+
       // Cleanup company
       await supabaseAdmin.from('companies').delete().eq('id', newCompanyId);
-      return res.status(500).json({ error: 'Failed to create user' });
+
+      // Provide specific error messages in Italian
+      let errorMessage = 'Errore nella creazione dell\'account';
+
+      if (authError) {
+        const errorMsg = authError.message?.toLowerCase() || '';
+        const errorCode = authError.code || '';
+
+        // Check for user already exists
+        if (errorMsg.includes('already') ||
+            errorMsg.includes('duplicate') ||
+            errorCode === '23505' ||
+            errorMsg.includes('user_email_key') ||
+            errorMsg.includes('unique')) {
+          errorMessage = 'Questa email è già registrata. Usa un\'altra email o prova ad accedere.';
+        } else if (errorMsg.includes('password') && !errorMsg.includes('email')) {
+          errorMessage = 'La password deve essere di almeno 8 caratteri.';
+        } else if (errorMsg.includes('invalid') && errorMsg.includes('email')) {
+          errorMessage = 'Formato email non valido.';
+        } else {
+          // For any other error, show the original message
+          errorMessage = authError.message || 'Errore nella creazione dell\'account';
+        }
+      }
+
+      return res.status(400).json({
+        error: errorMessage
+      });
     }
 
     const userId = authData.user.id;
@@ -623,7 +652,7 @@ app.post('/api/auth/register', async (req, res) => {
 
     if (registrationError) {
       console.error('❌ Error completing registration:', registrationError);
-      return res.status(500).json({ error: 'Failed to complete registration' });
+      return res.status(500).json({ error: 'Errore nel completamento della registrazione. Riprova.' });
     }
 
     console.log(`✅ User registration completed in DB`);
@@ -636,7 +665,7 @@ app.post('/api/auth/register', async (req, res) => {
 
     if (tokenError || !tokenData) {
       console.error('❌ Error generating confirmation token:', tokenError);
-      return res.status(500).json({ error: 'Failed to generate confirmation token' });
+      return res.status(500).json({ error: 'Errore nella generazione del token di conferma. Riprova.' });
     }
 
     // Extract token from the generated link
@@ -656,7 +685,7 @@ app.post('/api/auth/register', async (req, res) => {
       // Don't fail the registration if email fails
       return res.status(201).json({
         success: true,
-        message: 'Account created but email sending failed. Please contact support.',
+        message: 'Account creato ma invio email fallito. Contatta il supporto per ricevere il link di conferma.',
         emailSent: false
       });
     }
@@ -670,8 +699,8 @@ app.post('/api/auth/register', async (req, res) => {
   } catch (err) {
     console.error('❌ [Auth] Unexpected error during registration:', err);
     res.status(500).json({
-      error: 'Registration failed',
-      message: err.message
+      error: 'Registrazione fallita',
+      message: err.message || 'Errore imprevisto durante la registrazione'
     });
   }
 });

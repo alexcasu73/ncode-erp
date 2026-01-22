@@ -44,53 +44,8 @@ export const RegistrationSuccess: React.FC<RegistrationSuccessProps> = ({ email,
             </div>
           </div>
 
-          {/* Instructions */}
-          <div className="space-y-6 mb-8">
-            <div className="bg-gray-50 dark:bg-dark-bg rounded-lg p-6">
-              <h3 className="font-semibold text-dark dark:text-white mb-4 flex items-center gap-2">
-                <span className="flex items-center justify-center w-6 h-6 rounded-full bg-primary text-white text-sm">1</span>
-                Controlla la tua casella email
-              </h3>
-              <p className="text-gray-600 dark:text-gray-400 text-sm ml-8">
-                Cerca un'email da <strong>Ncode ERP</strong> con oggetto "Conferma la tua registrazione"
-              </p>
-            </div>
-
-            <div className="bg-gray-50 dark:bg-dark-bg rounded-lg p-6">
-              <h3 className="font-semibold text-dark dark:text-white mb-4 flex items-center gap-2">
-                <span className="flex items-center justify-center w-6 h-6 rounded-full bg-primary text-white text-sm">2</span>
-                Clicca sul link di conferma
-              </h3>
-              <p className="text-gray-600 dark:text-gray-400 text-sm ml-8">
-                Apri l'email e clicca sul pulsante <strong>"Conferma Email"</strong> per attivare il tuo account
-              </p>
-            </div>
-
-            <div className="bg-gray-50 dark:bg-dark-bg rounded-lg p-6">
-              <h3 className="font-semibold text-dark dark:text-white mb-4 flex items-center gap-2">
-                <span className="flex items-center justify-center w-6 h-6 rounded-full bg-primary text-white text-sm">3</span>
-                Accedi alla piattaforma
-              </h3>
-              <p className="text-gray-600 dark:text-gray-400 text-sm ml-8">
-                Dopo aver confermato l'email, potrai accedere con le tue credenziali
-              </p>
-            </div>
-          </div>
-
-          {/* Tips */}
-          <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-5 mb-8">
-            <h4 className="font-semibold text-yellow-900 dark:text-yellow-100 mb-2 flex items-center gap-2">
-              💡 Suggerimenti
-            </h4>
-            <ul className="text-sm text-yellow-800 dark:text-yellow-200 space-y-2 ml-6 list-disc">
-              <li>Controlla anche la cartella <strong>Spam/Posta indesiderata</strong></li>
-              <li>L'email potrebbe impiegare alcuni minuti ad arrivare</li>
-              <li>Il link di conferma è valido per <strong>24 ore</strong></li>
-            </ul>
-          </div>
-
           {/* Actions */}
-          <div className="space-y-4">
+          <div>
             <button
               onClick={onBackToLogin}
               className="w-full bg-primary hover:bg-primary/90 text-white font-medium py-3 px-6 rounded-lg transition-all duration-200 flex items-center justify-center gap-2"
@@ -98,10 +53,6 @@ export const RegistrationSuccess: React.FC<RegistrationSuccessProps> = ({ email,
               <ArrowLeft size={20} />
               <span>Torna al Login</span>
             </button>
-
-            <p className="text-center text-sm text-gray-500 dark:text-gray-400">
-              Non hai ricevuto l'email? Contatta il supporto o riprova più tardi
-            </p>
           </div>
         </div>
 
