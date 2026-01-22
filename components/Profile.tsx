@@ -218,10 +218,18 @@ export const Profile: React.FC = () => {
     }
 
     setLoading(true);
+    setError('');
     try {
       await deleteUser(user!.id);
-      // User will be logged out automatically
-      window.location.reload();
+
+      // Close modal and show success message
+      setShowDeleteAccountModal(false);
+      setSuccess('✅ Account eliminato con successo. Reindirizzamento in corso...');
+
+      // Wait 2 seconds to show the message, then reload (user will be signed out)
+      setTimeout(() => {
+        window.location.reload();
+      }, 2000);
     } catch (err: any) {
       setError(err.message || 'Errore nell\'eliminazione dell\'account');
       setLoading(false);
@@ -240,6 +248,7 @@ export const Profile: React.FC = () => {
     }
 
     setLoading(true);
+    setError('');
     try {
       // Use database function to delete company + all auth users
       const { data, error: rpcError } = await supabase.rpc('delete_company_completely', {
@@ -254,8 +263,14 @@ export const Profile: React.FC = () => {
         throw new Error(data.error || 'Errore nell\'eliminazione dell\'azienda');
       }
 
-      // User will be logged out automatically (session deleted)
-      window.location.reload();
+      // Close modal and show success message
+      setShowDeleteCompanyModal(false);
+      setSuccess('✅ Azienda eliminata con successo. Tutti gli utenti verranno disconnessi...');
+
+      // Wait 2 seconds to show the message, then reload (all users will be signed out)
+      setTimeout(() => {
+        window.location.reload();
+      }, 2000);
     } catch (err: any) {
       setError(err.message || 'Errore nell\'eliminazione dell\'azienda');
       setLoading(false);

@@ -1686,15 +1686,14 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       console.log('✅ User deleted successfully via server API');
 
-      // If deleting current user, sign out
+      // If deleting current user, sign out (but don't redirect - let calling component handle that)
       if (userId === user?.id) {
-        console.log('🚪 Current user deleted, signing out...');
+        console.log('🚪 Current user deleted, preparing sign out...');
         // Clear local data
         localStorage.clear();
         sessionStorage.clear();
-        // Sign out and redirect
+        // Sign out (calling component will handle redirect)
         await supabase.auth.signOut();
-        window.location.href = '/';
       }
     } catch (err) {
       console.error('Unexpected error deleting user:', err);

@@ -38,7 +38,15 @@
       "Bash(ls:*)",
       "Bash(jq:*)",
       "Bash(node --watch src/index.js:*)",
-      "Bash(PORT=3000 npm run dev:*)"
+      "Bash(PORT=3000 npm run dev:*)",
+      "Bash(git pull:*)",
+      "Bash(git merge:*)",
+      "Bash(git checkout:*)",
+      "Bash(git stash:*)",
+      "Bash(kill:*)",
+      "Bash(npm run dev:all:*)",
+      "Bash(supabase --version:*)",
+      "Bash(brew upgrade:*)"
     ]
   }
 }
