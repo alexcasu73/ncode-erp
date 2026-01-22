@@ -15,6 +15,7 @@ interface AuthContextType {
   companyId: string | null;
   loading: boolean;
   loginError: string | null;
+  showAccountDisabledModal: boolean;
   clearLoginError: () => void;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
   signUp: (data: SignUpData) => Promise<{ error: Error | null }>;
@@ -37,6 +38,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [companyId, setCompanyId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [loginError, setLoginError] = useState<string | null>(null);
+  const [showAccountDisabledModal, setShowAccountDisabledModal] = useState(false);
 
   useEffect(() => {
     // Get initial session
@@ -85,16 +87,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (error || !data) {
           console.log('🚫 User is disabled or deleted - forcing sign out');
 
-          // Show alert to user before signing out
-          alert('Il tuo account è stato disabilitato o eliminato. Verrai disconnesso.');
-
-          // Sign out and clear everything
-          await supabase.auth.signOut();
-          localStorage.clear();
-          sessionStorage.clear();
-
-          // Force page reload to login
-          window.location.href = '/';
+          // Show modal to user
+          setShowAccountDisabledModal(true);
         } else {
           console.log('✅ User is still active');
         }
@@ -260,6 +254,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     companyId,
     loading,
     loginError,
+    showAccountDisabledModal,
     clearLoginError,
     signIn,
     signUp,

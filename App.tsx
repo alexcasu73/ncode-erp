@@ -18,10 +18,11 @@ import { SetupPassword } from './components/SetupPassword';
 import { ConfirmEmail } from './components/ConfirmEmail';
 import { InvoiceNotifications } from './components/InvoiceNotifications';
 import { UnifiedImport } from './components/UnifiedImport';
-import { Bell, Menu, X, Sun, Moon, RefreshCw } from 'lucide-react';
+import { Bell, Menu, X, Sun, Moon, RefreshCw, AlertTriangle } from 'lucide-react';
 import { useTheme } from './context/ThemeContext';
 import { useData } from './context/DataContext';
 import { useAuth } from './context/AuthContext';
+import { supabase } from './lib/supabase';
 
 const App: React.FC = () => {
   const [currentView, setCurrentView] = useState('dashboard');
@@ -34,7 +35,7 @@ const App: React.FC = () => {
   const [registeredEmail, setRegisteredEmail] = useState('');
   const { theme, toggleTheme } = useTheme();
   const { aiProcessing, stopAiProcessing, invoiceNotifications } = useData();
-  const { user, loading, signOut } = useAuth();
+  const { user, loading, signOut, showAccountDisabledModal } = useAuth();
 
   // Check for password reset, setup, or email confirmation flow on mount
   useEffect(() => {
@@ -248,6 +249,45 @@ const App: React.FC = () => {
         isOpen={notificationsOpen}
         onClose={() => setNotificationsOpen(false)}
       />
+
+      {/* Account Disabled Modal */}
+      {showAccountDisabledModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-dark-card rounded-xl shadow-2xl max-w-md w-full p-6">
+            <div className="flex items-center justify-center mb-6">
+              <div className="inline-flex items-center justify-center w-16 h-16 bg-red-100 dark:bg-red-900/30 rounded-full mb-4">
+                <AlertTriangle className="w-10 h-10 text-red-600 dark:text-red-400" />
+              </div>
+            </div>
+
+            <h2 className="text-2xl font-bold text-red-600 dark:text-red-400 text-center mb-4">
+              Account Disabilitato
+            </h2>
+
+            <div className="space-y-4">
+              <p className="text-gray-700 dark:text-gray-300 text-center">
+                Il tuo account è stato disabilitato o eliminato. Verrai disconnesso.
+              </p>
+
+              <div className="flex justify-center pt-4">
+                <button
+                  onClick={async () => {
+                    // Sign out and clear everything
+                    await supabase.auth.signOut();
+                    localStorage.clear();
+                    sessionStorage.clear();
+                    // Force page reload to login
+                    window.location.href = '/';
+                  }}
+                  className="px-6 py-2 bg-primary text-white rounded-lg hover:opacity-90 transition-colors"
+                >
+                  Ok
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
