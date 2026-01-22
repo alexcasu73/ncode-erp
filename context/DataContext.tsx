@@ -1662,31 +1662,6 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
       }
 
-      // Check if this is the last admin/user in the company
-      const { data: companyUsers, error: checkError } = await supabase
-        .from('company_users')
-        .select('user_id, role')
-        .eq('company_id', companyId)
-        .eq('is_active', true);
-
-      if (checkError) {
-        console.error('Error checking company users:', checkError);
-        throw new Error('Errore nella verifica degli utenti');
-      }
-
-      // Check if there's only one user left
-      if (companyUsers && companyUsers.length <= 1) {
-        throw new Error('Non puoi eliminare l\'ultimo utente dell\'azienda');
-      }
-
-      // Check if this is the last admin
-      const adminUsers = companyUsers?.filter(cu => cu.role === 'admin') || [];
-      const isUserAdmin = adminUsers.some(cu => cu.user_id === userId);
-
-      if (isUserAdmin && adminUsers.length <= 1) {
-        throw new Error('Non puoi eliminare l\'ultimo amministratore dell\'azienda');
-      }
-
       // Call backend API to delete user server-side
       // This avoids RLS policy issues
       const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';

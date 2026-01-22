@@ -38,8 +38,10 @@ export const UserManagement: React.FC = () => {
   const [formLoading, setFormLoading] = useState(false);
 
   useEffect(() => {
-    loadUsers();
-  }, []);
+    if (companyId) {
+      loadUsers();
+    }
+  }, [companyId]);
 
   const loadUsers = async () => {
     if (!companyId) return;
