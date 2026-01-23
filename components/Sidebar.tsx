@@ -36,12 +36,19 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, onChangeView }) =
       setCompanyLogo(event.detail.url);
     };
 
+    // Listen for name updates
+    const handleNameUpdate = (event: any) => {
+      setUserName(event.detail.name);
+    };
+
     window.addEventListener('avatar-updated', handleAvatarUpdate);
     window.addEventListener('company-logo-updated', handleLogoUpdate);
+    window.addEventListener('name-updated', handleNameUpdate);
 
     return () => {
       window.removeEventListener('avatar-updated', handleAvatarUpdate);
       window.removeEventListener('company-logo-updated', handleLogoUpdate);
+      window.removeEventListener('name-updated', handleNameUpdate);
     };
   }, [companyId, user]);
 

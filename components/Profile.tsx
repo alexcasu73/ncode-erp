@@ -156,6 +156,9 @@ export const Profile: React.FC = () => {
 
       setSuccess('Profilo aggiornato con successo!');
       setTimeout(() => setSuccess(''), 3000);
+
+      // Trigger event to update sidebar
+      window.dispatchEvent(new CustomEvent('name-updated', { detail: { name: name.trim() } }));
     } catch (err) {
       setError('Errore imprevisto');
     } finally {
