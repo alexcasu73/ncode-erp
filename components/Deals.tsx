@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { useData } from '../context/DataContext';
 import { useUserRole } from '../hooks/useUserRole';
 import { Deal, DealStage } from '../types';
-import { Plus, Calendar, DollarSign, Edit2, Trash2, X, Check, GripVertical, TrendingUp } from 'lucide-react';
+import { Plus, Calendar, Euro, Edit2, Trash2, X, Check, GripVertical, TrendingUp } from 'lucide-react';
 import { formatCurrency } from '../lib/currency';
 
 export const Deals: React.FC = () => {
@@ -330,7 +330,7 @@ export const Deals: React.FC = () => {
                       {/* Deal Info */}
                       <div className="flex items-center justify-between mt-3 pt-2 border-t border-gray-200 dark:border-dark-border">
                         <div className="flex items-center gap-1 text-gray-500 dark:text-gray-400 text-sm font-bold">
-                          <DollarSign size={14} className="text-primary" />
+                          <Euro size={14} className="text-primary" />
                           {formatCurrency(deal.value || 0)}
                         </div>
                         <div className="flex items-center gap-1 text-gray-500 dark:text-gray-400 text-xs">
