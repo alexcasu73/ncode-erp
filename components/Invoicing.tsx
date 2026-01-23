@@ -838,7 +838,40 @@ export const Invoicing: React.FC = () => {
 
       {/* Table */}
       <div className="bg-white dark:bg-dark-card rounded-lg overflow-hidden shadow-sm border border-gray-200 dark:border-dark-border">
-        <div className="overflow-x-auto [&::-webkit-scrollbar]:h-3 [&::-webkit-scrollbar-track]:bg-gray-100 [&::-webkit-scrollbar-track]:dark:bg-gray-800 [&::-webkit-scrollbar-thumb]:bg-gray-300 [&::-webkit-scrollbar-thumb]:dark:bg-gray-600 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:hover:bg-gray-400 [&::-webkit-scrollbar-thumb]:dark:hover:bg-gray-500">
+        <div
+          className="overflow-x-auto"
+          style={{
+            scrollbarWidth: 'thin',
+            scrollbarColor: '#9ca3af #f3f4f6'
+          }}
+        >
+          <style>{`
+            .overflow-x-auto::-webkit-scrollbar {
+              height: 12px;
+            }
+            .overflow-x-auto::-webkit-scrollbar-track {
+              background: #f3f4f6;
+              border-radius: 10px;
+            }
+            .overflow-x-auto::-webkit-scrollbar-thumb {
+              background: #9ca3af;
+              border-radius: 10px;
+              border: 2px solid #f3f4f6;
+            }
+            .overflow-x-auto::-webkit-scrollbar-thumb:hover {
+              background: #6b7280;
+            }
+            .dark .overflow-x-auto::-webkit-scrollbar-track {
+              background: #374151;
+            }
+            .dark .overflow-x-auto::-webkit-scrollbar-thumb {
+              background: #6b7280;
+              border-color: #374151;
+            }
+            .dark .overflow-x-auto::-webkit-scrollbar-thumb:hover {
+              background: #9ca3af;
+            }
+          `}</style>
           <table className="w-full">
             <thead className="bg-gray-50 dark:bg-dark-bg">
               <tr className="text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
