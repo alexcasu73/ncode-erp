@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { useData } from '../context/DataContext';
 import { useUserRole } from '../hooks/useUserRole';
 import { Invoice, Deal, DealStage } from '../types';
@@ -80,6 +80,48 @@ export const Invoicing: React.FC = () => {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [importing, setImporting] = useState(false);
   const [importErrors, setImportErrors] = useState<string[]>([]);
+
+  // Refs for horizontal scroll sync
+  const tableScrollRef = useRef<HTMLDivElement>(null);
+  const topScrollRef = useRef<HTMLDivElement>(null);
+  const topScrollContentRef = useRef<HTMLDivElement>(null);
+
+  // Sync scroll between top scrollbar and table
+  useEffect(() => {
+    const tableScroll = tableScrollRef.current;
+    const topScroll = topScrollRef.current;
+    const topScrollContent = topScrollContentRef.current;
+
+    if (!tableScroll || !topScroll || !topScrollContent) return;
+
+    // Set the width of the fake scroll content to match table scroll width
+    const syncWidth = () => {
+      topScrollContent.style.width = `${tableScroll.scrollWidth}px`;
+    };
+
+    // Sync scroll from table to top
+    const onTableScroll = () => {
+      topScroll.scrollLeft = tableScroll.scrollLeft;
+    };
+
+    // Sync scroll from top to table
+    const onTopScroll = () => {
+      tableScroll.scrollLeft = topScroll.scrollLeft;
+    };
+
+    syncWidth();
+    tableScroll.addEventListener('scroll', onTableScroll);
+    topScroll.addEventListener('scroll', onTopScroll);
+
+    // Re-sync width on window resize
+    window.addEventListener('resize', syncWidth);
+
+    return () => {
+      tableScroll.removeEventListener('scroll', onTableScroll);
+      topScroll.removeEventListener('scroll', onTopScroll);
+      window.removeEventListener('resize', syncWidth);
+    };
+  }, [invoices.length]); // Re-sync when table content changes
 
   // Persist filters to localStorage
   React.useEffect(() => {
@@ -837,42 +879,42 @@ export const Invoicing: React.FC = () => {
       )}
 
       {/* Table */}
-      <div className="bg-white dark:bg-dark-card rounded-lg overflow-hidden shadow-sm border border-gray-200 dark:border-dark-border">
+      <div className="bg-white dark:bg-dark-card rounded-lg overflow-hidden shadow-sm border border-gray-200 dark:border-dark-border relative">
+        <style>{`
+          .horizontal-scrollbar::-webkit-scrollbar {
+            -webkit-appearance: none;
+            height: 12px;
+          }
+          .horizontal-scrollbar::-webkit-scrollbar-track {
+            background: #f3f4f6;
+            border-radius: 6px;
+          }
+          .horizontal-scrollbar::-webkit-scrollbar-thumb {
+            background: #9ca3af;
+            border-radius: 6px;
+            border: 2px solid #f3f4f6;
+          }
+          .horizontal-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #6b7280;
+          }
+          .dark .horizontal-scrollbar::-webkit-scrollbar-track {
+            background: #1f2937;
+          }
+          .dark .horizontal-scrollbar::-webkit-scrollbar-thumb {
+            background: #6b7280;
+            border-color: #1f2937;
+          }
+          .dark .horizontal-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #9ca3af;
+          }
+        `}</style>
+
+        {/* Table with scroll */}
         <div
-          className="overflow-x-auto"
-          style={{
-            scrollbarWidth: 'thin',
-            scrollbarColor: '#9ca3af #f3f4f6'
-          }}
+          ref={tableScrollRef}
+          className="horizontal-scrollbar overflow-x-scroll"
         >
-          <style>{`
-            .overflow-x-auto::-webkit-scrollbar {
-              height: 12px;
-            }
-            .overflow-x-auto::-webkit-scrollbar-track {
-              background: #f3f4f6;
-              border-radius: 10px;
-            }
-            .overflow-x-auto::-webkit-scrollbar-thumb {
-              background: #9ca3af;
-              border-radius: 10px;
-              border: 2px solid #f3f4f6;
-            }
-            .overflow-x-auto::-webkit-scrollbar-thumb:hover {
-              background: #6b7280;
-            }
-            .dark .overflow-x-auto::-webkit-scrollbar-track {
-              background: #374151;
-            }
-            .dark .overflow-x-auto::-webkit-scrollbar-thumb {
-              background: #6b7280;
-              border-color: #374151;
-            }
-            .dark .overflow-x-auto::-webkit-scrollbar-thumb:hover {
-              background: #9ca3af;
-            }
-          `}</style>
-          <table className="w-full">
+          <table className="w-full" style={{ minWidth: '1200px' }}>
             <thead className="bg-gray-50 dark:bg-dark-bg">
               <tr className="text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                 {!roleLoading && canDelete && (
@@ -1084,6 +1126,15 @@ export const Invoicing: React.FC = () => {
               Nessuna voce trovata
             </div>
           )}
+        </div>
+
+        {/* Bottom Scrollbar - Always visible at bottom */}
+        <div
+          ref={topScrollRef}
+          className="horizontal-scrollbar overflow-x-scroll sticky bottom-0 z-10 bg-white dark:bg-dark-card border-t border-gray-200 dark:border-dark-border"
+          style={{ height: '20px' }}
+        >
+          <div ref={topScrollContentRef} style={{ height: '1px' }}></div>
         </div>
       </div>
 
