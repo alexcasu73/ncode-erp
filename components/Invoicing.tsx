@@ -458,6 +458,7 @@ export const Invoicing: React.FC = () => {
       const newCashflow: Omit<CashflowRecord, 'id'> = {
         invoiceId: invoice.id,
         statoFatturazione: 'Stimato',
+        dataPagamento: invoice.data as string, // Usa la data della fattura
       };
 
       console.log('🔵 [Bulk Cashflow] Creating cashflow for invoice:', invoice.id, newCashflow);
