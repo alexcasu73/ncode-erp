@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { useData } from '../context/DataContext';
+import { useAuth } from '../context/AuthContext';
 import { useUserRole } from '../hooks/useUserRole';
 import { Invoice, Deal, DealStage } from '../types';
 import { Plus, Download, Upload, Filter, ArrowUpCircle, ArrowDownCircle, Search, Calendar, Eye, Edit2, Trash2, X, Check, ChevronUp, ChevronDown, ChevronsUpDown, RotateCcw } from 'lucide-react';
@@ -42,7 +43,8 @@ const formatInvoiceId = (id: string, anno: number): string => {
 };
 
 export const Invoicing: React.FC = () => {
-  const { invoices, deals, cashflowRecords, loading, addInvoice, updateInvoice, deleteInvoice } = useData();
+  const { invoices, deals, cashflowRecords, loading, addInvoice, updateInvoice, deleteInvoice, addCashflowRecord } = useData();
+  const { companyId } = useAuth();
   const { canEdit, canDelete, canImport, isViewer, loading: roleLoading } = useUserRole();
   const [searchTerm, setSearchTerm] = useState('');
   const [filterTipo, setFilterTipo] = useState<'tutti' | 'Entrata' | 'Uscita'>(() => {
@@ -205,6 +207,13 @@ export const Invoicing: React.FC = () => {
     type: 'single' | 'bulk';
     id?: string;
     count?: number;
+  } | null>(null);
+  const [bulkCashflowDialog, setBulkCashflowDialog] = useState<{
+    type: 'confirm' | 'error' | 'success';
+    invoicesStimato?: Invoice[];
+    invoicesWithCashflow?: Invoice[];
+    invoicesEffettivo?: Invoice[];
+    created?: number;
   } | null>(null);
 
   // Persist sorting to localStorage
@@ -398,6 +407,69 @@ export const Invoicing: React.FC = () => {
   const handleBulkDelete = () => {
     if (selectedIds.size === 0) return;
     setDeleteConfirmDialog({ type: 'bulk', count: selectedIds.size });
+  };
+
+  const handleBulkCreateCashflow = () => {
+    if (selectedIds.size === 0) return;
+
+    const selectedInvoices = sortedInvoices.filter(inv => selectedIds.has(inv.id));
+
+    // Separa per stato e presenza di cashflow
+    const invoicesWithCashflow = selectedInvoices.filter(inv => inv.fattura_id);
+    const invoicesEffettivo = selectedInvoices.filter(inv => !inv.fattura_id && inv.statoFatturazione === 'Effettivo');
+    const invoicesStimato = selectedInvoices.filter(inv => !inv.fattura_id && inv.statoFatturazione === 'Stimato');
+
+    if (invoicesStimato.length === 0) {
+      // Show error dialog
+      setBulkCashflowDialog({
+        type: 'error',
+        invoicesWithCashflow,
+        invoicesEffettivo,
+      });
+      return;
+    }
+
+    // Show confirmation dialog
+    setBulkCashflowDialog({
+      type: 'confirm',
+      invoicesStimato,
+      invoicesWithCashflow,
+      invoicesEffettivo,
+    });
+  };
+
+  const confirmBulkCreateCashflow = async () => {
+    if (!bulkCashflowDialog || bulkCashflowDialog.type !== 'confirm') return;
+
+    const { invoicesStimato } = bulkCashflowDialog;
+    if (!invoicesStimato) return;
+
+    // Crea flussi di cassa
+    let created = 0;
+    for (const invoice of invoicesStimato) {
+      const newCashflow: Omit<CashflowRecord, 'id'> = {
+        company_id: companyId!,
+        tipo: invoice.tipo,
+        descrizione: invoice.descrizione,
+        data: invoice.data,
+        flusso: invoice.flusso,
+        iva: invoice.iva,
+        stato: 'Stimato',
+        fattura_id: invoice.id,
+        categoria: invoice.categoria || null,
+      };
+
+      const result = await addCashflowRecord(newCashflow);
+      if (result) created++;
+    }
+
+    // Show success dialog
+    setBulkCashflowDialog({
+      type: 'success',
+      created,
+      invoicesStimato,
+    });
+    setSelectedIds(new Set());
   };
 
   // Export invoices to Excel
@@ -844,7 +916,7 @@ export const Invoicing: React.FC = () => {
       </div>
 
       {/* Bulk Actions Bar - Hidden for viewers */}
-      {selectedIds.size > 0 && !roleLoading && canDelete && (
+      {selectedIds.size > 0 && !roleLoading && !isViewer && (
         <div className="bg-gradient-to-r from-primary/10 to-primary/5 dark:from-primary/20 dark:to-primary/10 border-2 border-primary/30 dark:border-primary/40 rounded-xl p-5 flex items-center justify-between shadow-lg animate-fade-in backdrop-blur-sm">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-primary/20 dark:bg-primary/30 rounded-full flex items-center justify-center">
@@ -855,7 +927,7 @@ export const Invoicing: React.FC = () => {
                 {selectedIds.size} {selectedIds.size === 1 ? 'fattura selezionata' : 'fatture selezionate'}
               </p>
               <p className="text-xs text-gray-600 dark:text-gray-400">
-                Pronto per l'eliminazione
+                Scegli un'azione da eseguire
               </p>
             </div>
           </div>
@@ -867,13 +939,24 @@ export const Invoicing: React.FC = () => {
               <X size={16} />
               Annulla
             </button>
-            <button
-              onClick={handleBulkDelete}
-              className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-all shadow-md hover:shadow-lg flex items-center gap-2"
-            >
-              <Trash2 size={16} />
-              Elimina {selectedIds.size > 1 ? 'tutti' : ''}
-            </button>
+            {canEdit && (
+              <button
+                onClick={handleBulkCreateCashflow}
+                className="px-4 py-2 bg-secondary hover:bg-secondary/90 text-white rounded-lg font-medium transition-all shadow-md hover:shadow-lg flex items-center gap-2"
+              >
+                <ArrowUpCircle size={16} />
+                Crea Flussi di Cassa
+              </button>
+            )}
+            {canDelete && (
+              <button
+                onClick={handleBulkDelete}
+                className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-all shadow-md hover:shadow-lg flex items-center gap-2"
+              >
+                <Trash2 size={16} />
+                Elimina {selectedIds.size > 1 ? 'tutti' : ''}
+              </button>
+            )}
           </div>
         </div>
       )}
@@ -1182,6 +1265,153 @@ export const Invoicing: React.FC = () => {
                 SI
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Bulk Cashflow Creation Dialog */}
+      {bulkCashflowDialog && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white dark:bg-dark-card rounded-xl shadow-2xl p-6 max-w-lg w-full mx-4">
+            {/* Error Dialog */}
+            {bulkCashflowDialog.type === 'error' && (
+              <>
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-12 h-12 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center">
+                    <X size={24} className="text-red-600 dark:text-red-400" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-dark dark:text-white">
+                    Nessuna fattura può essere processata
+                  </h3>
+                </div>
+                <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-4 mb-6">
+                  <p className="text-sm text-gray-600 dark:text-gray-300 mb-3">
+                    Puoi creare flussi di cassa solo da fatture in stato <strong>Stimato</strong> senza flusso già associato.
+                  </p>
+                  <ul className="text-sm text-gray-600 dark:text-gray-300 space-y-2">
+                    {bulkCashflowDialog.invoicesWithCashflow && bulkCashflowDialog.invoicesWithCashflow.length > 0 && (
+                      <li className="flex items-start gap-2">
+                        <span className="text-orange-500">•</span>
+                        <span>
+                          {bulkCashflowDialog.invoicesWithCashflow.length} {bulkCashflowDialog.invoicesWithCashflow.length === 1 ? 'ha' : 'hanno'} già un flusso di cassa
+                        </span>
+                      </li>
+                    )}
+                    {bulkCashflowDialog.invoicesEffettivo && bulkCashflowDialog.invoicesEffettivo.length > 0 && (
+                      <li className="flex items-start gap-2">
+                        <span className="text-orange-500">•</span>
+                        <span>
+                          {bulkCashflowDialog.invoicesEffettivo.length} {bulkCashflowDialog.invoicesEffettivo.length === 1 ? 'è' : 'sono'} in stato Effettivo
+                        </span>
+                      </li>
+                    )}
+                  </ul>
+                </div>
+                <div className="flex justify-end">
+                  <button
+                    onClick={() => setBulkCashflowDialog(null)}
+                    className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-dark dark:text-white rounded-lg hover:opacity-90 transition-all font-medium"
+                  >
+                    Chiudi
+                  </button>
+                </div>
+              </>
+            )}
+
+            {/* Confirmation Dialog */}
+            {bulkCashflowDialog.type === 'confirm' && (
+              <>
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-12 h-12 bg-secondary/20 dark:bg-secondary/30 rounded-full flex items-center justify-center">
+                    <ArrowUpCircle size={24} className="text-secondary" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-dark dark:text-white">
+                    Crea Flussi di Cassa
+                  </h3>
+                </div>
+                <div className="mb-6">
+                  <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4 mb-3">
+                    <p className="text-sm font-medium text-green-800 dark:text-green-300 flex items-center gap-2">
+                      <Check size={16} className="flex-shrink-0" />
+                      <span>
+                        {bulkCashflowDialog.invoicesStimato?.length === 1 ? 'Verrà creato' : 'Verranno creati'} <strong>{bulkCashflowDialog.invoicesStimato?.length}</strong> {bulkCashflowDialog.invoicesStimato?.length === 1 ? 'flusso di cassa' : 'flussi di cassa'} {bulkCashflowDialog.invoicesStimato?.length === 1 ? 'dalla fattura' : 'dalle fatture'} in stato <strong>Stimato</strong>
+                      </span>
+                    </p>
+                  </div>
+                  {((bulkCashflowDialog.invoicesWithCashflow && bulkCashflowDialog.invoicesWithCashflow.length > 0) ||
+                    (bulkCashflowDialog.invoicesEffettivo && bulkCashflowDialog.invoicesEffettivo.length > 0)) && (
+                    <div className="bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-lg p-4">
+                      <p className="text-sm font-medium text-orange-800 dark:text-orange-300 mb-2 flex items-center gap-2">
+                        <span>⚠️</span>
+                        <span>
+                          {((bulkCashflowDialog.invoicesWithCashflow?.length || 0) + (bulkCashflowDialog.invoicesEffettivo?.length || 0))}{' '}
+                          {((bulkCashflowDialog.invoicesWithCashflow?.length || 0) + (bulkCashflowDialog.invoicesEffettivo?.length || 0)) === 1 ? 'fattura verrà ignorata' : 'fatture verranno ignorate'}:
+                        </span>
+                      </p>
+                      <ul className="text-sm text-orange-700 dark:text-orange-400 space-y-1">
+                        {bulkCashflowDialog.invoicesWithCashflow && bulkCashflowDialog.invoicesWithCashflow.length > 0 && (
+                          <li className="flex items-start gap-2">
+                            <span>•</span>
+                            <span>
+                              {bulkCashflowDialog.invoicesWithCashflow.length} {bulkCashflowDialog.invoicesWithCashflow.length === 1 ? 'ha' : 'hanno'} già un flusso di cassa
+                            </span>
+                          </li>
+                        )}
+                        {bulkCashflowDialog.invoicesEffettivo && bulkCashflowDialog.invoicesEffettivo.length > 0 && (
+                          <li className="flex items-start gap-2">
+                            <span>•</span>
+                            <span>
+                              {bulkCashflowDialog.invoicesEffettivo.length} {bulkCashflowDialog.invoicesEffettivo.length === 1 ? 'è' : 'sono'} in stato Effettivo (non processabile)
+                            </span>
+                          </li>
+                        )}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+                <div className="flex gap-3 justify-end">
+                  <button
+                    onClick={() => setBulkCashflowDialog(null)}
+                    className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-dark dark:text-white rounded-lg hover:opacity-90 transition-all font-medium"
+                  >
+                    Annulla
+                  </button>
+                  <button
+                    onClick={confirmBulkCreateCashflow}
+                    className="px-4 py-2 bg-secondary hover:bg-secondary/90 text-white rounded-lg transition-all font-medium"
+                  >
+                    Conferma
+                  </button>
+                </div>
+              </>
+            )}
+
+            {/* Success Dialog */}
+            {bulkCashflowDialog.type === 'success' && (
+              <>
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-12 h-12 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center">
+                    <Check size={24} className="text-green-600 dark:text-green-400" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-dark dark:text-white">
+                    Operazione completata
+                  </h3>
+                </div>
+                <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4 mb-6">
+                  <p className="text-sm text-green-800 dark:text-green-300">
+                    Creati <strong>{bulkCashflowDialog.created}</strong> flussi di cassa da <strong>{bulkCashflowDialog.invoicesStimato?.length}</strong> fatture in stato Stimato.
+                  </p>
+                </div>
+                <div className="flex justify-end">
+                  <button
+                    onClick={() => setBulkCashflowDialog(null)}
+                    className="px-4 py-2 bg-secondary hover:bg-secondary/90 text-white rounded-lg transition-all font-medium"
+                  >
+                    Chiudi
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}

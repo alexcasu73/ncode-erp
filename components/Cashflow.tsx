@@ -612,6 +612,7 @@ export const Cashflow: React.FC = () => {
         setFormNote(inv.note || '');
         setFormSpesa(inv.spesa || '');
         setFormTipoSpesa(inv.tipoSpesa || '');
+        setFormDataPagamento(inv.data || ''); // Set date from invoice
       }
     } else {
       setFormImporto('');
@@ -619,6 +620,7 @@ export const Cashflow: React.FC = () => {
       setFormSpesa('');
       setFormTipoSpesa('');
       setFormNote('');
+      setFormDataPagamento(''); // Clear date when no invoice selected
     }
   };
 
