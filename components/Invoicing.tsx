@@ -415,9 +415,15 @@ export const Invoicing: React.FC = () => {
     const selectedInvoices = sortedInvoices.filter(inv => selectedIds.has(inv.id));
 
     // Separa per stato e presenza di cashflow
-    const invoicesWithCashflow = selectedInvoices.filter(inv => inv.fattura_id);
-    const invoicesEffettivo = selectedInvoices.filter(inv => !inv.fattura_id && inv.statoFatturazione === 'Effettivo');
-    const invoicesStimato = selectedInvoices.filter(inv => !inv.fattura_id && inv.statoFatturazione === 'Stimato');
+    const invoicesWithCashflow = selectedInvoices.filter(inv =>
+      cashflowRecords.some(cf => cf.invoiceId === inv.id)
+    );
+    const invoicesEffettivo = selectedInvoices.filter(inv =>
+      !cashflowRecords.some(cf => cf.invoiceId === inv.id) && inv.statoFatturazione === 'Effettivo'
+    );
+    const invoicesStimato = selectedInvoices.filter(inv =>
+      !cashflowRecords.some(cf => cf.invoiceId === inv.id) && inv.statoFatturazione === 'Stimato'
+    );
 
     if (invoicesStimato.length === 0) {
       // Show error dialog
