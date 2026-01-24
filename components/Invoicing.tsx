@@ -450,6 +450,8 @@ export const Invoicing: React.FC = () => {
     const { invoicesStimato } = bulkCashflowDialog;
     if (!invoicesStimato) return;
 
+    console.log('🔵 [Bulk Cashflow] Starting creation for invoices:', invoicesStimato.length);
+
     // Crea flussi di cassa
     let created = 0;
     for (const invoice of invoicesStimato) {
@@ -458,9 +460,18 @@ export const Invoicing: React.FC = () => {
         statoFatturazione: 'Stimato',
       };
 
+      console.log('🔵 [Bulk Cashflow] Creating cashflow for invoice:', invoice.id, newCashflow);
       const result = await addCashflowRecord(newCashflow);
-      if (result) created++;
+      console.log('🔵 [Bulk Cashflow] Result:', result);
+      if (result) {
+        created++;
+        console.log('✅ [Bulk Cashflow] Created successfully, count:', created);
+      } else {
+        console.error('❌ [Bulk Cashflow] Failed to create for invoice:', invoice.id);
+      }
     }
+
+    console.log('🔵 [Bulk Cashflow] Total created:', created, 'out of', invoicesStimato.length);
 
     // Show success dialog
     setBulkCashflowDialog({
