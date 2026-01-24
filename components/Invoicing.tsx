@@ -448,15 +448,8 @@ export const Invoicing: React.FC = () => {
     let created = 0;
     for (const invoice of invoicesStimato) {
       const newCashflow: Omit<CashflowRecord, 'id'> = {
-        company_id: companyId!,
-        tipo: invoice.tipo,
-        descrizione: invoice.descrizione,
-        data: invoice.data,
-        flusso: invoice.flusso,
-        iva: invoice.iva,
-        stato: 'Stimato',
-        fattura_id: invoice.id,
-        categoria: invoice.categoria || null,
+        invoiceId: invoice.id,
+        statoFatturazione: 'Stimato',
       };
 
       const result = await addCashflowRecord(newCashflow);
