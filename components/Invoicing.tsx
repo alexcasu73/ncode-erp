@@ -1829,7 +1829,7 @@ const InvoiceModal: React.FC<InvoiceModalProps> = ({ invoice, deals, invoices, o
             <button
               type="button"
               onClick={onClose}
-              className="px-6 py-3 bg-gray-50 dark:bg-dark-bg border border-gray-200 dark:border-dark-border rounded-lg font-medium text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+              className="px-6 py-3 bg-gray-50 dark:bg-dark-bg border border-gray-200 dark:border-dark-border rounded-lg font-medium text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors flex items-center justify-center"
             >
               Annulla
             </button>
