@@ -1247,6 +1247,42 @@ export const Invoicing: React.FC = () => {
             }
             setShowModal(false);
           }}
+          onSaveAndCreateCashflow={async (data) => {
+            let invoiceId: string;
+
+            if (editingInvoice) {
+              // Modifica fattura esistente
+              await updateInvoice(editingInvoice.id, data);
+              invoiceId = editingInvoice.id;
+            } else {
+              // Crea nuova fattura
+              const newInvoice = await addInvoice(data as Omit<Invoice, 'id'>);
+              if (!newInvoice) {
+                alert('Errore durante la creazione della fattura');
+                return;
+              }
+              invoiceId = newInvoice.id;
+            }
+
+            // Crea il cashflow collegato
+            const newCashflow: Omit<CashflowRecord, 'id'> = {
+              invoiceId: invoiceId,
+              statoFatturazione: 'Stimato',
+              dataPagamento: data.data as string,
+            };
+
+            console.log('🔵 [Invoicing] Creating cashflow for invoice:', invoiceId, newCashflow);
+            const result = await addCashflowRecord(newCashflow);
+
+            if (result) {
+              console.log('✅ [Invoicing] Cashflow created successfully');
+            } else {
+              console.error('❌ [Invoicing] Failed to create cashflow');
+              alert('Fattura salvata ma errore durante la creazione del flusso di cassa');
+            }
+
+            setShowModal(false);
+          }}
         />
       )}
 
@@ -1437,9 +1473,10 @@ interface InvoiceModalProps {
   invoices: Invoice[];
   onClose: () => void;
   onSave: (data: Partial<Invoice>) => void;
+  onSaveAndCreateCashflow?: (data: Partial<Invoice>) => void;
 }
 
-const InvoiceModal: React.FC<InvoiceModalProps> = ({ invoice, deals, invoices, onClose, onSave }) => {
+const InvoiceModal: React.FC<InvoiceModalProps> = ({ invoice, deals, invoices, onClose, onSave, onSaveAndCreateCashflow }) => {
   // Filtra le opportunità per stato: Proposta, Negoziazione, Vinto
   const availableProjects = useMemo(() => {
     return deals.filter(d =>
@@ -1505,6 +1542,43 @@ const InvoiceModal: React.FC<InvoiceModalProps> = ({ invoice, deals, invoices, o
     console.log('✅ [Invoicing] Generated new invoice ID:', id);
 
     onSave({ ...formData, id });
+  };
+
+  const handleSubmitWithCashflow = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!onSaveAndCreateCashflow) return;
+
+    console.log('🔵 [Invoicing] handleSubmitWithCashflow called', { invoice, formData });
+
+    // Se stiamo modificando una fattura esistente, mantieni l'ID
+    if (invoice?.id) {
+      console.log('🔵 [Invoicing] Updating existing invoice with cashflow:', invoice.id);
+      onSaveAndCreateCashflow({ ...formData, id: invoice.id });
+      return;
+    }
+
+    // Per nuove fatture, genera numero progressivo
+    const anno = formData.anno || new Date().getFullYear();
+    console.log('🔵 [Invoicing] Creating new invoice with cashflow for year:', anno);
+
+    // Trova il numero più alto per quest'anno
+    const fattureAnno = invoices.filter(inv => inv.anno === anno);
+    let maxNumero = 0;
+
+    fattureAnno.forEach(inv => {
+      const match = inv.id.match(/Fattura_(\d+)/);
+      if (match) {
+        const num = parseInt(match[1], 10);
+        if (num > maxNumero) maxNumero = num;
+      }
+    });
+
+    const nuovoNumero = maxNumero + 1;
+    const id = `Fattura_${nuovoNumero}/${anno}`;
+    console.log('✅ [Invoicing] Generated new invoice ID with cashflow:', id);
+
+    onSaveAndCreateCashflow({ ...formData, id });
   };
 
   const updateField = (field: keyof Invoice, value: any) => {
@@ -1751,11 +1825,11 @@ const InvoiceModal: React.FC<InvoiceModalProps> = ({ invoice, deals, invoices, o
           </div>
 
           {/* Actions */}
-          <div className="flex gap-4 pt-4">
+          <div className="flex gap-3 pt-4">
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 px-6 py-3 bg-gray-50 dark:bg-dark-bg border border-gray-200 dark:border-dark-border rounded-lg font-medium text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+              className="px-6 py-3 bg-gray-50 dark:bg-dark-bg border border-gray-200 dark:border-dark-border rounded-lg font-medium text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
             >
               Annulla
             </button>
@@ -1764,8 +1838,19 @@ const InvoiceModal: React.FC<InvoiceModalProps> = ({ invoice, deals, invoices, o
               className="flex-1 px-6 py-3 bg-primary text-white rounded-lg font-medium hover:opacity-90 transition-all flex items-center justify-center gap-2"
             >
               <Check size={18} />
-              {invoice ? 'Salva Modifiche' : 'Aggiungi'}
+              {invoice ? 'Salva' : 'Aggiungi'}
             </button>
+            {/* Pulsante "Salva e Crea Flusso" - visibile solo per fatture Stimato */}
+            {formData.statoFatturazione === 'Stimato' && onSaveAndCreateCashflow && (
+              <button
+                type="button"
+                onClick={handleSubmitWithCashflow}
+                className="flex-1 px-6 py-3 bg-secondary hover:bg-secondary/90 text-white rounded-lg font-medium transition-all flex items-center justify-center gap-2"
+              >
+                <ArrowUpCircle size={18} />
+                {invoice ? 'Salva e Crea Flusso' : 'Aggiungi e Crea Flusso'}
+              </button>
+            )}
           </div>
         </form>
       </div>
