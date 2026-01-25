@@ -779,8 +779,8 @@ export const Cashflow: React.FC = () => {
 
     let duplicated = 0;
     for (const record of selectedRecords) {
-      // Crea il record duplicato senza l'id (verrà generato dal database)
-      const { id, createdAt, ...recordData } = record;
+      // Crea il record duplicato senza l'id, createdAt e invoice (oggetto nested)
+      const { id, createdAt, invoice, ...recordData } = record;
 
       const duplicatedRecord: Omit<CashflowRecord, 'id'> = {
         ...recordData,
