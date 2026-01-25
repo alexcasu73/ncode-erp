@@ -3,7 +3,7 @@ import { useData } from '../context/DataContext';
 import { useAuth } from '../context/AuthContext';
 import { useUserRole } from '../hooks/useUserRole';
 import { Invoice, Deal, DealStage } from '../types';
-import { Plus, Download, Upload, Filter, ArrowUpCircle, ArrowDownCircle, Search, Calendar, Eye, Edit2, Trash2, X, Check, ChevronUp, ChevronDown, ChevronsUpDown, RotateCcw } from 'lucide-react';
+import { Plus, Download, Upload, Filter, ArrowUpCircle, ArrowDownCircle, Search, Calendar, Eye, Edit2, Trash2, X, Check, ChevronUp, ChevronDown, ChevronsUpDown, RotateCcw, Copy } from 'lucide-react';
 import { formatCurrency } from '../lib/currency';
 import { exportInvoicesToExcel, importInvoicesFromExcel } from '../lib/import-export';
 
@@ -407,6 +407,57 @@ export const Invoicing: React.FC = () => {
   const handleBulkDelete = () => {
     if (selectedIds.size === 0) return;
     setDeleteConfirmDialog({ type: 'bulk', count: selectedIds.size });
+  };
+
+  const handleBulkDuplicate = async () => {
+    if (selectedIds.size === 0) return;
+
+    const selectedInvoices = sortedInvoices.filter(inv => selectedIds.has(inv.id));
+
+    if (!confirm(`Duplicare ${selectedInvoices.length} ${selectedInvoices.length === 1 ? 'fattura' : 'fatture'}?`)) {
+      return;
+    }
+
+    console.log('🔵 [Bulk Duplicate] Starting duplication for invoices:', selectedInvoices.length);
+
+    let duplicated = 0;
+    for (const invoice of selectedInvoices) {
+      const anno = invoice.anno;
+
+      // Trova il numero più alto per quest'anno
+      const fattureAnno = invoices.filter(inv => inv.anno === anno);
+      let maxNumero = 0;
+
+      fattureAnno.forEach(inv => {
+        const match = inv.id.match(/Fattura_(\d+)/);
+        if (match) {
+          const num = parseInt(match[1], 10);
+          if (num > maxNumero) maxNumero = num;
+        }
+      });
+
+      const nuovoNumero = maxNumero + 1;
+      const newId = `Fattura_${nuovoNumero}/${anno}`;
+
+      // Crea la fattura duplicata
+      const duplicatedInvoice: Omit<Invoice, 'id'> = {
+        ...invoice,
+        id: newId,
+      };
+
+      console.log('🔵 [Bulk Duplicate] Duplicating invoice:', invoice.id, '→', newId);
+      const result = await addInvoice(duplicatedInvoice as Omit<Invoice, 'id'>);
+
+      if (result) {
+        duplicated++;
+        console.log('✅ [Bulk Duplicate] Duplicated successfully');
+      } else {
+        console.error('❌ [Bulk Duplicate] Failed to duplicate invoice:', invoice.id);
+      }
+    }
+
+    alert(`✅ Duplicate ${duplicated} ${duplicated === 1 ? 'fattura' : 'fatture'} con successo.`);
+    setSelectedIds(new Set());
   };
 
   const handleBulkCreateCashflow = () => {
@@ -957,6 +1008,15 @@ export const Invoicing: React.FC = () => {
               >
                 <ArrowUpCircle size={16} />
                 Crea Flussi di Cassa
+              </button>
+            )}
+            {canEdit && (
+              <button
+                onClick={handleBulkDuplicate}
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-all shadow-md hover:shadow-lg flex items-center gap-2"
+              >
+                <Copy size={16} />
+                Duplica
               </button>
             )}
             {canDelete && (
