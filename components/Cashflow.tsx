@@ -1255,7 +1255,7 @@ export const Cashflow: React.FC = () => {
       )}
 
       {/* Tabella Movimenti */}
-      <div className="bg-white dark:bg-dark-card rounded-lg shadow-sm">
+      <div className="bg-white dark:bg-dark-card rounded-lg overflow-hidden shadow-sm border border-gray-200 dark:border-dark-border relative">
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead className="bg-gray-50 dark:bg-dark-bg">
@@ -1481,13 +1481,12 @@ export const Cashflow: React.FC = () => {
               })}
             </tbody>
           </table>
+          {sortedRecords.length === 0 && (
+            <div className="p-8 text-center text-gray-500 dark:text-gray-400">
+              Nessun movimento trovato. Aggiungi un movimento collegandolo a una fattura.
+            </div>
+          )}
         </div>
-
-        {sortedRecords.length === 0 && (
-          <div className="p-8 text-center text-gray-500 dark:text-gray-400">
-            Nessun movimento trovato. Aggiungi un movimento collegandolo a una fattura.
-          </div>
-        )}
 
         {/* Footer con conteggio e totali */}
         <div className="p-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/30">
