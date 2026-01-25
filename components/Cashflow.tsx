@@ -1191,13 +1191,11 @@ export const Cashflow: React.FC = () => {
         </div>
       )}
 
-      {/* Tabella Movimenti */}
-      <div className="bg-white dark:bg-dark-card rounded-lg shadow-sm">
-        <div className="overflow-x-auto">
-          {/* Header tabella con ricerca e filtri */}
-          <div className="p-4 border-b border-gray-200 dark:border-dark-border flex flex-col gap-4">
-            <h3 className="text-section-title text-dark dark:text-white">Dettaglio Movimenti</h3>
-            <div className="flex gap-3 items-center flex-wrap">
+      {/* Filtri */}
+      <div className="bg-white dark:bg-dark-card rounded-lg p-4 shadow-sm border border-gray-200 dark:border-dark-border">
+        <div className="flex flex-col gap-4">
+          <h3 className="text-section-title text-dark dark:text-white">Dettaglio Movimenti</h3>
+          <div className="flex gap-3 items-center flex-wrap">
             {/* Ricerca */}
             <div className="relative">
               <Search size={16} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 dark:text-gray-400" />
@@ -1254,8 +1252,11 @@ export const Cashflow: React.FC = () => {
             </select>
           </div>
         </div>
+      </div>
 
-        {/* Tabella */}
+      {/* Tabella Movimenti */}
+      <div className="bg-white dark:bg-dark-card rounded-lg shadow-sm">
+        <div className="overflow-x-auto">
           <table className="w-full">
             <thead className="bg-gray-50 dark:bg-dark-bg">
               <tr className="text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
@@ -1480,14 +1481,16 @@ export const Cashflow: React.FC = () => {
               })}
             </tbody>
           </table>
-          {sortedRecords.length === 0 && (
-            <div className="p-8 text-center text-gray-500 dark:text-gray-400">
-              Nessun movimento trovato. Aggiungi un movimento collegandolo a una fattura.
-            </div>
-          )}
+        </div>
 
-          {/* Footer con conteggio e totali */}
-          <div className="p-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/30">
+        {sortedRecords.length === 0 && (
+          <div className="p-8 text-center text-gray-500 dark:text-gray-400">
+            Nessun movimento trovato. Aggiungi un movimento collegandolo a una fattura.
+          </div>
+        )}
+
+        {/* Footer con conteggio e totali */}
+        <div className="p-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/30">
             <div className="flex items-center justify-between gap-4 flex-wrap">
               <span className="text-sm text-gray-500 dark:text-gray-400">
                 {sortedRecords.length} movimenti visualizzati
@@ -1504,7 +1507,6 @@ export const Cashflow: React.FC = () => {
                 </span>
               </div>
             </div>
-          </div>
         </div>
       </div>
 
