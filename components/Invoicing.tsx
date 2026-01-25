@@ -215,6 +215,11 @@ export const Invoicing: React.FC = () => {
     invoicesEffettivo?: Invoice[];
     created?: number;
   } | null>(null);
+  const [bulkDuplicateDialog, setBulkDuplicateDialog] = useState<{
+    type: 'confirm' | 'success';
+    invoices?: Invoice[];
+    duplicated?: number;
+  } | null>(null);
 
   // Persist sorting to localStorage
   React.useEffect(() => {
@@ -409,14 +414,23 @@ export const Invoicing: React.FC = () => {
     setDeleteConfirmDialog({ type: 'bulk', count: selectedIds.size });
   };
 
-  const handleBulkDuplicate = async () => {
+  const handleBulkDuplicate = () => {
     if (selectedIds.size === 0) return;
 
     const selectedInvoices = sortedInvoices.filter(inv => selectedIds.has(inv.id));
 
-    if (!confirm(`Duplicare ${selectedInvoices.length} ${selectedInvoices.length === 1 ? 'fattura' : 'fatture'}?`)) {
-      return;
-    }
+    // Show confirmation dialog
+    setBulkDuplicateDialog({
+      type: 'confirm',
+      invoices: selectedInvoices,
+    });
+  };
+
+  const confirmBulkDuplicate = async () => {
+    if (!bulkDuplicateDialog || bulkDuplicateDialog.type !== 'confirm') return;
+
+    const { invoices: selectedInvoices } = bulkDuplicateDialog;
+    if (!selectedInvoices) return;
 
     console.log('🔵 [Bulk Duplicate] Starting duplication for invoices:', selectedInvoices.length);
 
@@ -456,7 +470,12 @@ export const Invoicing: React.FC = () => {
       }
     }
 
-    alert(`✅ Duplicate ${duplicated} ${duplicated === 1 ? 'fattura' : 'fatture'} con successo.`);
+    // Show success dialog
+    setBulkDuplicateDialog({
+      type: 'success',
+      duplicated,
+      invoices: selectedInvoices,
+    });
     setSelectedIds(new Set());
   };
 
@@ -1513,6 +1532,76 @@ export const Invoicing: React.FC = () => {
                   <button
                     onClick={() => setBulkCashflowDialog(null)}
                     className="px-4 py-2 bg-secondary hover:bg-secondary/90 text-white rounded-lg transition-all font-medium"
+                  >
+                    Chiudi
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Bulk Duplicate Dialog */}
+      {bulkDuplicateDialog && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white dark:bg-dark-card rounded-xl shadow-2xl p-6 max-w-lg w-full mx-4">
+            {/* Confirmation Dialog */}
+            {bulkDuplicateDialog.type === 'confirm' && (
+              <>
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center">
+                    <Copy size={24} className="text-blue-600 dark:text-blue-400" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-dark dark:text-white">
+                    Duplica Fatture
+                  </h3>
+                </div>
+                <div className="mb-6">
+                  <p className="text-sm text-gray-600 dark:text-gray-300">
+                    Duplicare <strong>{bulkDuplicateDialog.invoices?.length}</strong> {bulkDuplicateDialog.invoices?.length === 1 ? 'fattura' : 'fatture'}?
+                  </p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                    {bulkDuplicateDialog.invoices?.length === 1 ? 'La fattura verrà duplicata' : 'Le fatture verranno duplicate'} con nuovi ID progressivi mantenendo tutti i dati originali.
+                  </p>
+                </div>
+                <div className="flex gap-3 justify-end">
+                  <button
+                    onClick={() => setBulkDuplicateDialog(null)}
+                    className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-dark dark:text-white rounded-lg hover:opacity-90 transition-all font-medium"
+                  >
+                    Annulla
+                  </button>
+                  <button
+                    onClick={confirmBulkDuplicate}
+                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-all font-medium"
+                  >
+                    Conferma
+                  </button>
+                </div>
+              </>
+            )}
+
+            {/* Success Dialog */}
+            {bulkDuplicateDialog.type === 'success' && (
+              <>
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-12 h-12 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center">
+                    <Check size={24} className="text-green-600 dark:text-green-400" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-dark dark:text-white">
+                    Duplicazione completata
+                  </h3>
+                </div>
+                <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4 mb-6">
+                  <p className="text-sm text-green-800 dark:text-green-300">
+                    Duplicate <strong>{bulkDuplicateDialog.duplicated}</strong> {bulkDuplicateDialog.duplicated === 1 ? 'fattura' : 'fatture'} con successo.
+                  </p>
+                </div>
+                <div className="flex justify-end">
+                  <button
+                    onClick={() => setBulkDuplicateDialog(null)}
+                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-all font-medium"
                   >
                     Chiudi
                   </button>
