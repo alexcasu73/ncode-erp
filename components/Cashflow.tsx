@@ -620,7 +620,8 @@ export const Cashflow: React.FC = () => {
         setFormDataPagamento(inv.data || ''); // Set date from invoice
       }
     } else {
-      setFormImporto('');
+      // Quando si rimuove l'associazione alla fattura, mantieni l'importo corrente
+      // setFormImporto(''); // Rimosso per mantenere l'importo
       setFormStatoFatturazione('Effettivo');
       setFormSpesa('');
       setFormTipoSpesa('');
