@@ -1149,6 +1149,48 @@ export const Cashflow: React.FC = () => {
         </div>
       </div>
 
+      {/* Bulk Actions Bar */}
+      {selectedIds.size > 0 && (
+        <div className="bg-gradient-to-r from-primary/10 to-primary/5 dark:from-primary/20 dark:to-primary/10 border-2 border-primary/30 dark:border-primary/40 rounded-xl p-5 flex items-center justify-between shadow-lg animate-fade-in backdrop-blur-sm">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-primary/20 dark:bg-primary/30 rounded-full flex items-center justify-center">
+              <Check size={20} className="text-primary dark:text-primary" strokeWidth={2.5} />
+            </div>
+            <div>
+              <p className="text-sm font-bold text-dark dark:text-white">
+                {selectedIds.size} {selectedIds.size === 1 ? 'movimento selezionato' : 'movimenti selezionati'}
+              </p>
+              <p className="text-xs text-gray-600 dark:text-gray-400">
+                Scegli un'azione da eseguire
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setSelectedIds(new Set())}
+              className="px-4 py-2 bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 rounded-lg font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition-all flex items-center gap-2"
+            >
+              <X size={16} />
+              Annulla
+            </button>
+            <button
+              onClick={handleBulkDuplicate}
+              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-all shadow-md hover:shadow-lg flex items-center gap-2"
+            >
+              <Copy size={16} />
+              Duplica
+            </button>
+            <button
+              onClick={handleBulkDelete}
+              className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-all shadow-md hover:shadow-lg flex items-center gap-2"
+            >
+              <Trash2 size={16} />
+              Elimina {selectedIds.size > 1 ? 'tutti' : ''}
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Tabella Movimenti */}
       <div className="bg-white dark:bg-dark-card rounded-lg shadow-sm">
         <div className="overflow-x-auto">
@@ -1213,48 +1255,6 @@ export const Cashflow: React.FC = () => {
             </select>
           </div>
           </div>
-
-          {/* Bulk Actions Bar */}
-          {selectedIds.size > 0 && (
-            <div className="bg-gradient-to-r from-primary/10 to-primary/5 dark:from-primary/20 dark:to-primary/10 border-2 border-primary/30 dark:border-primary/40 rounded-xl p-5 flex items-center justify-between shadow-lg animate-fade-in backdrop-blur-sm">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-primary/20 dark:bg-primary/30 rounded-full flex items-center justify-center">
-                    <Check size={20} className="text-primary dark:text-primary" strokeWidth={2.5} />
-                  </div>
-                  <div>
-                    <p className="text-sm font-bold text-dark dark:text-white">
-                      {selectedIds.size} {selectedIds.size === 1 ? 'movimento selezionato' : 'movimenti selezionati'}
-                    </p>
-                    <p className="text-xs text-gray-600 dark:text-gray-400">
-                      Pronto per l'eliminazione
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-3">
-                  <button
-                    onClick={() => setSelectedIds(new Set())}
-                    className="px-4 py-2 bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 rounded-lg font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition-all flex items-center gap-2"
-                  >
-                    <X size={16} />
-                    Annulla
-                  </button>
-                  <button
-                    onClick={handleBulkDuplicate}
-                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-all shadow-md hover:shadow-lg flex items-center gap-2"
-                  >
-                    <Copy size={16} />
-                    Duplica
-                  </button>
-                  <button
-                    onClick={handleBulkDelete}
-                    className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-all shadow-md hover:shadow-lg flex items-center gap-2"
-                  >
-                    <Trash2 size={16} />
-                    Elimina {selectedIds.size > 1 ? 'tutti' : ''}
-                  </button>
-                </div>
-            </div>
-          )}
 
           {/* Tabella */}
           <table className="w-full">
