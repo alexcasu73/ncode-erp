@@ -3,7 +3,7 @@ import { XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, BarChart, Ba
 import { useData } from '../context/DataContext';
 import { useUserRole } from '../hooks/useUserRole';
 import { CashflowRecord, Invoice } from '../types';
-import { Plus, ArrowUpCircle, ArrowDownCircle, Calendar, Search, ChevronUp, ChevronDown, ChevronsUpDown, X, Edit2, Trash2, Wallet, Settings, RotateCcw, Check, Download, Upload } from 'lucide-react';
+import { Plus, ArrowUpCircle, ArrowDownCircle, Calendar, Search, ChevronUp, ChevronDown, ChevronsUpDown, X, Edit2, Trash2, Wallet, Settings, RotateCcw, Check, Download, Upload, Copy } from 'lucide-react';
 import { formatCurrency } from '../lib/currency';
 import { exportCashflowToExcel, importCashflowFromExcel } from '../lib/import-export';
 
@@ -196,6 +196,11 @@ export const Cashflow: React.FC = () => {
     type: 'single' | 'bulk';
     id?: string;
     count?: number;
+  } | null>(null);
+  const [bulkDuplicateDialog, setBulkDuplicateDialog] = useState<{
+    type: 'confirm' | 'success';
+    records?: CashflowRecord[];
+    duplicated?: number;
   } | null>(null);
 
   // Persist sorting to localStorage
@@ -752,6 +757,55 @@ export const Cashflow: React.FC = () => {
     setDeleteConfirmDialog({ type: 'bulk', count: selectedIds.size });
   };
 
+  const handleBulkDuplicate = () => {
+    if (selectedIds.size === 0) return;
+
+    const selectedRecords = sortedRecords.filter(rec => selectedIds.has(rec.id));
+
+    // Show confirmation dialog
+    setBulkDuplicateDialog({
+      type: 'confirm',
+      records: selectedRecords,
+    });
+  };
+
+  const confirmBulkDuplicate = async () => {
+    if (!bulkDuplicateDialog || bulkDuplicateDialog.type !== 'confirm') return;
+
+    const { records: selectedRecords } = bulkDuplicateDialog;
+    if (!selectedRecords) return;
+
+    console.log('🔵 [Bulk Duplicate Cashflow] Starting duplication for records:', selectedRecords.length);
+
+    let duplicated = 0;
+    for (const record of selectedRecords) {
+      // Crea il record duplicato senza l'id (verrà generato dal database)
+      const { id, createdAt, ...recordData } = record;
+
+      const duplicatedRecord: Omit<CashflowRecord, 'id'> = {
+        ...recordData,
+      };
+
+      console.log('🔵 [Bulk Duplicate Cashflow] Duplicating record:', record.id);
+      const result = await addCashflowRecord(duplicatedRecord);
+
+      if (result) {
+        duplicated++;
+        console.log('✅ [Bulk Duplicate Cashflow] Duplicated successfully, new ID:', result.id);
+      } else {
+        console.error('❌ [Bulk Duplicate Cashflow] Failed to duplicate record:', record.id);
+      }
+    }
+
+    // Show success dialog
+    setBulkDuplicateDialog({
+      type: 'success',
+      duplicated,
+      records: selectedRecords,
+    });
+    setSelectedIds(new Set());
+  };
+
   // Bank balance modal handlers
   const openBankBalanceModal = () => {
     if (filterAnno !== 'tutti') {
@@ -1184,6 +1238,13 @@ export const Cashflow: React.FC = () => {
                   >
                     <X size={16} />
                     Annulla
+                  </button>
+                  <button
+                    onClick={handleBulkDuplicate}
+                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-all shadow-md hover:shadow-lg flex items-center gap-2"
+                  >
+                    <Copy size={16} />
+                    Duplica
                   </button>
                   <button
                     onClick={handleBulkDelete}
@@ -1799,6 +1860,76 @@ export const Cashflow: React.FC = () => {
                 SI
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Bulk Duplicate Dialog */}
+      {bulkDuplicateDialog && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white dark:bg-dark-card rounded-xl shadow-2xl p-6 max-w-lg w-full mx-4">
+            {/* Confirmation Dialog */}
+            {bulkDuplicateDialog.type === 'confirm' && (
+              <>
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center">
+                    <Copy size={24} className="text-blue-600 dark:text-blue-400" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-dark dark:text-white">
+                    Duplica Flussi di Cassa
+                  </h3>
+                </div>
+                <div className="mb-6">
+                  <p className="text-sm text-gray-600 dark:text-gray-300">
+                    Duplicare <strong>{bulkDuplicateDialog.records?.length}</strong> {bulkDuplicateDialog.records?.length === 1 ? 'flusso di cassa' : 'flussi di cassa'}?
+                  </p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                    {bulkDuplicateDialog.records?.length === 1 ? 'Il flusso verrà duplicato' : 'I flussi verranno duplicati'} con nuovi ID mantenendo tutti i dati originali.
+                  </p>
+                </div>
+                <div className="flex gap-3 justify-end">
+                  <button
+                    onClick={() => setBulkDuplicateDialog(null)}
+                    className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-dark dark:text-white rounded-lg hover:opacity-90 transition-all font-medium"
+                  >
+                    Annulla
+                  </button>
+                  <button
+                    onClick={confirmBulkDuplicate}
+                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-all font-medium"
+                  >
+                    Conferma
+                  </button>
+                </div>
+              </>
+            )}
+
+            {/* Success Dialog */}
+            {bulkDuplicateDialog.type === 'success' && (
+              <>
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-12 h-12 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center">
+                    <Check size={24} className="text-green-600 dark:text-green-400" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-dark dark:text-white">
+                    Duplicazione completata
+                  </h3>
+                </div>
+                <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4 mb-6">
+                  <p className="text-sm text-green-800 dark:text-green-300">
+                    Duplicati <strong>{bulkDuplicateDialog.duplicated}</strong> {bulkDuplicateDialog.duplicated === 1 ? 'flusso di cassa' : 'flussi di cassa'} con successo.
+                  </p>
+                </div>
+                <div className="flex justify-end">
+                  <button
+                    onClick={() => setBulkDuplicateDialog(null)}
+                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-all font-medium"
+                  >
+                    Chiudi
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}
