@@ -1080,12 +1080,19 @@ export const Invoicing: React.FC = () => {
           .dark .horizontal-scrollbar::-webkit-scrollbar-thumb:hover {
             background: #9ca3af;
           }
+          .hide-scrollbar::-webkit-scrollbar {
+            display: none;
+          }
+          .hide-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+          }
         `}</style>
 
         {/* Table with scroll */}
         <div
           ref={tableScrollRef}
-          className="horizontal-scrollbar overflow-x-scroll"
+          className="hide-scrollbar overflow-x-scroll"
         >
           <table className="w-full" style={{ minWidth: '1200px' }}>
             <thead className="bg-gray-50 dark:bg-dark-bg">
