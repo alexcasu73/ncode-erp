@@ -1194,11 +1194,10 @@ export const Cashflow: React.FC = () => {
       {/* Tabella Movimenti */}
       <div className="bg-white dark:bg-dark-card rounded-lg shadow-sm">
         <div className="overflow-x-auto">
-          <div>
-            {/* Header tabella con ricerca e filtri */}
-            <div className="p-4 border-b border-gray-200 dark:border-dark-border flex flex-col gap-4">
-              <h3 className="text-section-title text-dark dark:text-white">Dettaglio Movimenti</h3>
-              <div className="flex gap-3 items-center flex-wrap">
+          {/* Header tabella con ricerca e filtri */}
+          <div className="p-4 border-b border-gray-200 dark:border-dark-border flex flex-col gap-4">
+            <h3 className="text-section-title text-dark dark:text-white">Dettaglio Movimenti</h3>
+            <div className="flex gap-3 items-center flex-wrap">
             {/* Ricerca */}
             <div className="relative">
               <Search size={16} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 dark:text-gray-400" />
@@ -1254,9 +1253,9 @@ export const Cashflow: React.FC = () => {
               <option value="Nessuno">Nessuno</option>
             </select>
           </div>
-          </div>
+        </div>
 
-          {/* Tabella */}
+        {/* Tabella */}
           <table className="w-full">
             <thead className="bg-gray-50 dark:bg-dark-bg">
               <tr className="text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
@@ -1505,7 +1504,6 @@ export const Cashflow: React.FC = () => {
                 </span>
               </div>
             </div>
-          </div>
           </div>
         </div>
       </div>
