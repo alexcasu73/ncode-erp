@@ -1102,7 +1102,7 @@ export const Cashflow: React.FC = () => {
       </div>
 
       {/* Chart Section */}
-      <div className="bg-white dark:bg-dark-card p-6 rounded-lg" shadow-sm>
+      <div className="bg-white dark:bg-dark-card p-6 rounded-lg shadow-sm">
         <h3 className="text-section-title text-dark dark:text-white mb-6">Andamento Mensile</h3>
         <div className="h-[300px] w-full">
           <ResponsiveContainer width="100%" height="100%">
