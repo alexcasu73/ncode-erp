@@ -90,7 +90,7 @@ interface DataContextType {
   // Invoice CRUD
   addInvoice: (invoice: Omit<Invoice, 'id'>) => Promise<Invoice | null>;
   updateInvoice: (id: string, invoice: Partial<Invoice>) => Promise<boolean>;
-  deleteInvoice: (id: string) => Promise<boolean>;
+  deleteInvoice: (id: string, cascadeDelete?: boolean) => Promise<boolean>;
 
   // Transaction CRUD
   addTransaction: (transaction: Omit<Transaction, 'id'>) => Promise<Transaction | null>;
@@ -678,17 +678,22 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return true;
   };
 
-  const deleteInvoice = async (id: string): Promise<boolean> => {
+  const deleteInvoice = async (id: string, cascadeDelete: boolean = false): Promise<boolean> => {
     // Check if there are cashflow records associated with this invoice
     const associatedCashflows = cashflowRecords.filter(cf => cf.invoiceId === id);
 
     if (associatedCashflows.length > 0) {
-      console.error('Cannot delete invoice with associated cashflow records');
-      const movimentiDettagli = associatedCashflows.map(cf =>
-        `- ID: ${cf.id}, Data Pagamento: ${cf.dataPagamento || 'N/D'}, Note: ${cf.note || 'Nessuna nota'}`
-      ).join('\n');
-      alert(`Non puoi eliminare questa fattura perché ha ${associatedCashflows.length} movimento/i di cassa associato/i:\n\n${movimentiDettagli}\n\nVai in Flusso di Cassa e elimina prima questi movimenti. Potrebbero essere nascosti dai filtri (controlla Anno/Mese/Tipo/Stato).`);
-      return false;
+      if (!cascadeDelete) {
+        const movimentiDettagli = associatedCashflows.map(cf =>
+          `- Data Pagamento: ${cf.dataPagamento || 'N/D'}, Note: ${cf.note || 'Nessuna nota'}`
+        ).join('\n');
+        const doDelete = confirm(`Questa fattura ha ${associatedCashflows.length} flusso/i di cassa associato/i:\n\n${movimentiDettagli}\n\nVuoi eliminare anche i flussi di cassa associati?`);
+        if (!doDelete) return false;
+      }
+      // Delete associated cashflows first
+      for (const cf of associatedCashflows) {
+        await deleteCashflowRecord(cf.id);
+      }
     }
 
     if (!isSupabaseConfigured) {

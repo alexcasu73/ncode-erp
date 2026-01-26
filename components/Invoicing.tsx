@@ -394,28 +394,31 @@ export const Invoicing: React.FC = () => {
         }
       }
 
-      // Show single summary for linked invoices
+      // Ask once for all linked invoices
+      let cascadeDelete = false;
       if (linkedIds.length > 0) {
         const linkedInvoices = invoices.filter(inv => linkedIds.includes(inv.id));
         const dettagli = linkedInvoices.map(inv => {
           const cfCount = cashflowRecords.filter(cf => cf.invoiceId === inv.id).length;
-          return `- ${formatInvoiceId(inv.id, inv.anno)} — ${inv.nomeProgetto} (${cfCount} flusso/i di cassa)`;
+          return `- ${formatInvoiceId(inv.id, inv.anno)} — ${inv.nomeProgetto} (${cfCount} flusso/i)`;
         }).join('\n');
 
-        if (freeIds.length === 0) {
-          alert(`Impossibile eliminare: tutte le ${linkedIds.length} fatture selezionate sono associate a flussi di cassa.\n\n${dettagli}\n\nVai in Flusso di Cassa e rimuovi prima le associazioni.`);
-        } else {
-          alert(`${linkedIds.length} fattura/e non eliminata/e perché associata/e a flussi di cassa:\n\n${dettagli}\n\nVerranno eliminate solo le ${freeIds.length} fatture senza associazioni.`);
-        }
+        cascadeDelete = confirm(`${linkedIds.length} fattura/e hanno flussi di cassa associati:\n\n${dettagli}\n\nVuoi eliminare anche i flussi di cassa associati?`);
       }
 
-      // Delete only free invoices
+      // Delete free invoices
       for (const id of freeIds) {
         await deleteInvoice(id);
       }
 
-      // Keep linked ones selected so user can see which couldn't be deleted
-      setSelectedIds(new Set(linkedIds));
+      // Delete linked invoices (with cascade if confirmed)
+      if (cascadeDelete) {
+        for (const id of linkedIds) {
+          await deleteInvoice(id, true);
+        }
+      }
+
+      setSelectedIds(cascadeDelete ? new Set() : new Set(linkedIds));
     }
 
     setDeleteConfirmDialog(null);
