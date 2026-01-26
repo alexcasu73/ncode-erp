@@ -111,7 +111,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, onChangeView }) =
               <img
                 src={companyLogo}
                 alt="Company Logo"
-                className="w-10 h-10 rounded-xl object-cover flex-shrink-0"
+                className="w-10 h-10 object-contain flex-shrink-0"
               />
             ) : (
               <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center text-white font-bold text-xl flex-shrink-0">

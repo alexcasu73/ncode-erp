@@ -142,14 +142,14 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
       <div className="relative">
         <div
           className={`${sizeClasses[size]} ${
-            shape === 'circle' ? 'rounded-full' : 'rounded-lg'
+            shape === 'circle' ? 'rounded-full' : ''
           } bg-gray-100 dark:bg-gray-800 flex items-center justify-center overflow-hidden border-2 border-gray-200 dark:border-dark-border`}
         >
           {previewUrl ? (
             <img
               src={previewUrl}
               alt="Preview"
-              className="w-full h-full object-cover"
+              className={`w-full h-full ${shape === 'circle' ? 'object-cover' : 'object-contain'}`}
             />
           ) : (
             <Upload className="text-gray-400" size={size === 'large' ? 32 : 24} />
@@ -169,7 +169,7 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
 
         {/* Loading overlay */}
         {uploading && (
-          <div className="absolute inset-0 bg-black/50 rounded-full flex items-center justify-center">
+          <div className={`absolute inset-0 bg-black/50 ${shape === 'circle' ? 'rounded-full' : ''} flex items-center justify-center`}>
             <Loader className="text-white animate-spin" size={24} />
           </div>
         )}

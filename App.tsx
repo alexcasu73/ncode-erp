@@ -38,6 +38,19 @@ const App: React.FC = () => {
   const { aiProcessing, stopAiProcessing, invoiceNotifications } = useData();
   const { user, loading, signOut, showAccountDisabledModal } = useAuth();
 
+  // Navigate auth views with browser history support
+  const navigateToAuth = (view: typeof authView) => {
+    // Push history when navigating from landing to login/register
+    if (authView === 'landing' && (view === 'login' || view === 'register')) {
+      window.history.pushState({ authView: view }, '');
+    }
+    // Replace history when switching between login and register
+    else if ((authView === 'login' || authView === 'register') && (view === 'login' || view === 'register')) {
+      window.history.replaceState({ authView: view }, '');
+    }
+    setAuthView(view);
+  };
+
   // Check for password reset, setup, or email confirmation flow on mount
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -62,6 +75,18 @@ const App: React.FC = () => {
       setAuthView('reset-password');
     }
   }, []);
+
+  // Handle browser back button for auth pages
+  useEffect(() => {
+    if (isResetPasswordFlow || isSetupPasswordFlow || isConfirmEmailFlow) return;
+
+    const handlePopState = () => {
+      setAuthView('landing');
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [isResetPasswordFlow, isSetupPasswordFlow, isConfirmEmailFlow]);
 
   // Show loading state while checking authentication
   if (loading) {
@@ -112,7 +137,13 @@ const App: React.FC = () => {
     }
     if (authView === 'register') {
       return <Register
-        onBackToLogin={() => setAuthView('landing')}
+        onBackToLogin={() => {
+          if (window.history.state?.authView) {
+            window.history.back();
+          } else {
+            setAuthView('landing');
+          }
+        }}
         onRegistrationSuccess={(email) => {
           setRegisteredEmail(email);
           setAuthView('registration-success');
@@ -120,11 +151,11 @@ const App: React.FC = () => {
       />;
     }
     if (authView === 'login') {
-      return <Login onRegisterClick={() => setAuthView('register')} />;
+      return <Login onRegisterClick={() => navigateToAuth('register')} />;
     }
     return <LandingPage
-      onLoginClick={() => setAuthView('login')}
-      onRegisterClick={() => setAuthView('register')}
+      onLoginClick={() => navigateToAuth('login')}
+      onRegisterClick={() => navigateToAuth('register')}
     />;
   }
 

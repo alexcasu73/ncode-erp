@@ -46,7 +46,9 @@ export const Invoicing: React.FC = () => {
   const { invoices, deals, cashflowRecords, loading, addInvoice, updateInvoice, deleteInvoice, addCashflowRecord } = useData();
   const { companyId } = useAuth();
   const { canEdit, canDelete, canImport, isViewer, loading: roleLoading } = useUserRole();
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchTerm, setSearchTerm] = useState(() => {
+    return localStorage.getItem('invoicing_searchTerm') || '';
+  });
   const [filterTipo, setFilterTipo] = useState<'tutti' | 'Entrata' | 'Uscita'>(() => {
     const saved = localStorage.getItem('invoicing_filterTipo');
     return (saved as 'tutti' | 'Entrata' | 'Uscita') || 'tutti';
@@ -157,6 +159,10 @@ export const Invoicing: React.FC = () => {
   React.useEffect(() => {
     localStorage.setItem('invoicing_filterConScadenza', String(filterConScadenza));
   }, [filterConScadenza]);
+
+  React.useEffect(() => {
+    localStorage.setItem('invoicing_searchTerm', searchTerm);
+  }, [searchTerm]);
 
   // Reset tutti i filtri
   const resetAllFilters = () => {

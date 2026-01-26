@@ -101,7 +101,9 @@ export const Cashflow: React.FC = () => {
     const saved = localStorage.getItem('cashflow_vistaStato');
     return (saved as 'tutti' | 'effettivo' | 'stimato') || 'tutti';
   });
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchTerm, setSearchTerm] = useState(() => {
+    return localStorage.getItem('cashflow_searchTerm') || '';
+  });
   const [filterTipo, setFilterTipo] = useState<'tutti' | 'Entrata' | 'Uscita'>(() => {
     const saved = localStorage.getItem('cashflow_filterTipo');
     return (saved as 'tutti' | 'Entrata' | 'Uscita') || 'tutti';
@@ -153,6 +155,10 @@ export const Cashflow: React.FC = () => {
   React.useEffect(() => {
     localStorage.setItem('cashflow_filterStatoTabella', filterStatoTabella);
   }, [filterStatoTabella]);
+
+  React.useEffect(() => {
+    localStorage.setItem('cashflow_searchTerm', searchTerm);
+  }, [searchTerm]);
 
   // Reset tutti i filtri
   const resetAllFilters = () => {
