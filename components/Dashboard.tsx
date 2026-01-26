@@ -1,7 +1,7 @@
 import React, { useMemo, useRef } from 'react';
 import {
-  BarChart, Bar, XAxis, Tooltip, ResponsiveContainer,
-  LineChart, Line, PieChart, Pie, Cell
+  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
+  LineChart, Line, PieChart, Pie, Cell, ComposedChart, ReferenceLine, Legend
 } from 'recharts';
 import { useData } from '../context/DataContext';
 import { ArrowUpRight, TrendingUp, Users, Wallet, TrendingDown, Download, FileText } from 'lucide-react';
@@ -185,13 +185,19 @@ export const Dashboard: React.FC = () => {
         inv.mese === monthName && inv.anno === currentYear && inv.statoFatturazione === 'Effettivo'
       );
 
-      const revenue = monthInvoices.reduce((sum, inv) =>
-        sum + (inv.flusso || 0) + (inv.iva || 0), 0
-      );
+      const entrate = monthInvoices
+        .filter(inv => inv.tipo === 'Entrata')
+        .reduce((sum, inv) => sum + (inv.flusso || 0) + (inv.iva || 0), 0);
+
+      const uscite = monthInvoices
+        .filter(inv => inv.tipo === 'Uscita')
+        .reduce((sum, inv) => sum + (inv.flusso || 0) + (inv.iva || 0), 0);
 
       revenueChartData.push({
         name: monthName.substring(0, 3),
-        value: revenue
+        entrate,
+        uscite,
+        margine: entrate - uscite
       });
     }
 
@@ -274,7 +280,9 @@ export const Dashboard: React.FC = () => {
     // Aggiungi foglio fatturato mensile
     const wsRevenue = XLSX.utils.json_to_sheet(dashboardData.revenueChartData.map(item => ({
       Mese: item.name,
-      Fatturato: item.value
+      Entrate: item.entrate,
+      Uscite: item.uscite,
+      Margine: item.margine
     })));
     XLSX.utils.book_append_sheet(wb, wsRevenue, 'Fatturato Mensile');
 
@@ -482,7 +490,7 @@ export const Dashboard: React.FC = () => {
           <div className="h-16 w-full mt-4">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={dashboardData.revenueChartData}>
-                 <Bar dataKey="value" fill="#0EA5E9" radius={[4, 4, 4, 4]} barSize={12} />
+                 <Bar dataKey="entrate" fill="#10b981" radius={[4, 4, 4, 4]} barSize={12} />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -594,7 +602,7 @@ export const Dashboard: React.FC = () => {
         </div>
         <div className="w-full flex-1 min-h-0">
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={dashboardData.revenueChartData} margin={{ top: 10, right: 10, left: 10, bottom: 10 }}>
+            <ComposedChart data={dashboardData.revenueChartData} margin={{ top: 10, right: 10, left: 10, bottom: 10 }}>
               <XAxis
                 dataKey="name"
                 axisLine={false}
@@ -602,8 +610,20 @@ export const Dashboard: React.FC = () => {
                 tick={{ fill: '#a1a1aa', fontSize: 12 }}
                 dy={10}
               />
+              <YAxis
+                axisLine={false}
+                tickLine={false}
+                tick={{ fill: '#a1a1aa', fontSize: 11 }}
+                tickFormatter={(value) => {
+                  if (value === 0) return '0';
+                  if (Math.abs(value) >= 1000) return `${(value / 1000).toFixed(0)}k`;
+                  return String(value);
+                }}
+                width={50}
+              />
+              <ReferenceLine y={0} stroke="#d1d5db" strokeDasharray="3 3" />
               <Tooltip
-                cursor={{ fill: 'rgba(14, 165, 233, 0.1)' }}
+                cursor={{ fill: 'rgba(14, 165, 233, 0.05)' }}
                 contentStyle={{
                   backgroundColor: '#1E293B',
                   borderRadius: '12px',
@@ -612,11 +632,27 @@ export const Dashboard: React.FC = () => {
                   padding: '12px'
                 }}
                 itemStyle={{ color: '#fff' }}
-                formatter={(value) => formatCurrency(Number(value))}
+                formatter={(value: number, name: string) => {
+                  const label = name === 'entrate' ? 'Entrate' : name === 'uscite' ? 'Uscite' : 'Margine';
+                  return [formatCurrency(Number(value)), label];
+                }}
                 labelStyle={{ color: '#0EA5E9', fontWeight: 'bold' }}
               />
-              <Bar dataKey="value" fill="#0EA5E9" radius={[8, 8, 0, 0]} />
-            </BarChart>
+              <Legend
+                formatter={(value) => value === 'entrate' ? 'Entrate' : value === 'uscite' ? 'Uscite' : 'Margine'}
+                wrapperStyle={{ fontSize: '12px' }}
+              />
+              <Bar dataKey="entrate" fill="#10b981" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="uscite" fill="#f97316" radius={[4, 4, 0, 0]} />
+              <Line
+                type="monotone"
+                dataKey="margine"
+                stroke="#6366f1"
+                strokeWidth={2}
+                dot={{ r: 3, fill: '#6366f1' }}
+                activeDot={{ r: 5 }}
+              />
+            </ComposedChart>
           </ResponsiveContainer>
         </div>
       </div>

@@ -926,7 +926,7 @@ export const Cashflow: React.FC = () => {
           </button>
 
           {/* Import Button - Only for admin and manager */}
-          {!roleLoading && canImport && (
+          {canImport && (
             <label className="bg-white dark:bg-dark-card border border-gray-300 dark:border-dark-border text-dark dark:text-white px-4 py-2 rounded-lg font-medium hover:bg-gray-50 dark:hover:bg-gray-800 transition-all flex items-center gap-2 shadow-sm cursor-pointer">
               <Upload size={18} />
               <span className="hidden sm:inline">{importing ? 'Importando...' : 'Importa'}</span>
@@ -941,7 +941,7 @@ export const Cashflow: React.FC = () => {
           )}
 
           {/* Add New Button - Hidden for viewers */}
-          {!roleLoading && canEdit && (
+          {canEdit && (
             <button
               onClick={openNewModal}
               className="bg-primary text-white px-6 py-2 rounded-lg font-medium hover:opacity-90 transition-all flex items-center gap-2 shadow-sm"
@@ -1374,7 +1374,7 @@ export const Cashflow: React.FC = () => {
                       </td>
                       <td className="px-3 py-3 text-right">
                         <div className="flex justify-end gap-1">
-                          {!roleLoading && canEdit && (
+                          {canEdit && (
                             <button
                               onClick={() => openEditModal(record)}
                               className="p-1 text-gray-500 hover:text-dark transition-colors"
@@ -1383,7 +1383,7 @@ export const Cashflow: React.FC = () => {
                               <Edit2 size={14} />
                             </button>
                           )}
-                          {!roleLoading && canDelete && (
+                          {canDelete && (
                             <button
                               onClick={() => handleDelete(record.id)}
                               className="p-1 text-gray-500 hover:text-red-500 transition-colors"
@@ -1462,7 +1462,7 @@ export const Cashflow: React.FC = () => {
                     </td>
                     <td className="px-3 py-3 text-right">
                       <div className="flex justify-end gap-1">
-                        {!roleLoading && canEdit && (
+                        {canEdit && (
                           <button
                             onClick={() => openEditModal(record)}
                             className="p-1 text-gray-500 hover:text-dark transition-colors"
@@ -1471,7 +1471,7 @@ export const Cashflow: React.FC = () => {
                             <Edit2 size={14} />
                           </button>
                         )}
-                        {!roleLoading && canDelete && (
+                        {canDelete && (
                           <button
                             onClick={() => handleDelete(record.id)}
                             className="p-1 text-gray-500 hover:text-red-500 transition-colors"

@@ -79,6 +79,9 @@ export const Invoicing: React.FC = () => {
     const saved = localStorage.getItem('invoicing_filterConScadenza');
     return saved === 'true';
   });
+  const [bilancioCollapsed, setBilancioCollapsed] = useState(() => {
+    return localStorage.getItem('invoicing_bilancioCollapsed') === 'true';
+  });
   const [showModal, setShowModal] = useState(false);
   const [editingInvoice, setEditingInvoice] = useState<Invoice | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -163,6 +166,10 @@ export const Invoicing: React.FC = () => {
   React.useEffect(() => {
     localStorage.setItem('invoicing_searchTerm', searchTerm);
   }, [searchTerm]);
+
+  React.useEffect(() => {
+    localStorage.setItem('invoicing_bilancioCollapsed', String(bilancioCollapsed));
+  }, [bilancioCollapsed]);
 
   // Reset tutti i filtri
   const resetAllFilters = () => {
@@ -698,7 +705,7 @@ export const Invoicing: React.FC = () => {
           </button>
 
           {/* Import Button - Only for admin and manager */}
-          {!roleLoading && canImport && (
+          {canImport && (
             <label className="bg-white dark:bg-dark-card border border-gray-300 dark:border-dark-border text-dark dark:text-white px-4 py-2 rounded-lg font-medium hover:bg-gray-50 dark:hover:bg-gray-800 transition-all flex items-center gap-2 shadow-sm cursor-pointer">
               <Upload size={18} />
               <span className="hidden sm:inline">{importing ? 'Importando...' : 'Importa'}</span>
@@ -713,7 +720,7 @@ export const Invoicing: React.FC = () => {
           )}
 
           {/* Add New Button - Hidden for viewers */}
-          {!roleLoading && canEdit && (
+          {canEdit && (
             <button
               onClick={() => { setEditingInvoice(null); setShowModal(true); }}
               className="bg-primary text-white px-6 py-2 rounded-lg font-medium hover:opacity-90 transition-all flex items-center gap-2 shadow-sm"
@@ -851,90 +858,103 @@ export const Invoicing: React.FC = () => {
 
       {/* Confronto Effettivo vs Stimato */}
       {vistaStato === 'tutti' && (
-        <div className="bg-white dark:bg-dark-card rounded-lg p-6 shadow-sm border border-gray-200 dark:border-dark-border">
-          <h3 className="text-section-title text-dark dark:text-white mb-4">Confronto Bilancio: Effettivo vs Stimato</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Colonna Effettivo */}
-            <div className="border border-green-200 dark:border-green-800 rounded-lg p-4 bg-green-50/30 dark:bg-green-900/10">
-              <div className="flex items-center gap-2 mb-3">
-                <div className="w-3 h-3 bg-green-500 dark:bg-green-400 rounded-full"></div>
-                <h4 className="font-bold text-green-700 dark:text-green-400">Effettivo (Confermato)</h4>
-              </div>
-              <div className="space-y-2">
-                <div className="flex justify-between">
-                  <span className="text-gray-500 dark:text-gray-400">Entrate:</span>
-                  <span className="font-semibold text-green-600 dark:text-green-400">{formatCurrency(totals.effettivo.entrate)}</span>
+        <div className="bg-white dark:bg-dark-card rounded-lg shadow-sm border border-gray-200 dark:border-dark-border">
+          <button
+            onClick={() => setBilancioCollapsed(!bilancioCollapsed)}
+            className="w-full flex items-center justify-between p-6 text-left hover:bg-gray-50/50 dark:hover:bg-dark-bg/50 transition-colors rounded-lg"
+          >
+            <h3 className="text-section-title text-dark dark:text-white">Confronto Bilancio: Effettivo vs Stimato</h3>
+            <ChevronDown
+              size={20}
+              className={`text-gray-400 transition-transform duration-200 ${bilancioCollapsed ? '' : 'rotate-180'}`}
+            />
+          </button>
+          {!bilancioCollapsed && (
+            <div className="px-6 pb-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Colonna Effettivo */}
+                <div className="border border-green-200 dark:border-green-800 rounded-lg p-4 bg-green-50/30 dark:bg-green-900/10">
+                  <div className="flex items-center gap-2 mb-3">
+                    <div className="w-3 h-3 bg-green-500 dark:bg-green-400 rounded-full"></div>
+                    <h4 className="font-bold text-green-700 dark:text-green-400">Effettivo (Confermato)</h4>
+                  </div>
+                  <div className="space-y-2">
+                    <div className="flex justify-between">
+                      <span className="text-gray-500 dark:text-gray-400">Entrate:</span>
+                      <span className="font-semibold text-green-600 dark:text-green-400">{formatCurrency(totals.effettivo.entrate)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-500 dark:text-gray-400">Uscite:</span>
+                      <span className="font-semibold text-orange-600 dark:text-orange-400">-{formatCurrency(totals.effettivo.uscite)}</span>
+                    </div>
+                    <div className="border-t border-gray-200 dark:border-dark-border pt-2 flex justify-between">
+                      <span className="font-bold text-gray-500 dark:text-gray-400">Margine:</span>
+                      <span className={`font-bold ${totals.effettivo.margine >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                        {formatCurrency(totals.effettivo.margine)}
+                      </span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-500 dark:text-gray-400">Saldo IVA:</span>
+                      <span className="text-gray-500 dark:text-gray-400">{formatCurrency(totals.effettivo.ivaBalance)}</span>
+                    </div>
+                  </div>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-500 dark:text-gray-400">Uscite:</span>
-                  <span className="font-semibold text-orange-600 dark:text-orange-400">-{formatCurrency(totals.effettivo.uscite)}</span>
-                </div>
-                <div className="border-t border-gray-200 dark:border-dark-border pt-2 flex justify-between">
-                  <span className="font-bold text-gray-500 dark:text-gray-400">Margine:</span>
-                  <span className={`font-bold ${totals.effettivo.margine >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-                    {formatCurrency(totals.effettivo.margine)}
-                  </span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-500 dark:text-gray-400">Saldo IVA:</span>
-                  <span className="text-gray-500 dark:text-gray-400">{formatCurrency(totals.effettivo.ivaBalance)}</span>
-                </div>
-              </div>
-            </div>
 
-            {/* Colonna Stimato */}
-            <div className="border border-gray-200 dark:border-dark-border rounded-lg p-4 bg-gray-50/30 dark:bg-gray-800/10">
-              <div className="flex items-center gap-2 mb-3">
-                <div className="w-3 h-3 bg-primary rounded-full"></div>
-                <h4 className="font-bold text-dark dark:text-white">Stimato</h4>
+                {/* Colonna Stimato */}
+                <div className="border border-gray-200 dark:border-dark-border rounded-lg p-4 bg-gray-50/30 dark:bg-gray-800/10">
+                  <div className="flex items-center gap-2 mb-3">
+                    <div className="w-3 h-3 bg-primary rounded-full"></div>
+                    <h4 className="font-bold text-dark dark:text-white">Stimato</h4>
+                  </div>
+                  <div className="space-y-2">
+                    <div className="flex justify-between">
+                      <span className="text-gray-500 dark:text-gray-400">Entrate:</span>
+                      <span className="font-semibold text-green-600 dark:text-green-400">{formatCurrency(totals.stimato.entrate)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-500 dark:text-gray-400">Uscite:</span>
+                      <span className="font-semibold text-orange-600 dark:text-orange-400">-{formatCurrency(totals.stimato.uscite)}</span>
+                    </div>
+                    <div className="border-t border-gray-200 dark:border-dark-border pt-2 flex justify-between">
+                      <span className="font-bold text-gray-500 dark:text-gray-400">Margine:</span>
+                      <span className={`font-bold ${totals.stimato.margine >= 0 ? 'text-blue-600 dark:text-blue-400' : 'text-red-600 dark:text-red-400'}`}>
+                        {formatCurrency(totals.stimato.margine)}
+                      </span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-500 dark:text-gray-400">Saldo IVA:</span>
+                      <span className="text-gray-500 dark:text-gray-400">{formatCurrency(totals.stimato.ivaBalance)}</span>
+                    </div>
+                  </div>
+                </div>
               </div>
-              <div className="space-y-2">
-                <div className="flex justify-between">
-                  <span className="text-gray-500 dark:text-gray-400">Entrate:</span>
-                  <span className="font-semibold text-green-600 dark:text-green-400">{formatCurrency(totals.stimato.entrate)}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-500 dark:text-gray-400">Uscite:</span>
-                  <span className="font-semibold text-orange-600 dark:text-orange-400">-{formatCurrency(totals.stimato.uscite)}</span>
-                </div>
-                <div className="border-t border-gray-200 dark:border-dark-border pt-2 flex justify-between">
-                  <span className="font-bold text-gray-500 dark:text-gray-400">Margine:</span>
-                  <span className={`font-bold ${totals.stimato.margine >= 0 ? 'text-blue-600 dark:text-blue-400' : 'text-red-600 dark:text-red-400'}`}>
-                    {formatCurrency(totals.stimato.margine)}
-                  </span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-500 dark:text-gray-400">Saldo IVA:</span>
-                  <span className="text-gray-500 dark:text-gray-400">{formatCurrency(totals.stimato.ivaBalance)}</span>
-                </div>
-              </div>
-            </div>
-          </div>
 
-          {/* Totale Combinato */}
-          <div className="mt-4 pt-4 border-t border-gray-200 dark:border-dark-border">
-            <div className="flex flex-wrap justify-between items-center gap-4">
-              <div>
-                <span className="text-body text-gray-500 dark:text-gray-400">Bilancio Totale (Effettivo + Stimato):</span>
-              </div>
-              <div className="flex gap-6">
-                <div className="text-center">
-                  <p className="text-small">Entrate</p>
-                  <p className="text-body font-bold text-green-600">{formatCurrency(totals.tutti.entrate)}</p>
-                </div>
-                <div className="text-center">
-                  <p className="text-small">Uscite</p>
-                  <p className="text-body font-bold text-orange-600">{formatCurrency(totals.tutti.uscite)}</p>
-                </div>
-                <div className="text-center">
-                  <p className="text-small">Margine</p>
-                  <p className={`text-body font-bold ${totals.tutti.margine >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-                    {formatCurrency(totals.tutti.margine)}
-                  </p>
+              {/* Totale Combinato */}
+              <div className="mt-4 pt-4 border-t border-gray-200 dark:border-dark-border">
+                <div className="flex flex-wrap justify-between items-center gap-4">
+                  <div>
+                    <span className="text-body text-gray-500 dark:text-gray-400">Bilancio Totale (Effettivo + Stimato):</span>
+                  </div>
+                  <div className="flex gap-6">
+                    <div className="text-center">
+                      <p className="text-small">Entrate</p>
+                      <p className="text-body font-bold text-green-600">{formatCurrency(totals.tutti.entrate)}</p>
+                    </div>
+                    <div className="text-center">
+                      <p className="text-small">Uscite</p>
+                      <p className="text-body font-bold text-orange-600">{formatCurrency(totals.tutti.uscite)}</p>
+                    </div>
+                    <div className="text-center">
+                      <p className="text-small">Margine</p>
+                      <p className={`text-body font-bold ${totals.tutti.margine >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                        {formatCurrency(totals.tutti.margine)}
+                      </p>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
+          )}
         </div>
       )}
 
@@ -1036,7 +1056,7 @@ export const Invoicing: React.FC = () => {
       </div>
 
       {/* Bulk Actions Bar - Hidden for viewers */}
-      {selectedIds.size > 0 && !roleLoading && !isViewer && (
+      {selectedIds.size > 0 && !isViewer && (
         <div className="bg-gradient-to-r from-primary/10 to-primary/5 dark:from-primary/20 dark:to-primary/10 border-2 border-primary/30 dark:border-primary/40 rounded-xl p-5 flex items-center justify-between shadow-lg animate-fade-in backdrop-blur-sm">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-primary/20 dark:bg-primary/30 rounded-full flex items-center justify-center">
@@ -1136,7 +1156,7 @@ export const Invoicing: React.FC = () => {
           <table className="w-full" style={{ minWidth: '1200px' }}>
             <thead className="bg-gray-50 dark:bg-dark-bg">
               <tr className="text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                {!roleLoading && canDelete && (
+                {canDelete && (
                   <th className="px-6 py-4">
                     <div className="flex items-center justify-center">
                       <label className="inline-flex items-center cursor-pointer group">
@@ -1242,7 +1262,7 @@ export const Invoicing: React.FC = () => {
             <tbody className="divide-y divide-gray-200 dark:divide-dark-border">
               {sortedInvoices.map((inv) => (
                 <tr key={inv.id} className={`hover:bg-gray-50 dark:hover:bg-dark-bg transition-colors ${inv.tipo === 'Uscita' ? 'bg-orange-50/30 dark:bg-orange-900/10' : ''}`}>
-                  {!roleLoading && canDelete && (
+                  {canDelete && (
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center justify-center">
                         <label className="inline-flex items-center cursor-pointer group">
@@ -1315,7 +1335,7 @@ export const Invoicing: React.FC = () => {
                   </td>
                   <td className="px-6 py-4">
                     <div className="flex justify-center gap-2">
-                      {!roleLoading && canEdit && (
+                      {canEdit && (
                         <button
                           onClick={() => { setEditingInvoice(inv); setShowModal(true); }}
                           className="text-gray-500 hover:text-blue-500"
@@ -1323,7 +1343,7 @@ export const Invoicing: React.FC = () => {
                           <Edit2 size={16} />
                         </button>
                       )}
-                      {!roleLoading && canDelete && (
+                      {canDelete && (
                         <button
                           onClick={() => handleDelete(inv.id)}
                           className="text-gray-500 hover:text-red-500"
