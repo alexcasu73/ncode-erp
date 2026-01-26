@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { NavItem } from '../types';
 import { MAIN_NAV_ITEMS, SETTINGS_NAV_ITEMS, APP_NAME } from '../constants';
-import { LogOut, ChevronLeft, ChevronRight } from 'lucide-react';
+import { LogOut, ChevronLeft, ChevronRight, Scan } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useUserRole } from '../hooks/useUserRole';
 import { supabase } from '../lib/supabase';
@@ -251,6 +251,15 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, onChangeView }) =
             Esci
           </span>
         </button>
+
+        {/* Powered by */}
+        <div className={`pt-2 border-t border-gray-200 dark:border-dark-border text-center transition-opacity duration-300 ${isCollapsed ? 'opacity-0 h-0 overflow-hidden' : 'opacity-100 delay-150'}`}>
+          <p className="text-[10px] text-gray-400 dark:text-gray-500 uppercase tracking-wider">Powered by</p>
+          <div className="flex items-center justify-center gap-1.5 mt-0.5">
+            <Scan size={14} className="text-gray-400 dark:text-gray-500" />
+            <span className="text-xs font-semibold text-gray-500 dark:text-gray-400">Ncode Studio</span>
+          </div>
+        </div>
       </div>
     </div>
   );
