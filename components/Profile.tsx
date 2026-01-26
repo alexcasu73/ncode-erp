@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { User, Mail, Lock, Save, AlertTriangle, Trash2, Building2, X } from 'lucide-react';
+import { User, Mail, Lock, Save, AlertTriangle, Trash2, Building2, X, Pencil, Check } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useData } from '../context/DataContext';
 import { supabase } from '../lib/supabase';
@@ -27,6 +27,10 @@ export const Profile: React.FC = () => {
   const [companyLogoUrl, setCompanyLogoUrl] = useState<string>('');
   const [userRole, setUserRole] = useState('');
   const [isOnlyAdmin, setIsOnlyAdmin] = useState(false);
+
+  // Company name editing
+  const [editingCompanyName, setEditingCompanyName] = useState(false);
+  const [companyNameDraft, setCompanyNameDraft] = useState('');
 
   // Danger zone modals
   const [showDeleteAccountModal, setShowDeleteAccountModal] = useState(false);
@@ -128,6 +132,40 @@ export const Profile: React.FC = () => {
       window.dispatchEvent(new CustomEvent('company-logo-updated', { detail: { url } }));
     } catch (err) {
       setError('Errore nell\'upload del logo aziendale');
+    }
+  };
+
+  const handleSaveCompanyName = async () => {
+    if (!companyNameDraft.trim()) {
+      setError('Il nome azienda è obbligatorio');
+      return;
+    }
+    setLoading(true);
+    setError('');
+    try {
+      const { error: updateError } = await supabase
+        .from('companies')
+        .update({ name: companyNameDraft.trim() })
+        .eq('id', companyId);
+
+      if (updateError) {
+        setError('Errore nell\'aggiornamento del nome azienda');
+        return;
+      }
+
+      setCompanyName(companyNameDraft.trim());
+      setEditingCompanyName(false);
+      setSuccess('Nome azienda aggiornato!');
+      setTimeout(() => setSuccess(''), 3000);
+
+      // Update sidebar
+      window.dispatchEvent(new CustomEvent('company-logo-updated', {
+        detail: { url: companyLogoUrl, name: companyNameDraft.trim() }
+      }));
+    } catch (err) {
+      setError('Errore imprevisto');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -331,7 +369,46 @@ export const Profile: React.FC = () => {
         <div className="space-y-2">
           <div className="flex items-center justify-between">
             <span className="text-sm text-gray-600 dark:text-gray-400">Nome:</span>
-            <span className="text-sm font-medium text-dark dark:text-white">{companyName}</span>
+            {userRole === 'admin' && editingCompanyName ? (
+              <div className="flex items-center gap-2">
+                <input
+                  type="text"
+                  value={companyNameDraft}
+                  onChange={(e) => setCompanyNameDraft(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === 'Enter') handleSaveCompanyName(); if (e.key === 'Escape') setEditingCompanyName(false); }}
+                  className="px-3 py-1 text-sm rounded-lg border border-gray-300 dark:border-dark-border bg-white dark:bg-dark-bg text-dark dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
+                  autoFocus
+                />
+                <button
+                  onClick={handleSaveCompanyName}
+                  disabled={loading}
+                  className="p-1 text-green-600 hover:text-green-700 dark:text-green-400"
+                  title="Salva"
+                >
+                  <Check size={16} />
+                </button>
+                <button
+                  onClick={() => setEditingCompanyName(false)}
+                  className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                  title="Annulla"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium text-dark dark:text-white">{companyName}</span>
+                {userRole === 'admin' && (
+                  <button
+                    onClick={() => { setCompanyNameDraft(companyName); setEditingCompanyName(true); }}
+                    className="p-1 text-gray-400 hover:text-primary transition-colors"
+                    title="Modifica nome azienda"
+                  >
+                    <Pencil size={14} />
+                  </button>
+                )}
+              </div>
+            )}
           </div>
           <div className="flex items-center justify-between">
             <span className="text-sm text-gray-600 dark:text-gray-400">Ruolo:</span>
