@@ -128,7 +128,7 @@ export const ConfirmEmail: React.FC<ConfirmEmailProps> = ({ onBackToLogin }) => 
         {/* Version */}
         <div className="mt-6 text-center">
           <p className="text-xs text-gray-500 dark:text-gray-500">
-            Ncode ERP v1.0 - Multi-Tenant
+            Coalix v1.0
           </p>
         </div>
       </div>

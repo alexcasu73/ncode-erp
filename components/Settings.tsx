@@ -591,7 +591,7 @@ const Settings: React.FC = () => {
                   type="text"
                   value={smtpFromName}
                   onChange={(e) => setSmtpFromName(e.target.value)}
-                  placeholder="Ncode ERP"
+                  placeholder="Coalix"
                   className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-dark-border bg-white dark:bg-dark-bg text-dark dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
                 />
               </div>
@@ -777,7 +777,7 @@ const Settings: React.FC = () => {
                     type="text"
                     value={googleFromName}
                     onChange={(e) => setGoogleFromName(e.target.value)}
-                    placeholder="Ncode ERP"
+                    placeholder="Coalix"
                     className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-dark-border bg-white dark:bg-dark-bg text-dark dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
                   />
                 </div>

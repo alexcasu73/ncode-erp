@@ -93,7 +93,7 @@ export const UserManagement: React.FC = () => {
       console.log('✅ [UserManagement] Invitation created:', inviteData);
 
       // Get company name for email
-      const companyName = 'Ncode ERP'; // TODO: Get from context/settings
+      const companyName = 'Coalix'; // TODO: Get from context/settings
 
       // Build magic link with token
       const magicLink = `${window.location.origin}/setup-account?token=${inviteData.token}`;
@@ -272,7 +272,7 @@ export const UserManagement: React.FC = () => {
       }
 
       // Get company name
-      const companyName = 'Ncode ERP'; // TODO: Get from context/settings
+      const companyName = 'Coalix'; // TODO: Get from context/settings
 
       // Build magic link with token
       const magicLink = `${window.location.origin}/setup-account?token=${invitation.token}`;

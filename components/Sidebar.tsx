@@ -15,6 +15,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, onChangeView }) =
   const { user, companyId, signOut } = useAuth();
   const { canManageUsers, canImport, canReconcile, loading: roleLoading } = useUserRole();
   const [companyLogo, setCompanyLogo] = useState<string>('');
+  const [companyName, setCompanyName] = useState<string>('');
   const [userName, setUserName] = useState<string>('');
   const [userAvatar, setUserAvatar] = useState<string>('');
   const [isCollapsed, setIsCollapsed] = useState<boolean>(() => {
@@ -34,6 +35,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, onChangeView }) =
     // Listen for company logo updates
     const handleLogoUpdate = (event: any) => {
       setCompanyLogo(event.detail.url);
+      if (event.detail.name) setCompanyName(event.detail.name);
     };
 
     // Listen for name updates
@@ -62,12 +64,13 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, onChangeView }) =
 
     const { data } = await supabase
       .from('companies')
-      .select('logo_url')
+      .select('name, logo_url')
       .eq('id', companyId)
       .single();
 
-    if (data?.logo_url) {
-      setCompanyLogo(data.logo_url);
+    if (data) {
+      if (data.logo_url) setCompanyLogo(data.logo_url);
+      if (data.name) setCompanyName(data.name);
     }
   };
 
@@ -112,12 +115,19 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, onChangeView }) =
               />
             ) : (
               <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center text-white font-bold text-xl flex-shrink-0">
-                N
+                C
               </div>
             )}
-            <span className={`ml-3 font-bold text-xl text-dark dark:text-white tracking-tight whitespace-nowrap transition-opacity duration-300 ${isCollapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100 delay-150'}`}>
-              {APP_NAME}
-            </span>
+            <div className={`ml-3 flex flex-col whitespace-nowrap transition-opacity duration-300 ${isCollapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100 delay-150'}`}>
+              <span className="font-bold text-xl text-dark dark:text-white tracking-tight leading-tight">
+                {APP_NAME}
+              </span>
+              {companyName && (
+                <span className="text-xs text-gray-500 dark:text-gray-400 leading-tight">
+                  {companyName}
+                </span>
+              )}
+            </div>
           </div>
         </div>
 

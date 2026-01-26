@@ -187,7 +187,7 @@ export const SetupPassword: React.FC<SetupPasswordProps> = ({ onComplete }) => {
             Configura il tuo Account
           </h1>
           <p className="text-gray-600 dark:text-gray-400">
-            Benvenuto su Ncode ERP
+            Benvenuto su Coalix
           </p>
         </div>
 

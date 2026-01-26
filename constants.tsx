@@ -1,7 +1,7 @@
 import { Deal, DealStage, Customer, Invoice, Transaction, FinancialItem } from './types';
 import { LayoutDashboard, Users, Briefcase, Receipt, PieChart, Wallet, BookOpen, FileCheck, Settings as SettingsIcon, UserCog, UserCircle, FileSpreadsheet } from 'lucide-react';
 
-export const APP_NAME = "Ncode ERP";
+export const APP_NAME = "Coalix";
 
 // Main navigation items (business functions)
 export const MAIN_NAV_ITEMS = [

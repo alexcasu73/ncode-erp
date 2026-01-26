@@ -54,7 +54,7 @@ export const Login: React.FC<LoginProps> = ({ onRegisterClick }) => {
               Benvenuto
             </h1>
             <p className="text-gray-600 dark:text-gray-400">
-              Accedi a Ncode ERP
+              Accedi a Coalix
             </p>
           </div>
 
@@ -173,7 +173,7 @@ export const Login: React.FC<LoginProps> = ({ onRegisterClick }) => {
         {/* Version */}
         <div className="mt-6 text-center">
           <p className="text-xs text-gray-500 dark:text-gray-500">
-            Ncode ERP v1.0 - Multi-Tenant
+            Coalix v1.0
           </p>
         </div>
       </div>

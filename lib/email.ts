@@ -131,7 +131,7 @@ function generateInviteEmailHtml(invitation: EmailInvitation): string {
     <head>
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <title>Invito a Ncode ERP</title>
+      <title>Invito a Coalix</title>
       <style>
         body {
           font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
@@ -197,13 +197,13 @@ function generateInviteEmailHtml(invitation: EmailInvitation): string {
     <body>
       <div class="container">
         <div class="header">
-          <div class="logo">Ncode ERP</div>
+          <div class="logo">Coalix</div>
         </div>
 
         <h1>Ciao ${invitation.toName}!</h1>
 
         <div class="content">
-          <p><strong>${invitation.inviterName}</strong> ti ha invitato a unirti a <strong>${invitation.companyName}</strong> su Ncode ERP.</p>
+          <p><strong>${invitation.inviterName}</strong> ti ha invitato a unirti a <strong>${invitation.companyName}</strong> su Coalix.</p>
 
           <div class="info-box">
             <p style="margin: 0;"><strong>Ruolo assegnato:</strong> ${roleLabel}</p>
@@ -234,7 +234,7 @@ function generateInviteEmailHtml(invitation: EmailInvitation): string {
         </div>
 
         <div class="footer">
-          <p>Ncode ERP - Sistema di gestione aziendale</p>
+          <p>Coalix - Sistema di gestione aziendale</p>
           <p>Se non hai richiesto questo invito, puoi ignorare questa email.</p>
         </div>
       </div>
@@ -268,7 +268,7 @@ Password temporanea: ${invitation.tempPassword}
   return `
 Ciao ${invitation.toName}!
 
-${invitation.inviterName} ti ha invitato a unirti a ${invitation.companyName} su Ncode ERP.
+${invitation.inviterName} ti ha invitato a unirti a ${invitation.companyName} su Coalix.
 
 Ruolo assegnato: ${roleLabel}
 ${credentialsText}
@@ -278,7 +278,7 @@ ${invitation.inviteLink}
 Questo invito scadrà tra 7 giorni.
 
 ---
-Ncode ERP - Sistema di gestione aziendale
+Coalix - Sistema di gestione aziendale
 Se non hai richiesto questo invito, puoi ignorare questa email.
   `.trim();
 }
@@ -364,7 +364,7 @@ export async function testSmtpConfiguration(
   const invitation: EmailInvitation = {
     toEmail: testEmail,
     toName: 'Test User',
-    inviterName: 'Ncode ERP',
+    inviterName: 'Coalix',
     companyName: 'Test Company',
     inviteLink: 'https://example.com/test',
     role: 'user',

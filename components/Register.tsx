@@ -74,7 +74,7 @@ export const Register: React.FC<RegisterProps> = ({ onBackToLogin, onRegistratio
               Registra la tua Azienda
             </h1>
             <p className="text-gray-600 dark:text-gray-400">
-              Crea il tuo account aziendale su Ncode ERP
+              Crea il tuo account aziendale su Coalix
             </p>
           </div>
 
@@ -215,7 +215,7 @@ export const Register: React.FC<RegisterProps> = ({ onBackToLogin, onRegistratio
         {/* Version */}
         <div className="mt-6 text-center">
           <p className="text-xs text-gray-500 dark:text-gray-500">
-            Ncode ERP v1.0 - Multi-Tenant
+            Coalix v1.0
           </p>
         </div>
       </div>
