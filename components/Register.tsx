@@ -212,11 +212,13 @@ export const Register: React.FC<RegisterProps> = ({ onBackToLogin, onRegistratio
           </div>
         </div>
 
-        {/* Version */}
+        {/* Powered by */}
         <div className="mt-6 text-center">
-          <p className="text-xs text-gray-500 dark:text-gray-500">
-            Coalix v1.0
-          </p>
+          <p className="text-[10px] text-gray-400 dark:text-gray-500 uppercase tracking-wider">Powered by</p>
+          <div className="flex items-center justify-center gap-1.5 mt-0.5">
+            <img src="/ncode-studio-icon.png" alt="Ncode Studio" className="w-3.5 h-3.5 dark:invert dark:opacity-60 opacity-50" />
+            <span className="text-xs font-semibold text-gray-500 dark:text-gray-400">Ncode Studio</span>
+          </div>
         </div>
       </div>
     </div>
