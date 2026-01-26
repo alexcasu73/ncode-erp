@@ -382,10 +382,40 @@ export const Invoicing: React.FC = () => {
     if (deleteConfirmDialog.type === 'single' && deleteConfirmDialog.id) {
       await deleteInvoice(deleteConfirmDialog.id);
     } else if (deleteConfirmDialog.type === 'bulk') {
+      // Pre-check all selected invoices for cashflow associations
+      const linkedIds: string[] = [];
+      const freeIds: string[] = [];
+
       for (const id of selectedIds) {
+        if (cashflowRecords.some(cf => cf.invoiceId === id)) {
+          linkedIds.push(id);
+        } else {
+          freeIds.push(id);
+        }
+      }
+
+      // Show single summary for linked invoices
+      if (linkedIds.length > 0) {
+        const linkedInvoices = invoices.filter(inv => linkedIds.includes(inv.id));
+        const dettagli = linkedInvoices.map(inv => {
+          const cfCount = cashflowRecords.filter(cf => cf.invoiceId === inv.id).length;
+          return `- ${formatInvoiceId(inv.id, inv.anno)} — ${inv.nomeProgetto} (${cfCount} flusso/i di cassa)`;
+        }).join('\n');
+
+        if (freeIds.length === 0) {
+          alert(`Impossibile eliminare: tutte le ${linkedIds.length} fatture selezionate sono associate a flussi di cassa.\n\n${dettagli}\n\nVai in Flusso di Cassa e rimuovi prima le associazioni.`);
+        } else {
+          alert(`${linkedIds.length} fattura/e non eliminata/e perché associata/e a flussi di cassa:\n\n${dettagli}\n\nVerranno eliminate solo le ${freeIds.length} fatture senza associazioni.`);
+        }
+      }
+
+      // Delete only free invoices
+      for (const id of freeIds) {
         await deleteInvoice(id);
       }
-      setSelectedIds(new Set());
+
+      // Keep linked ones selected so user can see which couldn't be deleted
+      setSelectedIds(new Set(linkedIds));
     }
 
     setDeleteConfirmDialog(null);
