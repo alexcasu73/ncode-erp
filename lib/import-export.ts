@@ -38,14 +38,31 @@ export function exportInvoicesToExcel(invoices: Invoice[], filename: string = 'f
 }
 
 /**
+ * Resolve effective importo for a cashflow record.
+ * When importo is undefined (invoice-linked records), compute from invoice.
+ */
+function getEffectiveImporto(cf: CashflowRecord, invoices: Invoice[]): number {
+  if (cf.importo !== undefined && cf.importo !== null) {
+    return cf.importo;
+  }
+  if (cf.invoiceId) {
+    const inv = invoices.find(i => i.id === cf.invoiceId);
+    if (inv) {
+      return (inv.flusso || 0) + (inv.iva || 0);
+    }
+  }
+  return 0;
+}
+
+/**
  * Export cashflow records to Excel
  */
-export function exportCashflowToExcel(cashflows: CashflowRecord[], filename: string = 'flussi-cassa.xlsx') {
+export function exportCashflowToExcel(cashflows: CashflowRecord[], filename: string = 'flussi-cassa.xlsx', invoices: Invoice[] = []) {
   const data = cashflows.map(cf => ({
     'ID': cf.id,
     'ID Fattura': cf.invoiceId || '',
     'Data Pagamento': cf.dataPagamento || '',
-    'Importo': cf.importo || 0,
+    'Importo': getEffectiveImporto(cf, invoices),
     'Note': cf.note || '',
     'Stato': cf.statoFatturazione || '',
     'Tipo': cf.tipo || '',
@@ -335,7 +352,7 @@ export function exportUnifiedExcel(
     'ID': cf.id,
     'ID Fattura': cf.invoiceId || '',
     'Data Pagamento': cf.dataPagamento || '',
-    'Importo': cf.importo || 0,
+    'Importo': getEffectiveImporto(cf, invoices),
     'Note': cf.note || '',
     'Stato': cf.statoFatturazione || '',
     'Tipo': cf.tipo || '',
