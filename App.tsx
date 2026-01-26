@@ -10,6 +10,7 @@ import { Reconciliation } from './components/Reconciliation';
 import Settings from './components/Settings';
 import { UserManagement } from './components/UserManagement';
 import { Profile } from './components/Profile';
+import { LandingPage } from './components/LandingPage';
 import { Login } from './components/Login';
 import { Register } from './components/Register';
 import { RegistrationSuccess } from './components/RegistrationSuccess';
@@ -28,7 +29,7 @@ const App: React.FC = () => {
   const [currentView, setCurrentView] = useState('dashboard');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
-  const [authView, setAuthView] = useState<'login' | 'register' | 'registration-success' | 'reset-password' | 'setup-password' | 'confirm-email'>('login');
+  const [authView, setAuthView] = useState<'landing' | 'login' | 'register' | 'registration-success' | 'reset-password' | 'setup-password' | 'confirm-email'>('landing');
   const [isResetPasswordFlow, setIsResetPasswordFlow] = useState(false);
   const [isSetupPasswordFlow, setIsSetupPasswordFlow] = useState(false);
   const [isConfirmEmailFlow, setIsConfirmEmailFlow] = useState(false);
@@ -111,14 +112,20 @@ const App: React.FC = () => {
     }
     if (authView === 'register') {
       return <Register
-        onBackToLogin={() => setAuthView('login')}
+        onBackToLogin={() => setAuthView('landing')}
         onRegistrationSuccess={(email) => {
           setRegisteredEmail(email);
           setAuthView('registration-success');
         }}
       />;
     }
-    return <Login onRegisterClick={() => setAuthView('register')} />;
+    if (authView === 'login') {
+      return <Login onRegisterClick={() => setAuthView('register')} />;
+    }
+    return <LandingPage
+      onLoginClick={() => setAuthView('login')}
+      onRegisterClick={() => setAuthView('register')}
+    />;
   }
 
   const renderContent = () => {
