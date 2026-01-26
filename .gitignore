@@ -30,3 +30,9 @@ dist-ssr
 *.json
 export-*.sql
 backups/
+
+# PM2
+ecosystem.config.cjs
+
+# Server logs
+server/logs/
