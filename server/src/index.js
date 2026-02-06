@@ -20,7 +20,7 @@ const PORT = process.env.SERVER_PORT || 3001;
 // === SECURITY ===
 app.use(helmet());
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+  origin: process.env.FRONTEND_URL || 'http://localhost:3004',
   credentials: true
 }));
 
@@ -548,7 +548,7 @@ app.post('/api/auth/register', async (req, res) => {
       gmailRefreshToken: process.env.GMAIL_REFRESH_TOKEN,
       googleClientId: process.env.GOOGLE_CLIENT_ID,
       googleClientSecret: process.env.GOOGLE_CLIENT_SECRET,
-      frontendUrl: process.env.FRONTEND_URL || 'http://localhost:3000',
+      frontendUrl: process.env.FRONTEND_URL || 'http://localhost:3004',
       appName: 'Ncode ERP',
       primaryColor: '#3B82F6'
     });

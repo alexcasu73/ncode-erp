@@ -775,6 +775,19 @@ const CreateInvoiceModal: React.FC<{
   const MESI = ['Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno', 'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre'];
 
   const txDate = new Date(transaction.data);
+  // L'importo della transazione bancaria è il lordo (con IVA)
+  const importoLordo = Math.abs(transaction.importo);
+
+  // Funzione per calcolare netto e IVA dalla percentuale
+  const calcolaImporti = (lordo: number, percentuale: number) => {
+    const netto = lordo / (1 + percentuale / 100);
+    const iva = lordo - netto;
+    return { netto, iva };
+  };
+
+  // Inizializza con percentuale IVA 22% (default italiano)
+  const importiIniziali = calcolaImporti(importoLordo, 22);
+
   const [formData, setFormData] = useState({
     data: transaction.data,
     mese: MESI[txDate.getMonth()],
@@ -785,12 +798,23 @@ const CreateInvoiceModal: React.FC<{
     spesa: '',
     tipoSpesa: '',
     note: transaction.descrizione || transaction.causale || '',
-    flusso: Math.abs(transaction.importo), // Use absolute value for amount
-    iva: 0,
-    percentualeIva: 0,
+    flusso: Number(importiIniziali.netto.toFixed(2)), // Importo netto calcolato
+    iva: Number(importiIniziali.iva.toFixed(2)), // IVA calcolata
+    percentualeIva: 22, // Default 22%
     percentualeFatturazione: 100,
     checked: false
   });
+
+  // Handler per aggiornare la percentuale IVA e ricalcolare netto e IVA
+  const handlePercentualeIvaChange = (nuovaPercentuale: number) => {
+    const { netto, iva } = calcolaImporti(importoLordo, nuovaPercentuale);
+    setFormData({
+      ...formData,
+      percentualeIva: nuovaPercentuale,
+      flusso: Number(netto.toFixed(2)),
+      iva: Number(iva.toFixed(2))
+    });
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -877,27 +901,58 @@ const CreateInvoiceModal: React.FC<{
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Importo Netto *</label>
-              <input
-                type="number"
-                step="0.01"
-                value={formData.flusso}
-                onChange={(e) => setFormData({ ...formData, flusso: parseFloat(e.target.value) || 0 })}
-                required
-                className="w-full pl-4 pr-4 py-2 border border-gray-200 dark:border-dark-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 bg-white dark:bg-gray-800/30 text-dark dark:text-white"
-              />
+          {/* Importi - mostra lordo rilevato e calcolo IVA */}
+          <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4 border border-blue-200 dark:border-blue-800">
+            <div className="text-sm font-medium text-blue-900 dark:text-blue-300 mb-3">
+              Importo rilevato dalla banca (lordo): <span className="text-lg font-bold">{formatCurrency(importoLordo)}</span>
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">IVA</label>
-              <input
-                type="number"
-                step="0.01"
-                value={formData.iva}
-                onChange={(e) => setFormData({ ...formData, iva: parseFloat(e.target.value) || 0 })}
-                className="w-full pl-4 pr-4 py-2 border border-gray-200 dark:border-dark-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 bg-white dark:bg-gray-800/30 text-dark dark:text-white"
-              />
+
+            <div className="space-y-3">
+              {/* Percentuale IVA - modificabile */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Percentuale IVA *</label>
+                <select
+                  value={formData.percentualeIva}
+                  onChange={(e) => handlePercentualeIvaChange(parseFloat(e.target.value))}
+                  className="w-full pl-4 pr-12 py-2 border border-gray-300 dark:border-dark-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 bg-white dark:bg-gray-800/30 text-dark dark:text-white font-medium"
+                >
+                  <option value="0">0% - Fuori campo IVA</option>
+                  <option value="4">4% - Ridotta</option>
+                  <option value="5">5% - Ridotta</option>
+                  <option value="10">10% - Ridotta</option>
+                  <option value="22">22% - Ordinaria</option>
+                </select>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                {/* Importo Netto - calcolato automaticamente */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Importo Netto</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={formData.flusso}
+                    readOnly
+                    className="w-full pl-4 pr-4 py-2 border border-gray-300 dark:border-dark-border rounded-lg bg-gray-50 dark:bg-gray-800 text-dark dark:text-white font-semibold cursor-not-allowed"
+                  />
+                </div>
+
+                {/* IVA - calcolata automaticamente */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Valore IVA</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={formData.iva}
+                    readOnly
+                    className="w-full pl-4 pr-4 py-2 border border-gray-300 dark:border-dark-border rounded-lg bg-gray-50 dark:bg-gray-800 text-dark dark:text-white font-semibold cursor-not-allowed"
+                  />
+                </div>
+              </div>
+
+              <div className="text-xs text-gray-600 dark:text-gray-400 pt-2 border-t border-blue-200 dark:border-blue-800">
+                <strong>Calcolo:</strong> Lordo {formatCurrency(importoLordo)} = Netto {formatCurrency(formData.flusso)} + IVA {formatCurrency(formData.iva)} ({formData.percentualeIva}%)
+              </div>
             </div>
           </div>
 
