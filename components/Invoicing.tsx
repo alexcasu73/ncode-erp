@@ -1157,7 +1157,7 @@ export const Invoicing: React.FC = () => {
             <thead className="bg-gray-50 dark:bg-dark-bg">
               <tr className="text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                 {canDelete && (
-                  <th className="px-6 py-4">
+                  <th className="px-3 py-3">
                     <div className="flex items-center justify-center">
                       <label className="inline-flex items-center cursor-pointer group">
                         <input
@@ -1178,7 +1178,7 @@ export const Invoicing: React.FC = () => {
                   </th>
                 )}
                 <th
-                  className="px-6 py-4 whitespace-nowrap cursor-pointer hover:bg-gray-50 dark:hover:bg-dark-bg transition-colors"
+                  className="px-3 py-3 whitespace-nowrap cursor-pointer hover:bg-gray-50 dark:hover:bg-dark-bg transition-colors"
                   onClick={() => handleSort('id')}
                 >
                   <div className="flex items-center gap-1">
@@ -1189,7 +1189,7 @@ export const Invoicing: React.FC = () => {
                   </div>
                 </th>
                 <th
-                  className="px-6 py-4 cursor-pointer hover:bg-gray-50 dark:hover:bg-dark-bg transition-colors"
+                  className="px-3 py-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-dark-bg transition-colors"
                   onClick={() => handleSort('tipo')}
                 >
                   <div className="flex items-center gap-1">
@@ -1200,7 +1200,7 @@ export const Invoicing: React.FC = () => {
                   </div>
                 </th>
                 <th
-                  className="px-6 py-4 cursor-pointer hover:bg-gray-50 dark:hover:bg-dark-bg transition-colors"
+                  className="px-3 py-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-dark-bg transition-colors"
                   onClick={() => handleSort('data')}
                 >
                   <div className="flex items-center gap-1">
@@ -1211,7 +1211,7 @@ export const Invoicing: React.FC = () => {
                   </div>
                 </th>
                 <th
-                  className="px-6 py-4 cursor-pointer hover:bg-gray-50 dark:hover:bg-dark-bg transition-colors"
+                  className="px-3 py-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-dark-bg transition-colors"
                   onClick={() => handleSort('progetto')}
                 >
                   <div className="flex items-center gap-1">
@@ -1221,9 +1221,9 @@ export const Invoicing: React.FC = () => {
                     ) : <ChevronsUpDown size={14} className="text-gray-300 dark:text-gray-600" />}
                   </div>
                 </th>
-                <th className="px-6 py-4 whitespace-nowrap">Descrizione</th>
+                <th className="px-3 py-3 whitespace-nowrap">Descrizione</th>
                 <th
-                  className="px-6 py-4 cursor-pointer hover:bg-gray-50 dark:hover:bg-dark-bg transition-colors"
+                  className="px-3 py-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-dark-bg transition-colors"
                   onClick={() => handleSort('stato')}
                 >
                   <div className="flex items-center gap-1">
@@ -1234,7 +1234,7 @@ export const Invoicing: React.FC = () => {
                   </div>
                 </th>
                 <th
-                  className="px-6 py-4 text-right cursor-pointer hover:bg-gray-50 dark:hover:bg-dark-bg transition-colors"
+                  className="px-3 py-3 text-right cursor-pointer hover:bg-gray-50 dark:hover:bg-dark-bg transition-colors"
                   onClick={() => handleSort('flusso')}
                 >
                   <div className="flex items-center justify-end gap-1">
@@ -1244,9 +1244,9 @@ export const Invoicing: React.FC = () => {
                     ) : <ChevronsUpDown size={14} className="text-gray-300 dark:text-gray-600" />}
                   </div>
                 </th>
-                <th className="px-6 py-4 whitespace-nowrap text-right">IVA</th>
+                <th className="px-3 py-3 whitespace-nowrap text-right">IVA</th>
                 <th
-                  className="px-6 py-4 text-right cursor-pointer hover:bg-gray-50 dark:hover:bg-dark-bg transition-colors"
+                  className="px-3 py-3 text-right cursor-pointer hover:bg-gray-50 dark:hover:bg-dark-bg transition-colors"
                   onClick={() => handleSort('totale')}
                 >
                   <div className="flex items-center justify-end gap-1">
@@ -1256,14 +1256,14 @@ export const Invoicing: React.FC = () => {
                     ) : <ChevronsUpDown size={14} className="text-gray-300 dark:text-gray-600" />}
                   </div>
                 </th>
-                <th className="px-6 py-4 whitespace-nowrap text-center">Azioni</th>
+                <th className="px-3 py-3 whitespace-nowrap text-center">Azioni</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200 dark:divide-dark-border">
               {sortedInvoices.map((inv) => (
                 <tr key={inv.id} className={`hover:bg-gray-50 dark:hover:bg-dark-bg transition-colors ${inv.tipo === 'Uscita' ? 'bg-orange-50/30 dark:bg-orange-900/10' : ''}`}>
                   {canDelete && (
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <td className="px-3 py-3 whitespace-nowrap">
                       <div className="flex items-center justify-center">
                         <label className="inline-flex items-center cursor-pointer group">
                           <input
@@ -1283,25 +1283,25 @@ export const Invoicing: React.FC = () => {
                       </div>
                     </td>
                   )}
-                  <td className="px-6 py-4 text-sm text-dark dark:text-white font-semibold">
+                  <td className="px-3 py-3 text-sm text-dark dark:text-white font-semibold whitespace-nowrap">
                     {formatInvoiceId(inv.id, inv.anno)}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  <td className="px-3 py-3 whitespace-nowrap">
                     {inv.tipo === 'Entrata' ? (
-                      <ArrowUpCircle size={20} className="text-green-500" />
+                      <ArrowUpCircle size={18} className="text-green-500" />
                     ) : (
-                      <ArrowDownCircle size={20} className="text-orange-500" />
+                      <ArrowDownCircle size={18} className="text-orange-500" />
                     )}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                  <td className="px-3 py-3 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                     {formatDate(inv.data)}
                   </td>
-                  <td className="px-6 py-4 text-sm">
+                  <td className="px-3 py-3 text-sm max-w-[10rem] truncate">
                     {inv.tipo === 'Entrata' ? (
                       <span className="font-medium text-dark dark:text-white">{inv.nomeProgetto || '-'}</span>
                     ) : (
                       <div className="flex flex-col gap-1 items-start">
-                        <span className="font-medium text-dark dark:text-white">{inv.spesa || '-'}</span>
+                        <span className="font-medium text-dark dark:text-white truncate">{inv.spesa || '-'}</span>
                         {inv.tipoSpesa && (
                           <span className="px-2 py-0.5 bg-gray-100 dark:bg-dark-border text-gray-600 dark:text-gray-400 text-xs rounded">
                             {inv.tipoSpesa}
@@ -1310,10 +1310,10 @@ export const Invoicing: React.FC = () => {
                       </div>
                     )}
                   </td>
-                  <td className="px-6 py-4 text-sm text-gray-500 max-w-[200px] truncate" data-tooltip={inv.note || undefined}>
+                  <td className="px-3 py-3 text-sm text-gray-500 dark:text-gray-400 max-w-[12rem] truncate" data-tooltip={inv.note || undefined}>
                     {inv.note || '-'}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  <td className="px-3 py-3 whitespace-nowrap">
                     <span className={`px-2 py-1 text-xs font-medium rounded-md text-white ${
                       inv.statoFatturazione === 'Effettivo'
                         ? 'bg-secondary'
@@ -1324,16 +1324,16 @@ export const Invoicing: React.FC = () => {
                       {inv.statoFatturazione || 'Nessuno'}
                     </span>
                   </td>
-                  <td className={`px-6 py-4 whitespace-nowrap text-sm font-medium text-right ${inv.tipo === 'Uscita' ? 'text-orange-600 dark:text-orange-400' : 'text-green-600 dark:text-green-400'}`}>
+                  <td className={`px-3 py-3 whitespace-nowrap text-sm font-medium text-right ${inv.tipo === 'Uscita' ? 'text-orange-600 dark:text-orange-400' : 'text-green-600 dark:text-green-400'}`}>
                     {inv.tipo === 'Uscita' ? '-' : '+'}{formatCurrency(inv.flusso || 0)}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-right">
+                  <td className="px-3 py-3 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400 text-right">
                     {formatCurrency(inv.iva || 0)}
                   </td>
-                  <td className={`px-6 py-4 whitespace-nowrap text-sm font-bold text-right ${inv.tipo === 'Uscita' ? 'text-orange-600 dark:text-orange-400' : 'text-green-600 dark:text-green-400'}`}>
+                  <td className={`px-3 py-3 whitespace-nowrap text-sm font-bold text-right ${inv.tipo === 'Uscita' ? 'text-orange-600 dark:text-orange-400' : 'text-green-600 dark:text-green-400'}`}>
                     {inv.tipo === 'Uscita' ? '-' : '+'}{formatCurrency((inv.flusso || 0) + (inv.iva || 0))}
                   </td>
-                  <td className="px-6 py-4">
+                  <td className="px-3 py-3">
                     <div className="flex justify-center gap-2">
                       {canEdit && (
                         <button

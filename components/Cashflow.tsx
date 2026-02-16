@@ -287,8 +287,9 @@ export const Cashflow: React.FC = () => {
         const matchesTipo = filterTipo === 'tutti' || cf.tipo === filterTipo;
         const matchesMeseTabella = filterMeseTabella === 'tutti' || getMeseFromDate(cf.dataPagamento) === filterMeseTabella;
         const matchesAnnoTabella = filterAnnoTabella === 'tutti' || getAnnoFromDate(cf.dataPagamento) === filterAnnoTabella;
-        // Movimenti standalone non hanno stato fatturazione, considerali sempre "Nessuno"
-        const matchesStatoTabella = filterStatoTabella === 'tutti' || filterStatoTabella === 'Nessuno';
+        // Usa lo stato del cashflow record
+        const stato = cf.statoFatturazione || 'Nessuno';
+        const matchesStatoTabella = filterStatoTabella === 'tutti' || stato === filterStatoTabella;
         return matchesSearch && matchesTipo && matchesMeseTabella && matchesAnnoTabella && matchesStatoTabella;
       }
 
