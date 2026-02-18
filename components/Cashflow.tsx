@@ -492,12 +492,13 @@ export const Cashflow: React.FC = () => {
     recordsForDashboard.forEach(cf => {
       const inv = cf.invoice;
       const meseIndex = getMeseIndexFromDate(cf.dataPagamento);
-      if (inv && meseIndex !== -1) {
+      if (meseIndex !== -1) {
         const meseAbr = MESI_ABR[meseIndex];
         const totale = getImportoEffettivo(cf);
-        if (inv.tipo === 'Entrata') {
+        const tipo = inv ? inv.tipo : cf.tipo;
+        if (tipo === 'Entrata') {
           monthlyData[meseAbr].entrate += totale;
-        } else {
+        } else if (tipo === 'Uscita') {
           monthlyData[meseAbr].uscite += totale;
         }
       }
