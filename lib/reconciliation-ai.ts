@@ -511,7 +511,7 @@ Movimenti disponibili: (nessuno - già filtrati)
 → {"invoiceId": null, "cashflowId": null, "confidence": 0, "reason": "Nessun movimento disponibile"}`;
 
   try {
-    const selectedModel = model || 'claude-3-5-haiku-20241022';
+    const selectedModel = model || 'claude-haiku-4-5-20251001';
     console.log('\n🤖 STEP 3: CALLING AI');
     console.log(`   Model: ${selectedModel}`);
     console.log(`   Sending ${cashflowsToSendToAI.length} cashflow(s) for final analysis...`);

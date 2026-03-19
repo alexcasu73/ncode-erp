@@ -1950,7 +1950,7 @@ export const Reconciliation: React.FC = () => {
 
   const [selectedAiModel, setSelectedAiModel] = useState<string>(() => {
     const saved = localStorage.getItem('reconciliation_selectedAiModel');
-    return saved || (selectedAiProvider === 'openai' ? 'gpt-4o-mini' : 'claude-3-5-haiku-20241022');
+    return saved || (selectedAiProvider === 'openai' ? 'gpt-4o-mini' : 'claude-haiku-4-5-20251001');
   });
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -1993,20 +1993,14 @@ export const Reconciliation: React.FC = () => {
   // Get AI model details
   const getAiModelInfo = (modelId: string) => {
     // Anthropic models
-    if (modelId === 'claude-3-5-haiku-20241022') {
-      return { id: modelId, name: 'Haiku 3.5', cost: '~15¢/100 tx', description: 'Veloce ed economico' };
+    if (modelId === 'claude-haiku-4-5-20251001') {
+      return { id: modelId, name: 'Haiku 4.5', cost: '~15¢/100 tx', description: 'Veloce ed economico' };
     }
-    if (modelId === 'claude-3-5-sonnet-20241022') {
-      return { id: modelId, name: 'Sonnet 3.5', cost: '~$1.50/100 tx', description: 'Bilanciato, alta qualità' };
+    if (modelId === 'claude-sonnet-4-6') {
+      return { id: modelId, name: 'Sonnet 4.6', cost: '~$1.50/100 tx', description: 'Bilanciato, alta qualità' };
     }
-    if (modelId === 'claude-sonnet-4-20250514') {
-      return { id: modelId, name: 'Sonnet 4', cost: '~$3/100 tx', description: 'Più recente e performante' };
-    }
-    if (modelId === 'claude-3-opus-20240229') {
-      return { id: modelId, name: 'Opus 3', cost: '~$7.50/100 tx', description: 'Altissima qualità' };
-    }
-    if (modelId === 'claude-opus-4-5-20251101') {
-      return { id: modelId, name: 'Opus 4.5', cost: '~$15/100 tx', description: 'Massima qualità assoluta' };
+    if (modelId === 'claude-opus-4-6') {
+      return { id: modelId, name: 'Opus 4.6', cost: '~$15/100 tx', description: 'Massima qualità assoluta' };
     }
 
     // OpenAI models
@@ -3057,7 +3051,7 @@ export const Reconciliation: React.FC = () => {
                   onChange={(e) => {
                     const newProvider = e.target.value as 'anthropic' | 'openai';
                     setSelectedAiProvider(newProvider);
-                    setSelectedAiModel(newProvider === 'openai' ? 'gpt-4o-mini' : 'claude-3-5-haiku-20241022');
+                    setSelectedAiModel(newProvider === 'openai' ? 'gpt-4o-mini' : 'claude-haiku-4-5-20251001');
                   }}
                   className="text-sm font-semibold text-dark dark:text-white bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-primary/50 cursor-pointer hover:border-gray-400 dark:hover:border-gray-500 transition-colors"
                 >
@@ -3078,11 +3072,9 @@ export const Reconciliation: React.FC = () => {
                 >
                   {selectedAiProvider === 'anthropic' ? (
                     <>
-                      <option value="claude-3-5-haiku-20241022">Haiku 3.5 (~15¢/100 tx)</option>
-                      <option value="claude-3-5-sonnet-20241022">Sonnet 3.5 (~$1.50/100 tx)</option>
-                      <option value="claude-sonnet-4-20250514">Sonnet 4 (~$3/100 tx)</option>
-                      <option value="claude-3-opus-20240229">Opus 3 (~$7.50/100 tx)</option>
-                      <option value="claude-opus-4-5-20251101">Opus 4.5 (~$15/100 tx)</option>
+                      <option value="claude-haiku-4-5-20251001">Haiku 4.5 (~15¢/100 tx)</option>
+                      <option value="claude-sonnet-4-6">Sonnet 4.6 (~$1.50/100 tx)</option>
+                      <option value="claude-opus-4-6">Opus 4.6 (~$15/100 tx)</option>
                     </>
                   ) : (
                     <>

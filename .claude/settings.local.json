@@ -46,7 +46,29 @@
       "Bash(kill:*)",
       "Bash(npm run dev:all:*)",
       "Bash(supabase --version:*)",
-      "Bash(brew upgrade:*)"
+      "Bash(brew upgrade:*)",
+      "Bash(xargs cat:*)",
+      "Bash(certbot:*)",
+      "Bash(nginx -t:*)",
+      "Bash(ss -tlnp:*)",
+      "Bash(systemctl reload:*)",
+      "Bash(dig:*)",
+      "Bash(nslookup:*)",
+      "Bash(nginx -T:*)",
+      "Bash(pm2 restart:*)",
+      "Bash(systemctl list-timers:*)",
+      "Bash(crontab -l:*)",
+      "Bash(chmod:*)",
+      "Bash(systemctl is-enabled:*)",
+      "Bash(systemctl:*)",
+      "Bash(git -C /root/ncode-erp branch:*)",
+      "Bash(git -C /root/ncode-erp status)",
+      "Bash(git -C /root/ncode-erp fetch --all)",
+      "Bash(git -C /root/ncode-erp log --oneline 8fcd377..origin/main)",
+      "Bash(git -C /root/ncode-erp diff --name-only 8fcd377..origin/main)",
+      "Bash(git -C /root/ncode-erp diff --name-only)",
+      "Bash(pm2 startup:*)",
+      "Bash(pm2 save:*)"
     ]
   }
 }

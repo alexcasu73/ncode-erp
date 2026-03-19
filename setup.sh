@@ -252,23 +252,35 @@ install_ssl() {
     local domain="${1:-}"
 
     if [[ -n "$domain" ]]; then
-        info "Setting up Let's Encrypt SSL for $domain..."
-        if ! command -v certbot &>/dev/null; then
-            apt-get install -y -qq certbot python3-certbot-nginx
+        # Always set cert paths so configure_nginx can use them
+        SSL_CERT="/etc/letsencrypt/live/${domain}/fullchain.pem"
+        SSL_KEY="/etc/letsencrypt/live/${domain}/privkey.pem"
+
+        # Skip if certificate already exists
+        if [[ -f "$SSL_CERT" ]]; then
+            ok "Let's Encrypt certificate already exists for $domain"
+        else
+            info "Setting up Let's Encrypt SSL for $domain..."
+            if ! command -v certbot &>/dev/null; then
+                apt-get install -y -qq certbot python3-certbot-nginx
+            fi
+            # Stop nginx temporarily so certbot can bind to port 80
+            systemctl stop nginx 2>/dev/null || true
+            certbot certonly --standalone -d "$domain" --non-interactive --agree-tos \
+                --register-unsafely-without-email || {
+                warn "Certbot failed. You may need to run it manually after DNS is configured."
+                warn "Command: sudo certbot certonly --standalone -d $domain"
+                systemctl start nginx 2>/dev/null || true
+                return
+            }
+            systemctl start nginx 2>/dev/null || true
+            ok "Let's Encrypt SSL certificate obtained"
         fi
-        certbot --nginx -d "$domain" --non-interactive --agree-tos \
-            --register-unsafely-without-email --redirect || {
-            warn "Certbot failed. You may need to run it manually after DNS is configured."
-            warn "Command: sudo certbot --nginx -d $domain"
-            return
-        }
         # Auto-renewal cron (certbot usually sets this up, but ensure it)
         if ! crontab -l 2>/dev/null | grep -q certbot; then
             (crontab -l 2>/dev/null; echo "0 3 * * * certbot renew --quiet --post-hook 'systemctl reload nginx'") | crontab -
         fi
         ok "Let's Encrypt SSL configured with auto-renewal"
-        SSL_CERT="/etc/letsencrypt/live/${domain}/fullchain.pem"
-        SSL_KEY="/etc/letsencrypt/live/${domain}/privkey.pem"
     else
         info "No domain specified, generating self-signed certificate..."
         mkdir -p "$SSL_DIR"
