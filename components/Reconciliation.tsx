@@ -3053,7 +3053,7 @@ export const Reconciliation: React.FC = () => {
                     setSelectedAiProvider(newProvider);
                     setSelectedAiModel(newProvider === 'openai' ? 'gpt-4o-mini' : 'claude-haiku-4-5-20251001');
                   }}
-                  className="text-sm font-semibold text-dark dark:text-white bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-primary/50 cursor-pointer hover:border-gray-400 dark:hover:border-gray-500 transition-colors"
+                  className="text-sm font-semibold text-dark dark:text-white bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md pl-3 pr-8 py-1.5 focus:outline-none focus:ring-2 focus:ring-primary/50 cursor-pointer hover:border-gray-400 dark:hover:border-gray-500 transition-colors w-fit shrink-0"
                 >
                   <option value="anthropic">Anthropic (Claude)</option>
                   <option value="openai">OpenAI (GPT)</option>
@@ -3068,7 +3068,7 @@ export const Reconciliation: React.FC = () => {
                 <select
                   value={selectedAiModel}
                   onChange={(e) => setSelectedAiModel(e.target.value)}
-                  className="text-sm font-semibold text-dark dark:text-white bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-primary/50 cursor-pointer hover:border-gray-400 dark:hover:border-gray-500 transition-colors min-w-[200px]"
+                  className="text-sm font-semibold text-dark dark:text-white bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md pl-3 pr-8 py-1.5 focus:outline-none focus:ring-2 focus:ring-primary/50 cursor-pointer hover:border-gray-400 dark:hover:border-gray-500 transition-colors w-fit shrink-0"
                 >
                   {selectedAiProvider === 'anthropic' ? (
                     <>
