@@ -1,4 +1,5 @@
 import * as XLSX from 'xlsx';
+import type { BankTemplate } from './bank-template-analyzer';
 
 export interface ParsedBankStatement {
   numeroConto?: string;
@@ -323,8 +324,99 @@ function parseTransactions(rows: any[][], startRow: number, columnMap: Record<st
   };
 }
 
+// Parse transactions from data rows using a BankTemplate (for separate entrate/uscite columns)
+function parseTransactionsWithTemplate(
+  rows: any[][],
+  template: BankTemplate
+): { transactions: ParsedTransaction[]; stats: { totalRows: number; skippedNoDate: number; skippedInvalidDate: number; skippedZeroAmount: number } } {
+  const { columns, importoType, positiveIsEntrata, dataStartRow } = template;
+
+  const transactions: ParsedTransaction[] = [];
+  let skippedNoDate = 0;
+  let skippedInvalidDate = 0;
+  let skippedZeroAmount = 0;
+  let consecutiveEmptyRows = 0;
+  const totalRows = rows.length - dataStartRow;
+
+  for (let i = dataStartRow; i < rows.length; i++) {
+    const row = rows[i];
+
+    if (!row || !row.some((cell: any) => cell !== null && cell !== undefined && cell !== '')) {
+      consecutiveEmptyRows++;
+      if (consecutiveEmptyRows >= 10) break;
+      continue;
+    }
+    consecutiveEmptyRows = 0;
+
+    const warnings: string[] = [];
+
+    // Date
+    const dataOpRaw = columns.dataOp !== undefined ? row[columns.dataOp] : null;
+    let parsedDate: string;
+    if (!dataOpRaw) {
+      skippedNoDate++;
+      parsedDate = new Date().toISOString().split('T')[0];
+      warnings.push('⚠️ DATA MANCANTE');
+    } else {
+      const dateAttempt = parseDate(dataOpRaw);
+      if (!dateAttempt) {
+        skippedInvalidDate++;
+        parsedDate = new Date().toISOString().split('T')[0];
+        warnings.push(`⚠️ DATA INVALIDA: ${String(dataOpRaw)}`);
+      } else {
+        parsedDate = dateAttempt;
+      }
+    }
+
+    // Amount
+    let rawAmount = 0;
+    let tipo: 'Entrata' | 'Uscita' = 'Uscita';
+
+    if (importoType === 'separate') {
+      const entrate = columns.entrate !== undefined ? parseAmount(row[columns.entrate]) : 0;
+      const uscite = columns.uscite !== undefined ? parseAmount(row[columns.uscite]) : 0;
+      if (entrate && entrate !== 0) {
+        rawAmount = Math.abs(entrate);
+        tipo = 'Entrata';
+      } else if (uscite && uscite !== 0) {
+        rawAmount = Math.abs(uscite);
+        tipo = 'Uscita';
+      }
+    } else {
+      const imp = columns.importo !== undefined ? parseAmount(row[columns.importo]) : 0;
+      rawAmount = Math.abs(imp);
+      tipo = positiveIsEntrata ? (imp >= 0 ? 'Entrata' : 'Uscita') : (imp >= 0 ? 'Uscita' : 'Entrata');
+    }
+
+    if (rawAmount === 0) {
+      skippedZeroAmount++;
+      warnings.push('⚠️ IMPORTO ZERO O MANCANTE');
+    }
+
+    let descrizione = columns.descrizione !== undefined && row[columns.descrizione]
+      ? String(row[columns.descrizione]).trim()
+      : '';
+    if (warnings.length > 0) {
+      descrizione = warnings.join(' ') + (descrizione ? ' | ' + descrizione : '');
+    }
+
+    transactions.push({
+      data: parsedDate,
+      dataValuta: columns.dataVal !== undefined ? parseDate(row[columns.dataVal]) : undefined,
+      causale: columns.causale !== undefined && row[columns.causale] ? String(row[columns.causale]).trim() : undefined,
+      descrizione,
+      importo: rawAmount,
+      tipo,
+      saldo: columns.saldo !== undefined && row[columns.saldo] !== undefined ? parseAmount(row[columns.saldo]) : undefined,
+      hasErrors: warnings.length > 0
+    });
+  }
+
+  return { transactions, stats: { totalRows, skippedNoDate, skippedInvalidDate, skippedZeroAmount } };
+}
+
 // Main parser function
-export function parseBankStatementExcel(file: File): Promise<ParsedBankStatement> {
+export function parseBankStatementExcel(file: File, template?: BankTemplate): Promise<ParsedBankStatement> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
 
@@ -337,13 +429,8 @@ export function parseBankStatementExcel(file: File): Promise<ParsedBankStatement
         const sheetName = workbook.SheetNames[0];
         const sheet = workbook.Sheets[sheetName];
 
-        // Get the actual range of the sheet
-        const range = XLSX.utils.decode_range(sheet['!ref'] || 'A1');
-        console.log(`📐 Original sheet range: ${sheet['!ref']}, rows: ${range.e.r + 1}`);
-
         // FORCE reading up to row 200 to capture all transactions (Crédit Agricole files can have gaps)
-        const forceRange = `A1:L200`;
-        console.log(`🔧 Forcing extended range: ${forceRange}`);
+        const forceRange = `A1:P200`;
 
         // Convert to 2D array with extended range to avoid stopping at empty rows
         const rows = XLSX.utils.sheet_to_json(sheet, {
@@ -354,48 +441,50 @@ export function parseBankStatementExcel(file: File): Promise<ParsedBankStatement
         }) as any[][];
 
         console.log(`📄 Excel file "${file.name}" - Total rows read: ${rows.length}`);
-        console.log('First 10 rows:', rows.slice(0, 10));
 
         // Extract metadata from header rows
         const metadata = extractMetadata(rows);
 
-        // Header is ALWAYS at row 9 (index 8) for Crédit Agricole
-        const headerRowIndex = 8;
-        const headerRow = rows[headerRowIndex];
+        let transactions: ParsedTransaction[];
+        let stats: { totalRows: number; skippedNoDate: number; skippedInvalidDate: number; skippedZeroAmount: number };
 
-        if (!headerRow) {
-          throw new Error('Header row (row 9) not found in Excel file');
+        if (template) {
+          // Use AI-detected template mapping
+          console.log(`🤖 Using template "${template.bankName}" (header row ${template.headerRowIndex}, data from row ${template.dataStartRow})`);
+          const result = parseTransactionsWithTemplate(rows, template);
+          transactions = result.transactions;
+          stats = result.stats;
+        } else {
+          // Default: Crédit Agricole hardcoded logic
+          const headerRowIndex = 8;
+          const headerRow = rows[headerRowIndex];
+
+          if (!headerRow) {
+            throw new Error('Header row (row 9) not found in Excel file');
+          }
+
+          const columnMap: Record<string, number> = {};
+          const normalizedHeader = headerRow.map((cell: any) =>
+            cell ? String(cell).toLowerCase().trim() : ''
+          );
+
+          for (let j = 0; j < normalizedHeader.length; j++) {
+            const cell = normalizedHeader[j];
+            if (cell.includes('data op')) columnMap.dataOp = j;
+            else if (cell.includes('data val')) columnMap.dataVal = j;
+            else if (cell.includes('causale')) columnMap.causale = j;
+            else if (cell.includes('descrizione')) columnMap.descrizione = j;
+            else if (cell.includes('importo')) columnMap.importo = j;
+            else if (cell.includes('saldo')) columnMap.saldo = j;
+          }
+
+          console.log(`✅ Using Crédit Agricole default header at row 9`);
+          const result = parseTransactions(rows, headerRowIndex + 1, columnMap);
+          transactions = result.transactions;
+          stats = result.stats;
         }
 
-        // Build column map from row 9
-        const columnMap: Record<string, number> = {};
-        const normalizedHeader = headerRow.map(cell =>
-          cell ? String(cell).toLowerCase().trim() : ''
-        );
-
-        for (let j = 0; j < normalizedHeader.length; j++) {
-          const cell = normalizedHeader[j];
-          if (cell.includes('data op')) columnMap.dataOp = j;
-          else if (cell.includes('data val')) columnMap.dataVal = j;
-          else if (cell.includes('causale')) columnMap.causale = j;
-          else if (cell.includes('descrizione')) columnMap.descrizione = j;
-          else if (cell.includes('importo')) columnMap.importo = j;
-          else if (cell.includes('saldo')) columnMap.saldo = j;
-        }
-
-        console.log(`✅ Using fixed header at row 9 (index 8):`, normalizedHeader);
-        console.log('📍 Column mapping:', columnMap);
-
-        // Parse transactions starting from row 10 (index 9)
-        const { transactions, stats } = parseTransactions(rows, headerRowIndex + 1, columnMap);
-
-        const result: ParsedBankStatement = {
-          ...metadata,
-          transactions,
-          parsingStats: stats
-        };
-
-        resolve(result);
+        resolve({ ...metadata, transactions, parsingStats: stats });
       } catch (err) {
         reject(new Error(`Errore nel parsing del file Excel: ${err instanceof Error ? err.message : 'Errore sconosciuto'}`));
       }

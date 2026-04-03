@@ -5,6 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import { useUserRole } from '../hooks/useUserRole';
 import { parseBankStatementExcel, formatPeriodo, type ParsedBankStatement, type ParsedTransaction } from '../lib/excel-parser';
 import { suggestMatch, quickMatch, type MatchSuggestion } from '../lib/reconciliation-ai';
+import { analyzeTemplateWithAI, getBankTemplates, saveBankTemplate, deleteBankTemplate, type BankTemplate } from '../lib/bank-template-analyzer';
 import type { BankTransaction, ReconciliationSession, Invoice, CashflowRecord, CashflowWithInvoice, SideBySideRow, DifferenceReport } from '../types';
 import { formatCurrency } from '../lib/currency';
 
@@ -1953,6 +1954,18 @@ export const Reconciliation: React.FC = () => {
     return saved || (selectedAiProvider === 'openai' ? 'gpt-4o-mini' : 'claude-3-5-haiku-20241022');
   });
 
+  // Bank template state
+  const [savedTemplates, setSavedTemplates] = useState<BankTemplate[]>(() => getBankTemplates());
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string | 'auto'>(() => {
+    return localStorage.getItem('reconciliation_selectedTemplate') || 'auto';
+  });
+  const [showTemplateModal, setShowTemplateModal] = useState(false);
+  const [isAnalyzingTemplate, setIsAnalyzingTemplate] = useState(false);
+  const [templateBankName, setTemplateBankName] = useState('');
+  const [templateAnalysisResult, setTemplateAnalysisResult] = useState<BankTemplate | null>(null);
+  const [templateAnalysisError, setTemplateAnalysisError] = useState<string | null>(null);
+  const templateFileInputRef = useRef<HTMLInputElement>(null);
+
   const fileInputRef = useRef<HTMLInputElement>(null);
   const stopAIProcessingRef = useRef<boolean>(false);
 
@@ -1984,6 +1997,45 @@ export const Reconciliation: React.FC = () => {
   React.useEffect(() => {
     localStorage.setItem('reconciliation_selectedAiModel', selectedAiModel);
   }, [selectedAiModel]);
+
+  React.useEffect(() => {
+    localStorage.setItem('reconciliation_selectedTemplate', selectedTemplateId);
+  }, [selectedTemplateId]);
+
+  const handleAnalyzeTemplate = async (file: File) => {
+    if (!templateBankName.trim()) {
+      setTemplateAnalysisError('Inserisci il nome della banca prima di caricare il file');
+      return;
+    }
+    setIsAnalyzingTemplate(true);
+    setTemplateAnalysisError(null);
+    setTemplateAnalysisResult(null);
+    try {
+      const result = await analyzeTemplateWithAI(file, templateBankName.trim(), selectedAiModel);
+      setTemplateAnalysisResult(result);
+    } catch (err) {
+      setTemplateAnalysisError(err instanceof Error ? err.message : 'Errore durante l\'analisi');
+    } finally {
+      setIsAnalyzingTemplate(false);
+      if (templateFileInputRef.current) templateFileInputRef.current.value = '';
+    }
+  };
+
+  const handleSaveTemplate = () => {
+    if (!templateAnalysisResult) return;
+    saveBankTemplate(templateAnalysisResult);
+    setSavedTemplates(getBankTemplates());
+    setSelectedTemplateId(templateAnalysisResult.id);
+    setShowTemplateModal(false);
+    setTemplateBankName('');
+    setTemplateAnalysisResult(null);
+  };
+
+  const handleDeleteTemplate = (id: string) => {
+    deleteBankTemplate(id);
+    setSavedTemplates(getBankTemplates());
+    if (selectedTemplateId === id) setSelectedTemplateId('auto');
+  };
 
   // Sync aiProcessing.shouldStop with stopAIProcessingRef
   React.useEffect(() => {
@@ -2107,7 +2159,10 @@ export const Reconciliation: React.FC = () => {
 
     try {
       console.log('Parsing file...');
-      const parsed = await parseBankStatementExcel(file);
+      const activeTemplate = selectedTemplateId !== 'auto'
+        ? savedTemplates.find(t => t.id === selectedTemplateId)
+        : undefined;
+      const parsed = await parseBankStatementExcel(file, activeTemplate);
       console.log('Parsed result:', parsed);
 
       // Show parsing statistics if any rows had problems
@@ -2981,6 +3036,34 @@ export const Reconciliation: React.FC = () => {
               onChange={handleFileUpload}
               className="hidden"
             />
+
+            {/* Template selector */}
+            <div className="flex items-center gap-1">
+              <select
+                value={selectedTemplateId}
+                onChange={e => setSelectedTemplateId(e.target.value)}
+                className="text-sm border border-gray-200 dark:border-dark-border rounded-lg px-3 py-2 bg-white dark:bg-dark-card text-dark dark:text-white focus:outline-none focus:ring-2 focus:ring-primary/30"
+                title="Seleziona il formato della banca"
+              >
+                <option value="auto">Crédit Agricole (default)</option>
+                {savedTemplates.map(t => (
+                  <option key={t.id} value={t.id}>{t.bankName}</option>
+                ))}
+              </select>
+              <button
+                onClick={() => {
+                  setShowTemplateModal(true);
+                  setTemplateAnalysisResult(null);
+                  setTemplateAnalysisError(null);
+                  setTemplateBankName('');
+                }}
+                title="Aggiungi template banca"
+                className="flex items-center justify-center w-9 h-9 bg-white dark:bg-dark-card border border-gray-200 dark:border-dark-border rounded-lg hover:bg-gray-50 dark:hover:bg-dark-bg text-gray-600 dark:text-gray-400 transition-colors"
+              >
+                <PlusCircle size={18} />
+              </button>
+            </div>
+
             <button
               onClick={() => fileInputRef.current?.click()}
               disabled={isUploading}
@@ -3538,6 +3621,137 @@ export const Reconciliation: React.FC = () => {
                 </div>
               </>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Template Modal */}
+      {showTemplateModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-dark-card rounded-xl shadow-xl w-full max-w-lg">
+            <div className="flex items-center justify-between p-5 border-b border-gray-200 dark:border-dark-border">
+              <h3 className="text-lg font-semibold text-dark dark:text-white">Nuovo Template Banca</h3>
+              <button
+                onClick={() => setShowTemplateModal(false)}
+                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="p-5 space-y-4">
+              {/* Bank name */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Nome banca
+                </label>
+                <input
+                  type="text"
+                  value={templateBankName}
+                  onChange={e => setTemplateBankName(e.target.value)}
+                  placeholder="es. Intesa Sanpaolo, UniCredit..."
+                  className="w-full px-3 py-2 border border-gray-200 dark:border-dark-border rounded-lg bg-white dark:bg-dark-bg text-dark dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+                />
+              </div>
+
+              {/* File upload for template analysis */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Carica un file di esempio
+                </label>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
+                  Carica un estratto conto Excel della banca. L'AI analizzerà la struttura e creerà il mapping automaticamente.
+                </p>
+                <input
+                  ref={templateFileInputRef}
+                  type="file"
+                  accept=".xlsx,.xls"
+                  className="hidden"
+                  onChange={e => {
+                    const f = e.target.files?.[0];
+                    if (f) handleAnalyzeTemplate(f);
+                  }}
+                />
+                <button
+                  onClick={() => templateFileInputRef.current?.click()}
+                  disabled={isAnalyzingTemplate || !templateBankName.trim()}
+                  className="flex items-center gap-2 px-4 py-2 border border-dashed border-gray-300 dark:border-dark-border rounded-lg text-sm text-gray-600 dark:text-gray-400 hover:border-primary hover:text-primary transition-colors disabled:opacity-50 disabled:cursor-not-allowed w-full justify-center"
+                >
+                  {isAnalyzingTemplate ? (
+                    <><RefreshCw size={16} className="animate-spin" /> Analisi in corso...</>
+                  ) : (
+                    <><Upload size={16} /> Scegli file Excel</>
+                  )}
+                </button>
+              </div>
+
+              {/* Error */}
+              {templateAnalysisError && (
+                <div className="flex items-start gap-2 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+                  <AlertCircle size={16} className="text-red-500 mt-0.5 flex-shrink-0" />
+                  <p className="text-sm text-red-700 dark:text-red-400">{templateAnalysisError}</p>
+                </div>
+              )}
+
+              {/* Analysis result preview */}
+              {templateAnalysisResult && (
+                <div className="p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg space-y-2">
+                  <div className="flex items-center gap-2">
+                    <Check size={16} className="text-green-600" />
+                    <span className="text-sm font-medium text-green-700 dark:text-green-400">Struttura rilevata</span>
+                  </div>
+                  <div className="text-xs text-gray-600 dark:text-gray-300 space-y-1">
+                    <div><span className="font-medium">Riga header:</span> {templateAnalysisResult.headerRowIndex + 1}</div>
+                    <div><span className="font-medium">Dati da riga:</span> {templateAnalysisResult.dataStartRow + 1}</div>
+                    <div><span className="font-medium">Tipo importo:</span> {templateAnalysisResult.importoType === 'signed' ? 'Colonna unica con segno' : 'Entrate e uscite separate'}</div>
+                    <div className="font-medium mt-1">Colonne rilevate:</div>
+                    <div className="pl-2 space-y-0.5">
+                      {Object.entries(templateAnalysisResult.columns).map(([k, v]) => (
+                        <div key={k}>{k}: colonna {(v as number) + 1}</div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Saved templates list */}
+              {savedTemplates.length > 0 && (
+                <div>
+                  <div className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Template salvati</div>
+                  <div className="space-y-1">
+                    {savedTemplates.map(t => (
+                      <div key={t.id} className="flex items-center justify-between p-2 bg-gray-50 dark:bg-dark-bg rounded-lg">
+                        <span className="text-sm text-dark dark:text-white">{t.bankName}</span>
+                        <button
+                          onClick={() => handleDeleteTemplate(t.id)}
+                          className="text-red-400 hover:text-red-600 transition-colors"
+                          title="Elimina template"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="flex justify-end gap-3 p-5 border-t border-gray-200 dark:border-dark-border">
+              <button
+                onClick={() => setShowTemplateModal(false)}
+                className="px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-dark dark:hover:text-white transition-colors"
+              >
+                Chiudi
+              </button>
+              {templateAnalysisResult && (
+                <button
+                  onClick={handleSaveTemplate}
+                  className="px-4 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:opacity-90 transition-all"
+                >
+                  Salva Template
+                </button>
+              )}
+            </div>
           </div>
         </div>
       )}
