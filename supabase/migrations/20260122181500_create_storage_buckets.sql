@@ -136,5 +136,4 @@ FOR SELECT
 TO public
 USING (bucket_id = 'company-logos');
 
--- Add helpful comment
-COMMENT ON TABLE storage.buckets IS 'Storage buckets for user avatars and company logos. Avatars: users can manage their own. Company logos: only admins can manage.';
+-- Note: storage.buckets is owned by supabase_storage_admin, cannot add comments from migrations
