@@ -45,17 +45,25 @@ function parseDate(value: any): string | undefined {
 
   // If it's a string date
   if (typeof value === 'string') {
-    // Try DD/MM/YYYY or DD-MM-YYYY
-    const match = value.match(/(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/);
-    if (match) {
-      const day = match[1].padStart(2, '0');
-      const month = match[2].padStart(2, '0');
-      const year = match[3];
-      return `${year}-${month}-${day}`;
-    }
     // Try YYYY-MM-DD
     if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
       return value;
+    }
+    // Try DD/MM/YYYY or DD-MM-YYYY (4-digit year)
+    const match4 = value.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+    if (match4) {
+      const day = match4[1].padStart(2, '0');
+      const month = match4[2].padStart(2, '0');
+      const year = match4[3];
+      return `${year}-${month}-${day}`;
+    }
+    // Try M/D/YY or MM/DD/YY (2-digit year, US format)
+    const match2 = value.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2})$/);
+    if (match2) {
+      const month = match2[1].padStart(2, '0');
+      const day = match2[2].padStart(2, '0');
+      const year = parseInt(match2[3]) >= 50 ? `19${match2[3]}` : `20${match2[3]}`;
+      return `${year}-${month}-${day}`;
     }
   }
 

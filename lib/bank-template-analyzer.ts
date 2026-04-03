@@ -128,7 +128,7 @@ export async function analyzeTemplateWithAI(
   const rowsText = formatRowsForAI(rows.slice(0, 25));
   const prompt = buildPrompt(rowsText);
   const settings = getAISettings();
-  const selectedModel = model || settings?.defaultAiModel || 'claude-3-5-haiku-20241022';
+  const selectedModel = model || settings?.defaultAiModel || 'claude-haiku-4-5-20251001';
 
   let responseText = '';
 

@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useRef } from 'react';
-import { Upload, FileCheck, AlertCircle, Check, X, RefreshCw, ChevronDown, ChevronUp, Search, Eye, Link2, Trash2, FilePlus, PlusCircle, StopCircle, Lock } from 'lucide-react';
+import { Upload, FileCheck, AlertCircle, Check, X, RefreshCw, ChevronDown, ChevronUp, Search, Eye, Link2, Trash2, FilePlus, PlusCircle, StopCircle, Lock, ArrowLeftRight } from 'lucide-react';
 import { useData } from '../context/DataContext';
 import { useAuth } from '../context/AuthContext';
 import { useUserRole } from '../hooks/useUserRole';
@@ -1951,7 +1951,11 @@ export const Reconciliation: React.FC = () => {
 
   const [selectedAiModel, setSelectedAiModel] = useState<string>(() => {
     const saved = localStorage.getItem('reconciliation_selectedAiModel');
-    return saved || (selectedAiProvider === 'openai' ? 'gpt-4o-mini' : 'claude-3-5-haiku-20241022');
+    const DEPRECATED_MODELS = ['claude-3-5-haiku-20241022', 'claude-3-haiku-20240307'];
+    if (!saved || DEPRECATED_MODELS.includes(saved)) {
+      return selectedAiProvider === 'openai' ? 'gpt-4o-mini' : 'claude-haiku-4-5-20251001';
+    }
+    return saved;
   });
 
   // Bank template state
@@ -2037,6 +2041,14 @@ export const Reconciliation: React.FC = () => {
     if (selectedTemplateId === id) setSelectedTemplateId('auto');
   };
 
+  const handleFlipTemplateSign = (id: string) => {
+    const templates = getBankTemplates();
+    const t = templates.find(t => t.id === id);
+    if (!t) return;
+    saveBankTemplate({ ...t, positiveIsEntrata: !t.positiveIsEntrata });
+    setSavedTemplates(getBankTemplates());
+  };
+
   // Sync aiProcessing.shouldStop with stopAIProcessingRef
   React.useEffect(() => {
     stopAIProcessingRef.current = aiProcessing.shouldStop;
@@ -2045,7 +2057,7 @@ export const Reconciliation: React.FC = () => {
   // Get AI model details
   const getAiModelInfo = (modelId: string) => {
     // Anthropic models
-    if (modelId === 'claude-3-5-haiku-20241022') {
+    if (modelId === 'claude-haiku-4-5-20251001') {
       return { id: modelId, name: 'Haiku 3.5', cost: '~15¢/100 tx', description: 'Veloce ed economico' };
     }
     if (modelId === 'claude-3-5-sonnet-20241022') {
@@ -3062,6 +3074,24 @@ export const Reconciliation: React.FC = () => {
               >
                 <PlusCircle size={18} />
               </button>
+              {selectedTemplateId !== 'auto' && (
+                <>
+                  <button
+                    onClick={() => handleFlipTemplateSign(selectedTemplateId)}
+                    title={`Inverti entrate/uscite (ora: positivo = ${savedTemplates.find(t => t.id === selectedTemplateId)?.positiveIsEntrata ? 'Entrata' : 'Uscita'})`}
+                    className="flex items-center justify-center w-9 h-9 bg-white dark:bg-dark-card border border-gray-200 dark:border-dark-border rounded-lg hover:bg-gray-50 dark:hover:bg-dark-bg text-gray-600 dark:text-gray-400 hover:text-primary transition-colors"
+                  >
+                    <ArrowLeftRight size={16} />
+                  </button>
+                  <button
+                    onClick={() => handleDeleteTemplate(selectedTemplateId)}
+                    title="Elimina template selezionato"
+                    className="flex items-center justify-center w-9 h-9 bg-white dark:bg-dark-card border border-red-200 dark:border-red-800 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 text-red-400 hover:text-red-600 transition-colors"
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                </>
+              )}
             </div>
 
             <button
@@ -3140,7 +3170,7 @@ export const Reconciliation: React.FC = () => {
                   onChange={(e) => {
                     const newProvider = e.target.value as 'anthropic' | 'openai';
                     setSelectedAiProvider(newProvider);
-                    setSelectedAiModel(newProvider === 'openai' ? 'gpt-4o-mini' : 'claude-3-5-haiku-20241022');
+                    setSelectedAiModel(newProvider === 'openai' ? 'gpt-4o-mini' : 'claude-haiku-4-5-20251001');
                   }}
                   className="text-sm font-semibold text-dark dark:text-white bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-primary/50 cursor-pointer hover:border-gray-400 dark:hover:border-gray-500 transition-colors"
                 >
@@ -3161,7 +3191,7 @@ export const Reconciliation: React.FC = () => {
                 >
                   {selectedAiProvider === 'anthropic' ? (
                     <>
-                      <option value="claude-3-5-haiku-20241022">Haiku 3.5 (~15¢/100 tx)</option>
+                      <option value="claude-haiku-4-5-20251001">Haiku 3.5 (~15¢/100 tx)</option>
                       <option value="claude-3-5-sonnet-20241022">Sonnet 3.5 (~$1.50/100 tx)</option>
                       <option value="claude-sonnet-4-20250514">Sonnet 4 (~$3/100 tx)</option>
                       <option value="claude-3-opus-20240229">Opus 3 (~$7.50/100 tx)</option>
@@ -3704,6 +3734,16 @@ export const Reconciliation: React.FC = () => {
                     <div><span className="font-medium">Riga header:</span> {templateAnalysisResult.headerRowIndex + 1}</div>
                     <div><span className="font-medium">Dati da riga:</span> {templateAnalysisResult.dataStartRow + 1}</div>
                     <div><span className="font-medium">Tipo importo:</span> {templateAnalysisResult.importoType === 'signed' ? 'Colonna unica con segno' : 'Entrate e uscite separate'}</div>
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className="font-medium">Segni:</span>
+                      <span>positivo = {templateAnalysisResult.positiveIsEntrata ? 'Entrata' : 'Uscita'}</span>
+                      <button
+                        onClick={() => setTemplateAnalysisResult({ ...templateAnalysisResult, positiveIsEntrata: !templateAnalysisResult.positiveIsEntrata })}
+                        className="flex items-center gap-1 px-2 py-0.5 text-xs bg-white dark:bg-dark-bg border border-gray-300 dark:border-dark-border rounded text-gray-600 dark:text-gray-400 hover:text-primary hover:border-primary transition-colors"
+                      >
+                        <ArrowLeftRight size={11} /> Inverti
+                      </button>
+                    </div>
                     <div className="font-medium mt-1">Colonne rilevate:</div>
                     <div className="pl-2 space-y-0.5">
                       {Object.entries(templateAnalysisResult.columns).map(([k, v]) => (
