@@ -1973,6 +1973,20 @@ export const Reconciliation: React.FC = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const stopAIProcessingRef = useRef<boolean>(false);
 
+  const templateSelectWidth = useMemo(() => {
+    const labels = [
+      'Crédit Agricole (default)',
+      ...savedTemplates.map(t => t.bankName)
+    ];
+    const longest = labels.reduce((a, b) => a.length > b.length ? a : b, '');
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return 220;
+    ctx.font = '14px ui-sans-serif, system-ui, sans-serif'; // text-sm
+    const textWidth = ctx.measureText(longest).width;
+    return Math.ceil(textWidth) + 52; // padding + freccia select
+  }, [savedTemplates]);
+
   // Persist state to localStorage
   React.useEffect(() => {
     if (selectedSession) {
@@ -3048,6 +3062,7 @@ export const Reconciliation: React.FC = () => {
               <select
                 value={selectedTemplateId}
                 onChange={e => setSelectedTemplateId(e.target.value)}
+                style={{ width: templateSelectWidth }}
                 className="text-sm border border-gray-200 dark:border-dark-border rounded-lg px-3 py-2 bg-white dark:bg-dark-card text-dark dark:text-white focus:outline-none focus:ring-2 focus:ring-primary/30"
                 title="Seleziona il formato della banca"
               >
