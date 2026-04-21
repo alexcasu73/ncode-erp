@@ -558,8 +558,32 @@ do_update() {
     info "Installing dependencies (server)..."
     run_as_user "cd server && npm install"
 
+    info "Applying database migrations..."
+    if run_as_user "cd supabase && supabase db push --yes" 2>/dev/null; then
+        ok "Migrations applied"
+    else
+        warn "supabase db push failed — applying migrations via psql fallback..."
+        local db_url
+        db_url=$(run_as_user "cd supabase && supabase status 2>/dev/null | grep -oP 'DB URL:\s+\K\S+'" || echo "postgresql://postgres:postgres@localhost:54322/postgres")
+        for migration in "$APP_DIR"/supabase/migrations/*.sql; do
+            info "  Applying $(basename "$migration")..."
+            psql "$db_url" -f "$migration" --quiet 2>/dev/null || warn "  Already applied or failed: $(basename "$migration")"
+        done
+        ok "Migrations applied via psql"
+    fi
+
+    info "Deploying Edge Functions..."
+    if run_as_user "cd supabase && supabase functions deploy ai-proxy --use-api" 2>/dev/null; then
+        ok "Edge Function ai-proxy deployed"
+    else
+        warn "supabase functions deploy failed — skipping Edge Function deploy"
+    fi
+
     info "Building frontend..."
     run_as_user "npm run build"
+
+    info "Reloading Nginx..."
+    systemctl reload nginx 2>/dev/null || true
 
     info "Restarting PM2 processes..."
     run_as_user "pm2 restart all"

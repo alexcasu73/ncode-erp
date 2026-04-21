@@ -1,57 +1,99 @@
 import * as XLSX from 'xlsx';
 import Anthropic from '@anthropic-ai/sdk';
 import OpenAI from 'openai';
+import { supabase } from './supabase';
 
 export interface BankColumnMapping {
-  dataOp?: number;      // data operazione
-  dataVal?: number;     // data valuta
-  causale?: number;     // causale / tipo operazione
-  descrizione?: number; // descrizione / dettaglio
-  importo?: number;     // importo con segno (positivo=entrata o uscita, dipende da positiveIsEntrata)
-  entrate?: number;     // colonna entrate (se separata da uscite)
-  uscite?: number;      // colonna uscite (se separata da entrate)
-  saldo?: number;       // saldo
+  dataOp?: number;
+  dataVal?: number;
+  causale?: number;
+  descrizione?: number;
+  importo?: number;
+  entrate?: number;
+  uscite?: number;
+  saldo?: number;
 }
 
 export interface BankTemplate {
   id: string;
   bankName: string;
+  isDefault: boolean;
   createdAt: string;
-  headerRowIndex: number;     // indice riga header (0-based)
-  dataStartRow: number;       // indice prima riga dati (0-based)
+  headerRowIndex: number;
+  dataStartRow: number;
   columns: BankColumnMapping;
-  importoType: 'signed' | 'separate'; // signed = unica colonna con segno; separate = entrate/uscite divise
+  importoType: 'signed' | 'separate';
   positiveIsEntrata: boolean;
-  samplePreview: string;      // prime righe formattate per anteprima
+  samplePreview: string;
 }
 
-const TEMPLATES_STORAGE_KEY = 'bank_templates_v1';
-
-export function getBankTemplates(): BankTemplate[] {
-  try {
-    const raw = localStorage.getItem(TEMPLATES_STORAGE_KEY);
-    if (!raw) return [];
-    return JSON.parse(raw) as BankTemplate[];
-  } catch {
-    return [];
-  }
+// ── DB row → BankTemplate ──────────────────────────────────────────────────
+function fromRow(row: Record<string, unknown>): BankTemplate {
+  return {
+    id: row.id as string,
+    bankName: row.bank_name as string,
+    isDefault: row.is_default as boolean,
+    createdAt: row.created_at as string,
+    headerRowIndex: row.header_row_index as number,
+    dataStartRow: row.data_start_row as number,
+    columns: row.columns as BankColumnMapping,
+    importoType: row.importo_type as 'signed' | 'separate',
+    positiveIsEntrata: row.positive_is_entrata as boolean,
+    samplePreview: row.sample_preview as string,
+  };
 }
 
-export function saveBankTemplate(template: BankTemplate): void {
-  const templates = getBankTemplates();
-  const existingIdx = templates.findIndex(t => t.id === template.id);
-  if (existingIdx >= 0) {
-    templates[existingIdx] = template;
-  } else {
-    templates.push(template);
-  }
-  localStorage.setItem(TEMPLATES_STORAGE_KEY, JSON.stringify(templates));
+// ── CRUD ───────────────────────────────────────────────────────────────────
+
+export async function getBankTemplates(companyId: string): Promise<BankTemplate[]> {
+  const { data, error } = await supabase
+    .from('bank_templates')
+    .select('*')
+    .eq('company_id', companyId)
+    .order('created_at', { ascending: true });
+  if (error) { console.error('[getBankTemplates]', error); return []; }
+  return (data ?? []).map(fromRow);
 }
 
-export function deleteBankTemplate(id: string): void {
-  const templates = getBankTemplates().filter(t => t.id !== id);
-  localStorage.setItem(TEMPLATES_STORAGE_KEY, JSON.stringify(templates));
+export async function saveBankTemplate(template: BankTemplate, companyId: string): Promise<void> {
+  const row = {
+    id: template.id,
+    company_id: companyId,
+    bank_name: template.bankName,
+    is_default: template.isDefault,
+    header_row_index: template.headerRowIndex,
+    data_start_row: template.dataStartRow,
+    columns: template.columns,
+    importo_type: template.importoType,
+    positive_is_entrata: template.positiveIsEntrata,
+    sample_preview: template.samplePreview,
+  };
+  const { error } = await supabase
+    .from('bank_templates')
+    .upsert(row, { onConflict: 'id' });
+  if (error) throw new Error(`Errore salvataggio template: ${error.message}`);
 }
+
+// Imposta o rimuove il template default in modo atomico via RPC.
+// Passare templateId = null per rimuovere il default senza impostarne uno nuovo.
+export async function setDefaultTemplate(templateId: string | null, companyId: string): Promise<void> {
+  const { error } = await supabase.rpc('set_default_bank_template', {
+    p_template_id: templateId,
+    p_company_id: companyId,
+  });
+  if (error) throw new Error(`Errore impostazione default: ${error.message}`);
+}
+
+export async function deleteBankTemplate(id: string, companyId: string): Promise<void> {
+  const { error } = await supabase
+    .from('bank_templates')
+    .delete()
+    .eq('id', id)
+    .eq('company_id', companyId);
+  if (error) throw new Error(`Errore eliminazione template: ${error.message}`);
+}
+
+// ── AI analysis ────────────────────────────────────────────────────────────
 
 function getAISettings() {
   try {
@@ -71,15 +113,10 @@ function extractRawRows(file: File): Promise<string[][]> {
         const workbook = XLSX.read(data, { type: 'array', raw: false });
         const sheet = workbook.Sheets[workbook.SheetNames[0]];
         const rows = XLSX.utils.sheet_to_json(sheet, {
-          header: 1,
-          defval: '',
-          raw: false,
-          range: 'A1:P30'
+          header: 1, defval: '', raw: false, range: 'A1:P30'
         }) as string[][];
         resolve(rows);
-      } catch (err) {
-        reject(err);
-      }
+      } catch (err) { reject(err); }
     };
     reader.onerror = () => reject(new Error('Errore lettura file'));
     reader.readAsArrayBuffer(file);
@@ -88,10 +125,7 @@ function extractRawRows(file: File): Promise<string[][]> {
 
 function formatRowsForAI(rows: string[][]): string {
   return rows
-    .map((row, i) => {
-      const cells = row.map(c => String(c ?? '').trim());
-      return `RIGA[${i}]: ${cells.join(' | ')}`;
-    })
+    .map((row, i) => `RIGA[${i}]: ${row.map(c => String(c ?? '').trim()).join(' | ')}`)
     .join('\n');
 }
 
@@ -157,7 +191,6 @@ export async function analyzeTemplateWithAI(
     responseText = block.type === 'text' ? block.text : '';
   }
 
-  // Parse JSON response
   const jsonMatch = responseText.match(/\{[\s\S]*\}/);
   if (!jsonMatch) throw new Error('Risposta AI non valida: JSON non trovato');
 
@@ -175,21 +208,19 @@ export async function analyzeTemplateWithAI(
     throw new Error('Risposta AI non valida: JSON malformato');
   }
 
-  // Build sample preview (header row + first 3 data rows)
   const previewRows = rows.slice(parsed.headerRowIndex, parsed.dataStartRow + 3);
   const samplePreview = formatRowsForAI(previewRows);
 
-  const template: BankTemplate = {
+  return {
     id: crypto.randomUUID(),
     bankName,
+    isDefault: false,
     createdAt: new Date().toISOString(),
     headerRowIndex: parsed.headerRowIndex,
     dataStartRow: parsed.dataStartRow,
     columns: parsed.columns,
     importoType: parsed.importoType,
     positiveIsEntrata: parsed.positiveIsEntrata,
-    samplePreview
+    samplePreview,
   };
-
-  return template;
 }

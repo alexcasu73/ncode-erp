@@ -1,11 +1,12 @@
 import React, { useState, useMemo, useRef } from 'react';
+import { supabase } from '../lib/supabase';
 import { Upload, FileCheck, AlertCircle, Check, X, RefreshCw, ChevronDown, ChevronUp, Search, Eye, Link2, Trash2, FilePlus, PlusCircle, StopCircle, Lock, ArrowLeftRight } from 'lucide-react';
 import { useData } from '../context/DataContext';
 import { useAuth } from '../context/AuthContext';
 import { useUserRole } from '../hooks/useUserRole';
 import { parseBankStatementExcel, formatPeriodo, type ParsedBankStatement, type ParsedTransaction } from '../lib/excel-parser';
-import { suggestMatch, quickMatch, type MatchSuggestion } from '../lib/reconciliation-ai';
-import { analyzeTemplateWithAI, getBankTemplates, saveBankTemplate, deleteBankTemplate, type BankTemplate } from '../lib/bank-template-analyzer';
+import { suggestMatch, quickMatch, type MatchSuggestion, type ProxyConfig } from '../lib/reconciliation-ai';
+import { analyzeTemplateWithAI, getBankTemplates, saveBankTemplate, deleteBankTemplate, setDefaultTemplate, type BankTemplate } from '../lib/bank-template-analyzer';
 import type { BankTransaction, ReconciliationSession, Invoice, CashflowRecord, CashflowWithInvoice, SideBySideRow, DifferenceReport } from '../types';
 import { formatCurrency } from '../lib/currency';
 
@@ -1841,7 +1842,7 @@ const ReportView: React.FC<ReportViewProps> = ({ report }) => {
 
 export const Reconciliation: React.FC = () => {
   const { invoices, cashflowRecords, reconciliationSessions, bankTransactions, addReconciliationSession, addBankTransaction, updateBankTransaction, updateReconciliationSession, deleteBankTransaction, deleteReconciliationSession, clearAllReconciliationSessions, addInvoice, addCashflowRecord, updateCashflowRecord, updateInvoice, deleteCashflowRecord, deleteInvoice, aiProcessing, setAiProcessing, stopAiProcessing, refreshData, getSettings } = useData();
-  const { companyId } = useAuth();
+  const { companyId, session } = useAuth();
   const { canReconcile, loading: roleLoading } = useUserRole();
 
   const [isUploading, setIsUploading] = useState(false);
@@ -1959,10 +1960,8 @@ export const Reconciliation: React.FC = () => {
   });
 
   // Bank template state
-  const [savedTemplates, setSavedTemplates] = useState<BankTemplate[]>(() => getBankTemplates());
-  const [selectedTemplateId, setSelectedTemplateId] = useState<string | 'auto'>(() => {
-    return localStorage.getItem('reconciliation_selectedTemplate') || 'auto';
-  });
+  const [savedTemplates, setSavedTemplates] = useState<BankTemplate[]>([]);
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string | 'auto'>('auto');
   const [showTemplateModal, setShowTemplateModal] = useState(false);
   const [isAnalyzingTemplate, setIsAnalyzingTemplate] = useState(false);
   const [templateBankName, setTemplateBankName] = useState('');
@@ -1975,7 +1974,7 @@ export const Reconciliation: React.FC = () => {
 
   const templateSelectWidth = useMemo(() => {
     const labels = [
-      'Crédit Agricole (default)',
+      'Auto-rileva formato',
       ...savedTemplates.map(t => t.bankName)
     ];
     const longest = labels.reduce((a, b) => a.length > b.length ? a : b, '');
@@ -2016,9 +2015,15 @@ export const Reconciliation: React.FC = () => {
     localStorage.setItem('reconciliation_selectedAiModel', selectedAiModel);
   }, [selectedAiModel]);
 
+  // Carica template dal DB quando companyId è disponibile
   React.useEffect(() => {
-    localStorage.setItem('reconciliation_selectedTemplate', selectedTemplateId);
-  }, [selectedTemplateId]);
+    if (!companyId) return;
+    getBankTemplates(companyId).then(templates => {
+      setSavedTemplates(templates);
+      const defaultTemplate = templates.find(t => t.isDefault);
+      if (defaultTemplate) setSelectedTemplateId(defaultTemplate.id);
+    });
+  }, [companyId]);
 
   const handleAnalyzeTemplate = async (file: File) => {
     if (!templateBankName.trim()) {
@@ -2039,28 +2044,80 @@ export const Reconciliation: React.FC = () => {
     }
   };
 
-  const handleSaveTemplate = () => {
-    if (!templateAnalysisResult) return;
-    saveBankTemplate(templateAnalysisResult);
-    setSavedTemplates(getBankTemplates());
-    setSelectedTemplateId(templateAnalysisResult.id);
-    setShowTemplateModal(false);
-    setTemplateBankName('');
-    setTemplateAnalysisResult(null);
+  const handleSaveTemplate = async () => {
+    if (!templateAnalysisResult || !companyId) return;
+    try {
+      await saveBankTemplate(templateAnalysisResult, companyId);
+      const templates = await getBankTemplates(companyId);
+      setSavedTemplates(templates);
+      setSelectedTemplateId(templateAnalysisResult.id);
+      setShowTemplateModal(false);
+      setTemplateBankName('');
+      setTemplateAnalysisResult(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Errore salvataggio template');
+    }
   };
 
-  const handleDeleteTemplate = (id: string) => {
-    deleteBankTemplate(id);
-    setSavedTemplates(getBankTemplates());
-    if (selectedTemplateId === id) setSelectedTemplateId('auto');
+  const handleDeleteTemplate = async (id: string) => {
+    if (!companyId) return;
+    try {
+      // Se il template è il default, prima lo rimuove (RPC atomica)
+      const isDefault = savedTemplates.find(t => t.id === id)?.isDefault ?? false;
+      if (isDefault) await setDefaultTemplate(null, companyId);
+
+      await deleteBankTemplate(id, companyId);
+
+      // Verifica che l'eliminazione sia avvenuta
+      const templates = await getBankTemplates(companyId);
+      if (templates.some(t => t.id === id)) {
+        throw new Error('Il template non è stato eliminato. Riprova.');
+      }
+
+      setSavedTemplates(templates);
+      if (selectedTemplateId === id) {
+        const newDefault = templates.find(t => t.isDefault);
+        setSelectedTemplateId(newDefault?.id ?? 'auto');
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Errore eliminazione template');
+    }
   };
 
-  const handleFlipTemplateSign = (id: string) => {
-    const templates = getBankTemplates();
-    const t = templates.find(t => t.id === id);
-    if (!t) return;
-    saveBankTemplate({ ...t, positiveIsEntrata: !t.positiveIsEntrata });
-    setSavedTemplates(getBankTemplates());
+  const handleFlipTemplateSign = async (id: string) => {
+    if (!companyId) return;
+    try {
+      // Aggiorna il flag nel template
+      const t = savedTemplates.find(t => t.id === id);
+      if (!t) return;
+      await saveBankTemplate({ ...t, positiveIsEntrata: !t.positiveIsEntrata }, companyId);
+      setSavedTemplates(await getBankTemplates(companyId));
+
+      // Flip tipo di tutte le transazioni pending nella sessione corrente
+      if (selectedSession) {
+        const { error } = await supabase.rpc('flip_bank_transactions_tipo', {
+          p_session_id: selectedSession,
+          p_company_id: companyId,
+        });
+        if (error) throw new Error(`Errore flip transazioni: ${error.message}`);
+        await refreshData();
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Errore aggiornamento template');
+    }
+  };
+
+  const handleSetDefaultTemplate = async (id: string) => {
+    if (!companyId) return;
+    try {
+      const isAlreadyDefault = savedTemplates.find(t => t.id === id)?.isDefault ?? false;
+      // Toggle: se è già default lo rimuove, altrimenti lo imposta
+      await setDefaultTemplate(isAlreadyDefault ? null : id, companyId);
+      const updated = await getBankTemplates(companyId);
+      setSavedTemplates(updated);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Errore impostazione template default');
+    }
   };
 
   // Sync aiProcessing.shouldStop with stopAIProcessingRef
@@ -2468,7 +2525,11 @@ export const Reconciliation: React.FC = () => {
 
       console.log(`[Single AI Match] Filtered cashflows: ${availableCashflows.length}/${cashflowRecords.length} available (${cashflowRecords.length - availableCashflows.length} already matched)`);
 
-      const suggestion = await suggestMatch(tx, invoices, availableCashflows, modelInfo.id);
+      const proxyConfig: ProxyConfig | undefined = (session?.access_token && companyId && import.meta.env.VITE_SUPABASE_URL)
+        ? { supabaseUrl: import.meta.env.VITE_SUPABASE_URL, authToken: session.access_token, companyId }
+        : undefined;
+
+      const suggestion = await suggestMatch(tx, invoices, availableCashflows, modelInfo.id, proxyConfig);
       console.log(`[Single AI Match Result]`, suggestion);
 
       // Auto-match ONLY if confidence is 95% (AI is very sure)
@@ -2656,7 +2717,11 @@ export const Reconciliation: React.FC = () => {
         const availableCashflows = cashflowRecords.filter(cf => !usedCashflowIds.has(cf.id));
         console.log(`[Batch AI Match ${i+1}/${pending.length}] Available cashflows: ${availableCashflows.length}/${cashflowRecords.length}`);
 
-        const suggestion = await suggestMatch(tx, invoices, availableCashflows, modelInfo.id);
+        const batchProxyConfig: ProxyConfig | undefined = (session?.access_token && companyId && import.meta.env.VITE_SUPABASE_URL)
+          ? { supabaseUrl: import.meta.env.VITE_SUPABASE_URL, authToken: session.access_token, companyId }
+          : undefined;
+
+        const suggestion = await suggestMatch(tx, invoices, availableCashflows, modelInfo.id, batchProxyConfig);
 
         // Check again after AI call - use ref
         if (stopAIProcessingRef.current) {
@@ -3066,9 +3131,11 @@ export const Reconciliation: React.FC = () => {
                 className="text-sm border border-gray-200 dark:border-dark-border rounded-lg px-3 py-2 bg-white dark:bg-dark-card text-dark dark:text-white focus:outline-none focus:ring-2 focus:ring-primary/30"
                 title="Seleziona il formato della banca"
               >
-                <option value="auto">Crédit Agricole (default)</option>
+                <option value="auto">Auto-rileva formato</option>
                 {savedTemplates.map(t => (
-                  <option key={t.id} value={t.id}>{t.bankName}</option>
+                  <option key={t.id} value={t.id}>
+                    {t.bankName}{t.isDefault ? ' ★' : ''}
+                  </option>
                 ))}
               </select>
               <button
@@ -3083,24 +3150,44 @@ export const Reconciliation: React.FC = () => {
               >
                 <PlusCircle size={18} />
               </button>
-              {selectedTemplateId !== 'auto' && (
-                <>
-                  <button
-                    onClick={() => handleFlipTemplateSign(selectedTemplateId)}
-                    title={`Inverti entrate/uscite (ora: positivo = ${savedTemplates.find(t => t.id === selectedTemplateId)?.positiveIsEntrata ? 'Entrata' : 'Uscita'})`}
-                    className="flex items-center justify-center w-9 h-9 bg-white dark:bg-dark-card border border-gray-200 dark:border-dark-border rounded-lg hover:bg-gray-50 dark:hover:bg-dark-bg text-gray-600 dark:text-gray-400 hover:text-primary transition-colors"
-                  >
-                    <ArrowLeftRight size={16} />
-                  </button>
-                  <button
-                    onClick={() => handleDeleteTemplate(selectedTemplateId)}
-                    title="Elimina template selezionato"
-                    className="flex items-center justify-center w-9 h-9 bg-white dark:bg-dark-card border border-red-200 dark:border-red-800 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 text-red-400 hover:text-red-600 transition-colors"
-                  >
-                    <Trash2 size={16} />
-                  </button>
-                </>
-              )}
+              {selectedTemplateId !== 'auto' && (() => {
+                const tpl = savedTemplates.find(t => t.id === selectedTemplateId);
+                return (
+                  <>
+                    {tpl?.isDefault ? (
+                      <button
+                        onClick={() => handleSetDefaultTemplate(selectedTemplateId)}
+                        title="Rimuovi come predefinito"
+                        className="flex items-center gap-1 px-2 h-9 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-300 dark:border-yellow-700 rounded-lg text-yellow-600 dark:text-yellow-400 text-xs font-medium hover:bg-yellow-100 transition-colors whitespace-nowrap"
+                      >
+                        <span>★</span> Predefinito <span className="ml-0.5 opacity-60">✕</span>
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => handleSetDefaultTemplate(selectedTemplateId)}
+                        title="Imposta come template predefinito"
+                        className="flex items-center gap-1 px-2 h-9 bg-white dark:bg-dark-card border border-gray-200 dark:border-dark-border rounded-lg text-gray-500 dark:text-gray-400 text-xs font-medium hover:bg-yellow-50 hover:border-yellow-300 hover:text-yellow-600 transition-colors whitespace-nowrap"
+                      >
+                        <span>☆</span> Rendi predefinito
+                      </button>
+                    )}
+                    <button
+                      onClick={() => handleFlipTemplateSign(selectedTemplateId)}
+                      title={`Inverti entrate/uscite (ora: positivo = ${tpl?.positiveIsEntrata ? 'Entrata' : 'Uscita'})`}
+                      className="flex items-center justify-center w-9 h-9 bg-white dark:bg-dark-card border border-gray-200 dark:border-dark-border rounded-lg hover:bg-gray-50 dark:hover:bg-dark-bg text-gray-600 dark:text-gray-400 hover:text-primary transition-colors"
+                    >
+                      <ArrowLeftRight size={16} />
+                    </button>
+                    <button
+                      onClick={() => handleDeleteTemplate(selectedTemplateId)}
+                      title="Elimina template selezionato"
+                      className="flex items-center justify-center w-9 h-9 bg-white dark:bg-dark-card border border-red-200 dark:border-red-800 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 text-red-400 hover:text-red-600 transition-colors"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </>
+                );
+              })()}
             </div>
 
             <button

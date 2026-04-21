@@ -2,6 +2,12 @@ import Anthropic from '@anthropic-ai/sdk';
 import OpenAI from 'openai';
 import type { Invoice, CashflowRecord, BankTransaction } from '../types';
 
+export interface ProxyConfig {
+  supabaseUrl: string;
+  authToken: string;
+  companyId: string;
+}
+
 // Load AI settings from localStorage (used as cache)
 // Primary source is now the database via DataContext
 function getAISettings() {
@@ -16,12 +22,38 @@ function getAISettings() {
   return null;
 }
 
-// Initialize Anthropic client (always fresh to pick up updated keys)
+// Call Anthropic via Supabase Edge Function proxy (API key never leaves the server)
+async function callAnthropicProxy(
+  model: string,
+  system: string,
+  messages: { role: string; content: string }[],
+  max_tokens: number,
+  proxy: ProxyConfig
+): Promise<string> {
+  const url = `${proxy.supabaseUrl}/functions/v1/ai-proxy`
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${proxy.authToken}`,
+    },
+    body: JSON.stringify({ model, system, messages, max_tokens, company_id: proxy.companyId }),
+  })
+
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({ error: response.statusText }))
+    throw new Error(err.error || `Proxy error ${response.status}`)
+  }
+
+  const data = await response.json()
+  if (data.content?.[0]?.type === 'text') return data.content[0].text
+  if (data.error) throw new Error(data.error.message || JSON.stringify(data.error))
+  return ''
+}
+
+// Initialize Anthropic client — fallback when proxy config is not available
 function getAnthropicClient(): Anthropic {
   const settings = getAISettings();
-
-  // SECURITY: Only use API key from database/localStorage
-  // NEVER use import.meta.env.VITE_* as it exposes keys in the client bundle!
   const apiKey = settings?.anthropicApiKey;
 
   if (!apiKey) {
@@ -30,7 +62,7 @@ function getAnthropicClient(): Anthropic {
 
   return new Anthropic({
     apiKey,
-    dangerouslyAllowBrowser: true  // ⚠️ Still a risk - consider using backend proxy
+    dangerouslyAllowBrowser: true
   });
 }
 
@@ -93,7 +125,8 @@ export async function suggestMatch(
   transaction: BankTransaction,
   invoices: Invoice[],
   cashflowRecords: CashflowRecord[],
-  model?: string
+  model?: string,
+  proxyConfig?: ProxyConfig
 ): Promise<MatchSuggestion> {
   // Extract month and year from transaction date
   const transactionDate = new Date(transaction.data);
@@ -519,8 +552,10 @@ Movimenti disponibili: (nessuno - già filtrati)
     let text = '';
 
     // Determine provider based on model name
+    const systemPrompt = 'You are a precise JSON generator for bank reconciliation. CRITICAL RULES: 1) You MUST respond with ONLY valid JSON (no text, no markdown, no backticks). 2) You MUST filter by amount FIRST (difference ≤ 2€) BEFORE checking description. NEVER select a cashflow just because the description matches if the amount difference is > 2€. Your entire response must be a single valid JSON object starting with { and ending with }.';
+
     if (selectedModel.startsWith('gpt-')) {
-      // OpenAI models
+      // OpenAI models — always direct (no proxy needed, different provider)
       const openai = getOpenAIClient();
       const response = await openai.chat.completions.create({
         model: selectedModel,
@@ -529,13 +564,22 @@ Movimenti disponibili: (nessuno - già filtrati)
         response_format: { type: 'json_object' }
       });
       text = response.choices[0]?.message?.content || '';
+    } else if (proxyConfig) {
+      // Anthropic via Edge Function proxy (API key stays server-side)
+      text = await callAnthropicProxy(
+        selectedModel,
+        systemPrompt,
+        [{ role: 'user', content: prompt }],
+        500,
+        proxyConfig
+      );
     } else {
-      // Anthropic models (claude-*)
+      // Anthropic direct fallback (dangerouslyAllowBrowser)
       const anthropic = getAnthropicClient();
       const response = await anthropic.messages.create({
         model: selectedModel,
         max_tokens: 500,
-        system: 'You are a precise JSON generator for bank reconciliation. CRITICAL RULES: 1) You MUST respond with ONLY valid JSON (no text, no markdown, no backticks). 2) You MUST filter by amount FIRST (difference ≤ 2€) BEFORE checking description. NEVER select a cashflow just because the description matches if the amount difference is > 2€. Your entire response must be a single valid JSON object starting with { and ending with }.',
+        system: systemPrompt,
         messages: [{ role: 'user', content: prompt }]
       });
       text = response.content[0].type === 'text' ? response.content[0].text : '';
@@ -727,7 +771,8 @@ export async function suggestMatchesBatch(
   transactions: BankTransaction[],
   invoices: Invoice[],
   cashflowRecords: CashflowRecord[],
-  onProgress?: (current: number, total: number) => void
+  onProgress?: (current: number, total: number) => void,
+  proxyConfig?: ProxyConfig
 ): Promise<Map<string, MatchSuggestion>> {
   const results = new Map<string, MatchSuggestion>();
 
@@ -739,7 +784,7 @@ export async function suggestMatchesBatch(
       continue;
     }
 
-    const suggestion = await suggestMatch(tx, invoices, cashflowRecords);
+    const suggestion = await suggestMatch(tx, invoices, cashflowRecords, undefined, proxyConfig);
     results.set(tx.id, suggestion);
 
     if (onProgress) {

@@ -303,19 +303,48 @@ function parseTransactions(rows: any[][], startRow: number, columnMap: Record<st
       console.log(`⚠️ Row ${i}: Zero amount, raw value:`, row[columnMap.importo]);
     }
 
+    const causaleRaw = row[columnMap.causale] ? String(row[columnMap.causale]).trim() : '';
+    const descrizioneRaw = row[columnMap.descrizione] ? String(row[columnMap.descrizione]).trim() : '';
+
+    // Skip footer/summary rows (no date + summary keywords)
+    if (!dataOp && /totale|saldo contabile/i.test(descrizioneRaw)) {
+      console.log(`⏭️ Row ${i}: Skipping footer row: "${descrizioneRaw}"`);
+      continue;
+    }
+
     // Build description with warnings
-    let descrizione = row[columnMap.descrizione] ? String(row[columnMap.descrizione]).trim() : '';
+    let descrizione = descrizioneRaw;
     if (warnings.length > 0) {
       descrizione = warnings.join(' ') + (descrizione ? ' | ' + descrizione : '');
+    }
+
+    // Determine tipo: negative amount = always Uscita.
+    // For positive amounts in CA format (all amounts are absolute), use causale.
+    const CAUSALI_USCITA = [
+      'PAGAMENTO TRAMITE POS',
+      'COMMISSIONI/SPESE',
+      'PAGAMENTO UTENZE',
+      'IMPOSTE E TASSE',
+      'PAGAMENTO RATE FINANZIAMENTO',
+      'ADDEBITO PREAUTORIZZATO',
+      'ADDEBITO DIRETTO',
+    ];
+    let tipo: 'Entrata' | 'Uscita';
+    if (importo < 0) {
+      tipo = 'Uscita';
+    } else if (CAUSALI_USCITA.some(c => causaleRaw.toUpperCase().includes(c))) {
+      tipo = 'Uscita';
+    } else {
+      tipo = 'Entrata';
     }
 
     const transaction: ParsedTransaction = {
       data: parsedDate,
       dataValuta: parseDate(row[columnMap.dataVal]),
-      causale: row[columnMap.causale] ? String(row[columnMap.causale]).trim() : undefined,
+      causale: causaleRaw || undefined,
       descrizione,
       importo: Math.abs(importo),
-      tipo: importo >= 0 ? 'Entrata' : 'Uscita',
+      tipo,
       saldo: row[columnMap.saldo] !== undefined ? parseAmount(row[columnMap.saldo]) : undefined,
       hasErrors: warnings.length > 0
     };
@@ -463,30 +492,9 @@ export function parseBankStatementExcel(file: File, template?: BankTemplate): Pr
           transactions = result.transactions;
           stats = result.stats;
         } else {
-          // Default: Crédit Agricole hardcoded logic
-          const headerRowIndex = 8;
-          const headerRow = rows[headerRowIndex];
-
-          if (!headerRow) {
-            throw new Error('Header row (row 9) not found in Excel file');
-          }
-
-          const columnMap: Record<string, number> = {};
-          const normalizedHeader = headerRow.map((cell: any) =>
-            cell ? String(cell).toLowerCase().trim() : ''
-          );
-
-          for (let j = 0; j < normalizedHeader.length; j++) {
-            const cell = normalizedHeader[j];
-            if (cell.includes('data op')) columnMap.dataOp = j;
-            else if (cell.includes('data val')) columnMap.dataVal = j;
-            else if (cell.includes('causale')) columnMap.causale = j;
-            else if (cell.includes('descrizione')) columnMap.descrizione = j;
-            else if (cell.includes('importo')) columnMap.importo = j;
-            else if (cell.includes('saldo')) columnMap.saldo = j;
-          }
-
-          console.log(`✅ Using Crédit Agricole default header at row 9`);
+          // Auto-detect header row and column mapping
+          const { headerRowIndex, columnMap } = findHeaders(rows);
+          console.log(`✅ Auto-detected header at row ${headerRowIndex + 1}, columns:`, columnMap);
           const result = parseTransactions(rows, headerRowIndex + 1, columnMap);
           transactions = result.transactions;
           stats = result.stats;
