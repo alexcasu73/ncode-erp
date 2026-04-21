@@ -477,52 +477,54 @@ app.delete('/api/users/:userId', async (req, res) => {
       });
     }
 
-    console.log('🗑️ [Server] Deleting user:', userId, 'from company:', company_id);
+    // === AUTHENTICATION ===
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const { data: { user: callerUser }, error: authError } = await supabaseAdmin.auth.getUser(
+      authHeader.replace('Bearer ', '')
+    );
+    if (authError || !callerUser) {
+      return res.status(401).json({ error: 'Invalid or expired token' });
+    }
+
+    // === AUTHORIZATION: caller must be admin of the company ===
+    const adminCheck = await pool.query(
+      `SELECT role FROM company_users
+       WHERE user_id = $1 AND company_id = $2 AND is_active = true`,
+      [callerUser.id, company_id]
+    );
+    if (!adminCheck.rows.length || adminCheck.rows[0].role !== 'admin') {
+      return res.status(403).json({ error: 'Insufficient permissions' });
+    }
+
+    // === PREVENT SELF-DELETION ===
+    if (callerUser.id === userId) {
+      return res.status(403).json({ error: 'Cannot delete your own account' });
+    }
+
+    console.log('🗑️ [Server] Deleting user:', userId, 'from company:', company_id, 'by:', callerUser.id);
 
     // 1. Delete company_users link
-    const { error: linkError } = await pool.query(
+    await pool.query(
       'DELETE FROM company_users WHERE user_id = $1 AND company_id = $2',
       [userId, company_id]
     );
 
-    if (linkError) {
-      console.error('❌ [Server] Error deleting company_users link:', linkError);
-      return res.status(500).json({
-        error: 'Failed to delete company link',
-        message: linkError.message
-      });
-    }
-
     console.log('✅ [Server] Deleted company_users link');
 
-    // 2. Delete from users table
-    // This will trigger the database trigger to delete from auth.users automatically
-    const { error: userError } = await pool.query(
-      'DELETE FROM users WHERE id = $1',
-      [userId]
-    );
+    // 2. Delete from users table (trigger deletes from auth.users automatically)
+    await pool.query('DELETE FROM users WHERE id = $1', [userId]);
 
-    if (userError) {
-      console.error('❌ [Server] Error deleting user record:', userError);
-      return res.status(500).json({
-        error: 'Failed to delete user record',
-        message: userError.message
-      });
-    }
+    console.log('✅ [Server] Deleted user record');
 
-    console.log('✅ [Server] Deleted user record (trigger will delete from auth.users)');
-
-    res.json({
-      success: true,
-      message: 'User deleted successfully'
-    });
+    res.json({ success: true, message: 'User deleted successfully' });
 
   } catch (err) {
     console.error('❌ [Server] Unexpected error deleting user:', err);
-    res.status(500).json({
-      error: 'Failed to delete user',
-      message: err.message
-    });
+    res.status(500).json({ error: 'Failed to delete user' });
   }
 });
 
