@@ -1,5 +1,5 @@
 import * as XLSX from 'xlsx';
-import type { BankTemplate } from './bank-template-analyzer';
+import type { BankTemplate, BankColumnMapping } from './bank-template-analyzer';
 
 export interface ParsedBankStatement {
   numeroConto?: string;
@@ -187,13 +187,22 @@ function extractMetadata(rows: any[][]): Partial<ParsedBankStatement> {
   return metadata;
 }
 
+// Keyword variants per colonna (più banche supportate)
+const HEADER_KEYWORDS: Record<string, string[]> = {
+  dataOp:      ['data op', 'data oper', 'data movimento', 'data transazione', 'data contabile', 'data val', 'data'],
+  causale:     ['causale', 'tipo oper', 'tipo movim', 'descrizione breve', 'categoria'],
+  descrizione: ['descrizione', 'dettaglio', 'dicitura', 'note', 'narrative'],
+  importo:     ['importo', 'amount', 'valore', 'importo mov'],
+  entrate:     ['entrate', 'avere', 'accredito', 'credito', 'credit'],
+  uscite:      ['uscite', 'dare', 'addebito', 'debito', 'debit'],
+  saldo:       ['saldo'],
+};
+
 // Find header row and column indices
 function findHeaders(rows: any[][]): { headerRowIndex: number; columnMap: Record<string, number> } {
-  const expectedHeaders = ['data op', 'data val', 'causale', 'descrizione', 'importo', 'saldo'];
+  console.log('🔍 Auto-detecting headers in first 25 rows...');
 
-  console.log('🔍 Searching for headers in first 15 rows...');
-
-  for (let i = 0; i < Math.min(rows.length, 15); i++) {
+  for (let i = 0; i < Math.min(rows.length, 25); i++) {
     const row = rows[i];
     if (!row) continue;
 
@@ -201,46 +210,37 @@ function findHeaders(rows: any[][]): { headerRowIndex: number; columnMap: Record
       cell ? String(cell).toLowerCase().trim() : ''
     );
 
-    // Check if this row contains enough header keywords
+    const columnMap: Record<string, number> = {};
     let matchCount = 0;
-    for (const header of expectedHeaders) {
-      if (normalizedRow.some(cell => cell.includes(header))) {
-        matchCount++;
+
+    for (let j = 0; j < normalizedRow.length; j++) {
+      const cell = normalizedRow[j];
+      if (!cell) continue;
+      for (const [field, keywords] of Object.entries(HEADER_KEYWORDS)) {
+        if (!(field in columnMap) && keywords.some(kw => cell.includes(kw))) {
+          columnMap[field] = j;
+          matchCount++;
+          break;
+        }
       }
     }
 
-    if (matchCount >= 3) {
-      // Found header row, build column map
-      const columnMap: Record<string, number> = {};
+    // Riga header valida: almeno data + (importo o entrate/uscite) + descrizione
+    const hasDate = 'dataOp' in columnMap;
+    const hasAmount = 'importo' in columnMap || ('entrate' in columnMap && 'uscite' in columnMap);
+    const hasDesc = 'descrizione' in columnMap;
 
-      for (let j = 0; j < normalizedRow.length; j++) {
-        const cell = normalizedRow[j];
-        if (cell.includes('data op')) columnMap.dataOp = j;
-        else if (cell.includes('data val')) columnMap.dataVal = j;
-        else if (cell.includes('causale')) columnMap.causale = j;
-        else if (cell.includes('descrizione')) columnMap.descrizione = j;
-        else if (cell.includes('importo')) columnMap.importo = j;
-        else if (cell.includes('saldo')) columnMap.saldo = j;
-      }
-
-      console.log(`✅ Found headers at row ${i}:`, normalizedRow);
-      console.log('📍 Column mapping:', columnMap);
+    if (hasDate && hasAmount && hasDesc) {
+      console.log(`✅ Header trovato a riga ${i + 1}:`, columnMap);
       return { headerRowIndex: i, columnMap };
     }
   }
 
-  // Default fallback (Crédit Agricole standard positions)
-  console.log('⚠️ Headers not found, using default Crédit Agricole positions');
+  // Fallback: posizioni standard Crédit Agricole (header riga 9, dati da riga 10)
+  console.log('⚠️ Header non trovato — uso fallback Crédit Agricole (riga 9)');
   return {
-    headerRowIndex: 6, // Row 7 (0-indexed)
-    columnMap: {
-      dataOp: 0,
-      dataVal: 1,
-      causale: 2,
-      descrizione: 3,
-      importo: 4,
-      saldo: 5
-    }
+    headerRowIndex: 8,
+    columnMap: { dataOp: 0, dataVal: 1, causale: 2, descrizione: 3, importo: 4, saldo: 5 },
   };
 }
 
@@ -495,9 +495,31 @@ export function parseBankStatementExcel(file: File, template?: BankTemplate): Pr
           // Auto-detect header row and column mapping
           const { headerRowIndex, columnMap } = findHeaders(rows);
           console.log(`✅ Auto-detected header at row ${headerRowIndex + 1}, columns:`, columnMap);
-          const result = parseTransactions(rows, headerRowIndex + 1, columnMap);
-          transactions = result.transactions;
-          stats = result.stats;
+
+          const hasSeparate = ('entrate' in columnMap || 'uscite' in columnMap) && !('importo' in columnMap);
+          if (hasSeparate) {
+            // Colonne entrate/uscite separate → usa parseTransactionsWithTemplate
+            const syntheticTemplate: BankTemplate = {
+              id: 'auto',
+              bankName: 'Auto',
+              isDefault: false,
+              createdAt: '',
+              headerRowIndex,
+              dataStartRow: headerRowIndex + 1,
+              columns: columnMap as BankColumnMapping,
+              importoType: 'separate',
+              positiveIsEntrata: true,
+              samplePreview: '',
+            };
+            const result = parseTransactionsWithTemplate(rows, syntheticTemplate);
+            transactions = result.transactions;
+            stats = result.stats;
+          } else {
+            // Colonna importo con segno → usa parseTransactions (con causale-based tipo)
+            const result = parseTransactions(rows, headerRowIndex + 1, columnMap);
+            transactions = result.transactions;
+            stats = result.stats;
+          }
         }
 
         resolve({ ...metadata, transactions, parsingStats: stats });
