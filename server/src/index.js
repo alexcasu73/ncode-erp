@@ -750,6 +750,58 @@ app.post('/api/auth/confirm-email', async (req, res) => {
   }
 });
 
+// === AI PROXY ===
+// Proxy per chiamate Anthropic — la API key non passa mai dal browser
+app.post('/api/ai-proxy', async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) return res.status(401).json({ error: 'Missing authorization' });
+
+    const { model, system, messages, max_tokens, company_id } = req.body;
+    if (!model || !messages || !company_id) {
+      return res.status(400).json({ error: 'Missing required fields: model, messages, company_id' });
+    }
+
+    // Legge la API key dal DB usando il JWT dell'utente (rispetta RLS)
+    const { createClient } = await import('@supabase/supabase-js');
+    const userSupabase = createClient(
+      process.env.SUPABASE_URL,
+      process.env.SUPABASE_ANON_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY,
+      { global: { headers: { Authorization: authHeader } } }
+    );
+
+    const { data: settingsData, error: settingsError } = await userSupabase
+      .from('settings')
+      .select('anthropic_api_key')
+      .eq('id', 'default')
+      .eq('company_id', company_id)
+      .single();
+
+    if (settingsError || !settingsData?.anthropic_api_key) {
+      return res.status(400).json({ error: 'API key Anthropic non configurata nelle impostazioni' });
+    }
+
+    const body = { model, max_tokens: max_tokens ?? 500, messages };
+    if (system) body.system = system;
+
+    const anthropicRes = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': settingsData.anthropic_api_key,
+        'anthropic-version': '2023-06-01',
+      },
+      body: JSON.stringify(body),
+    });
+
+    const data = await anthropicRes.json();
+    res.status(anthropicRes.status).json(data);
+  } catch (err) {
+    console.error('[ai-proxy]', err);
+    res.status(500).json({ error: err.message || 'Internal server error' });
+  }
+});
+
 // === ERROR HANDLING ===
 app.use(errorHandler());
 

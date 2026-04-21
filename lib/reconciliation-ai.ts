@@ -3,7 +3,7 @@ import OpenAI from 'openai';
 import type { Invoice, CashflowRecord, BankTransaction } from '../types';
 
 export interface ProxyConfig {
-  supabaseUrl: string;
+  apiUrl: string;  // es. http://localhost:3001/api oppure https://coalix.it/api
   authToken: string;
   companyId: string;
 }
@@ -22,7 +22,7 @@ function getAISettings() {
   return null;
 }
 
-// Call Anthropic via Supabase Edge Function proxy (API key never leaves the server)
+// Call Anthropic via server proxy (API key never leaves the server)
 async function callAnthropicProxy(
   model: string,
   system: string,
@@ -30,7 +30,7 @@ async function callAnthropicProxy(
   max_tokens: number,
   proxy: ProxyConfig
 ): Promise<string> {
-  const url = `${proxy.supabaseUrl}/functions/v1/ai-proxy`
+  const url = `${proxy.apiUrl}/ai-proxy`
   const response = await fetch(url, {
     method: 'POST',
     headers: {

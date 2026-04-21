@@ -2525,8 +2525,8 @@ export const Reconciliation: React.FC = () => {
 
       console.log(`[Single AI Match] Filtered cashflows: ${availableCashflows.length}/${cashflowRecords.length} available (${cashflowRecords.length - availableCashflows.length} already matched)`);
 
-      const proxyConfig: ProxyConfig | undefined = (session?.access_token && companyId && import.meta.env.VITE_SUPABASE_URL)
-        ? { supabaseUrl: import.meta.env.VITE_SUPABASE_URL, authToken: session.access_token, companyId }
+      const proxyConfig: ProxyConfig | undefined = (session?.access_token && companyId && import.meta.env.VITE_API_URL)
+        ? { apiUrl: import.meta.env.VITE_API_URL, authToken: session.access_token, companyId }
         : undefined;
 
       const suggestion = await suggestMatch(tx, invoices, availableCashflows, modelInfo.id, proxyConfig);
@@ -2717,8 +2717,8 @@ export const Reconciliation: React.FC = () => {
         const availableCashflows = cashflowRecords.filter(cf => !usedCashflowIds.has(cf.id));
         console.log(`[Batch AI Match ${i+1}/${pending.length}] Available cashflows: ${availableCashflows.length}/${cashflowRecords.length}`);
 
-        const batchProxyConfig: ProxyConfig | undefined = (session?.access_token && companyId && import.meta.env.VITE_SUPABASE_URL)
-          ? { supabaseUrl: import.meta.env.VITE_SUPABASE_URL, authToken: session.access_token, companyId }
+        const batchProxyConfig: ProxyConfig | undefined = (session?.access_token && companyId && import.meta.env.VITE_API_URL)
+          ? { apiUrl: import.meta.env.VITE_API_URL, authToken: session.access_token, companyId }
           : undefined;
 
         const suggestion = await suggestMatch(tx, invoices, availableCashflows, modelInfo.id, batchProxyConfig);
