@@ -196,7 +196,7 @@ const HEADER_KEYWORDS: Record<string, string[]> = {
   entrate:     ['entrate', 'avere', 'accredito', 'accrediti', 'credito', 'credit'],
   uscite:      ['uscite', 'dare', 'addebito', 'addebiti', 'debito', 'debit'],
   saldo:       ['saldo'],
-  note:        ['note personali', 'note utente', 'annotazioni', 'memo'],
+  note:        ['note personali', 'note utente', 'annotazioni', 'memo', 'note'],
 };
 
 // Scansiona le righe dati per trovare le colonne con valori numerici (importi)
