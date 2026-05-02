@@ -196,6 +196,7 @@ const HEADER_KEYWORDS: Record<string, string[]> = {
   entrate:     ['entrate', 'avere', 'accredito', 'accrediti', 'credito', 'credit'],
   uscite:      ['uscite', 'dare', 'addebito', 'addebiti', 'debito', 'debit'],
   saldo:       ['saldo'],
+  dettagli:    ['riferimento', 'dettagli', 'causale completa', 'descrizione estesa', 'informazioni aggiuntive'],
   note:        ['note personali', 'note utente', 'annotazioni', 'memo', 'note'],
 };
 
@@ -401,11 +402,13 @@ function parseTransactions(rows: any[][], startRow: number, columnMap: Record<st
 
     const causaleRaw = row[columnMap.causale] ? String(row[columnMap.causale]).trim() : '';
     const descrizioneRaw = row[columnMap.descrizione] ? String(row[columnMap.descrizione]).trim() : '';
-
-    // Aggiungi note utente alla descrizione se presenti (es. col 8 Intesa)
+    const dettagliRaw = columnMap.dettagli !== undefined && row[columnMap.dettagli]
+      ? String(row[columnMap.dettagli]).trim() : '';
     const noteRaw = columnMap.note !== undefined && row[columnMap.note]
       ? String(row[columnMap.note]).trim() : '';
-    const descrizioneCompleta = [descrizioneRaw, noteRaw].filter(Boolean).join(' | ');
+
+    // Concatena descrizione + dettagli + note per massimizzare il contesto AI
+    const descrizioneCompleta = [descrizioneRaw, dettagliRaw, noteRaw].filter(Boolean).join(' | ');
 
     // Skip footer/summary rows (no date + summary keywords)
     if (!dataOp && /totale|saldo contabile/i.test(descrizioneCompleta)) {
