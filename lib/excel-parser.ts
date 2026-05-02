@@ -191,11 +191,12 @@ function extractMetadata(rows: any[][]): Partial<ParsedBankStatement> {
 const HEADER_KEYWORDS: Record<string, string[]> = {
   dataOp:      ['data op', 'data oper', 'data movimento', 'data transazione', 'data contabile', 'data val', 'data'],
   causale:     ['causale', 'tipo oper', 'tipo movim', 'descrizione breve', 'categoria'],
-  descrizione: ['descrizione', 'dettaglio', 'dicitura', 'note', 'narrative'],
+  descrizione: ['descrizione', 'dettaglio', 'dicitura', 'note', 'narrative', 'operazione'],
   importo:     ['importo', 'amount', 'valore', 'importo mov'],
   entrate:     ['entrate', 'avere', 'accredito', 'accrediti', 'credito', 'credit'],
   uscite:      ['uscite', 'dare', 'addebito', 'addebiti', 'debito', 'debit'],
   saldo:       ['saldo'],
+  note:        ['note personali', 'note utente', 'annotazioni', 'memo'],
 };
 
 // Scansiona le righe dati per trovare le colonne con valori numerici (importi)
@@ -349,7 +350,7 @@ function parseTransactions(rows: any[][], startRow: number, columnMap: Record<st
   const totalRows = rows.length - startRow;
 
   console.log(`📊 Parsing transactions starting from row ${startRow}, total rows: ${rows.length}`);
-  console.log('Column mapping:', columnMap);
+  console.log('Column mapping:', JSON.stringify(columnMap));
 
   for (let i = startRow; i < rows.length; i++) {
     const row = rows[i];
@@ -401,14 +402,19 @@ function parseTransactions(rows: any[][], startRow: number, columnMap: Record<st
     const causaleRaw = row[columnMap.causale] ? String(row[columnMap.causale]).trim() : '';
     const descrizioneRaw = row[columnMap.descrizione] ? String(row[columnMap.descrizione]).trim() : '';
 
+    // Aggiungi note utente alla descrizione se presenti (es. col 8 Intesa)
+    const noteRaw = columnMap.note !== undefined && row[columnMap.note]
+      ? String(row[columnMap.note]).trim() : '';
+    const descrizioneCompleta = [descrizioneRaw, noteRaw].filter(Boolean).join(' | ');
+
     // Skip footer/summary rows (no date + summary keywords)
-    if (!dataOp && /totale|saldo contabile/i.test(descrizioneRaw)) {
-      console.log(`⏭️ Row ${i}: Skipping footer row: "${descrizioneRaw}"`);
+    if (!dataOp && /totale|saldo contabile/i.test(descrizioneCompleta)) {
+      console.log(`⏭️ Row ${i}: Skipping footer row: "${descrizioneCompleta}"`);
       continue;
     }
 
     // Build description with warnings
-    let descrizione = descrizioneRaw;
+    let descrizione = descrizioneCompleta;
     if (warnings.length > 0) {
       descrizione = warnings.join(' ') + (descrizione ? ' | ' + descrizione : '');
     }
