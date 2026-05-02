@@ -193,10 +193,93 @@ const HEADER_KEYWORDS: Record<string, string[]> = {
   causale:     ['causale', 'tipo oper', 'tipo movim', 'descrizione breve', 'categoria'],
   descrizione: ['descrizione', 'dettaglio', 'dicitura', 'note', 'narrative'],
   importo:     ['importo', 'amount', 'valore', 'importo mov'],
-  entrate:     ['entrate', 'avere', 'accredito', 'credito', 'credit'],
-  uscite:      ['uscite', 'dare', 'addebito', 'debito', 'debit'],
+  entrate:     ['entrate', 'avere', 'accredito', 'accrediti', 'credito', 'credit'],
+  uscite:      ['uscite', 'dare', 'addebito', 'addebiti', 'debito', 'debit'],
   saldo:       ['saldo'],
 };
+
+// Scansiona le righe dati per trovare le colonne con valori numerici (importi)
+function inferNumericColumns(rows: any[][], dataStartRow: number): number[] {
+  const colNumericCount: Record<number, number> = {};
+  const sampleRows = rows.slice(dataStartRow, dataStartRow + 15);
+
+  for (const row of sampleRows) {
+    if (!row) continue;
+    for (let j = 0; j < row.length; j++) {
+      const val = row[j];
+      if (val === null || val === undefined || val === '') continue;
+      const n = parseAmount(val);
+      if (n !== 0) {
+        colNumericCount[j] = (colNumericCount[j] || 0) + 1;
+      }
+    }
+  }
+
+  // Ordina per frequenza decrescente, escludi colonne con valori come anni (es. 2026)
+  return Object.entries(colNumericCount)
+    .filter(([, count]) => count >= 2)
+    .sort(([, a], [, b]) => b - a)
+    .map(([col]) => Number(col));
+}
+
+// Fallback finale: rileva header cercando la prima riga con data + dati numerici
+function inferHeaderFromData(rows: any[][]): { headerRowIndex: number; columnMap: Record<string, number> } {
+  for (let i = 0; i < Math.min(rows.length - 5, 30); i++) {
+    const row = rows[i];
+    if (!row) continue;
+
+    // Cerca una riga che sembra un header (stringhe non numeriche)
+    const isHeaderLike = row.some(c => c && typeof c === 'string' && isNaN(Number(c)));
+    if (!isHeaderLike) continue;
+
+    // Verifica che la riga successiva abbia date valide
+    const nextRow = rows[i + 1];
+    if (!nextRow) continue;
+    const hasDateInNext = nextRow.some(c => parseDate(c) !== undefined);
+    if (!hasDateInNext) continue;
+
+    // Trova colonna data
+    let dateCol = -1;
+    for (let j = 0; j < (nextRow.length || 0); j++) {
+      if (parseDate(nextRow[j])) { dateCol = j; break; }
+    }
+    if (dateCol === -1) continue;
+
+    // Trova colonne numeriche
+    const numericCols = inferNumericColumns(rows, i + 1);
+    if (numericCols.length === 0) continue;
+
+    // Trova colonna descrizione (stringa più lunga nei dati)
+    let descCol = -1;
+    let maxLen = 0;
+    for (let j = 0; j < (nextRow.length || 0); j++) {
+      if (j === dateCol || numericCols.includes(j)) continue;
+      const val = nextRow[j];
+      if (val && typeof val === 'string' && val.length > maxLen) {
+        maxLen = val.length;
+        descCol = j;
+      }
+    }
+
+    const columnMap: Record<string, number> = { dataOp: dateCol };
+    if (descCol !== -1) columnMap['descrizione'] = descCol;
+    if (numericCols.length >= 2) {
+      columnMap['entrate'] = numericCols[0];
+      columnMap['uscite'] = numericCols[1];
+    } else {
+      columnMap['importo'] = numericCols[0];
+    }
+
+    console.log(`✅ Header inferito automaticamente a riga ${i + 1}:`, columnMap);
+    return { headerRowIndex: i, columnMap };
+  }
+
+  console.log('⚠️ Impossibile rilevare header — uso fallback generico');
+  return {
+    headerRowIndex: 0,
+    columnMap: { dataOp: 0, descrizione: 1, importo: 2 },
+  };
+}
 
 // Find header row and column indices
 function findHeaders(rows: any[][]): { headerRowIndex: number; columnMap: Record<string, number> } {
@@ -228,20 +311,32 @@ function findHeaders(rows: any[][]): { headerRowIndex: number; columnMap: Record
     // Riga header valida: almeno data + (importo o entrate/uscite) + descrizione
     const hasDate = 'dataOp' in columnMap;
     const hasAmount = 'importo' in columnMap || ('entrate' in columnMap && 'uscite' in columnMap);
-    const hasDesc = 'descrizione' in columnMap;
+    const hasDesc = 'descrizione' in columnMap || 'causale' in columnMap;
 
     if (hasDate && hasAmount && hasDesc) {
       console.log(`✅ Header trovato a riga ${i + 1}:`, columnMap);
       return { headerRowIndex: i, columnMap };
     }
+
+    // Header parziale: data trovata ma importo mancante → cerca colonne numeriche nei dati
+    if (hasDate && hasDesc && !hasAmount) {
+      const numericCols = inferNumericColumns(rows, i + 1);
+      if (numericCols.length >= 2) {
+        columnMap['entrate'] = numericCols[0];
+        columnMap['uscite'] = numericCols[1];
+        console.log(`✅ Header trovato a riga ${i + 1} (importo inferito dai dati):`, columnMap);
+        return { headerRowIndex: i, columnMap };
+      } else if (numericCols.length === 1) {
+        columnMap['importo'] = numericCols[0];
+        console.log(`✅ Header trovato a riga ${i + 1} (importo inferito dai dati):`, columnMap);
+        return { headerRowIndex: i, columnMap };
+      }
+    }
   }
 
-  // Fallback: posizioni standard Crédit Agricole (header riga 9, dati da riga 10)
-  console.log('⚠️ Header non trovato — uso fallback Crédit Agricole (riga 9)');
-  return {
-    headerRowIndex: 8,
-    columnMap: { dataOp: 0, dataVal: 1, causale: 2, descrizione: 3, importo: 4, saldo: 5 },
-  };
+  // Ultimo fallback: cerca la prima riga con una data valida e colonne numeriche
+  console.log('⚠️ Header non trovato con keyword — tentativo rilevamento automatico da dati...');
+  return inferHeaderFromData(rows);
 }
 
 // Parse transactions from data rows

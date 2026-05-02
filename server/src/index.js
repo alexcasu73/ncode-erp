@@ -753,7 +753,7 @@ app.post('/api/auth/confirm-email', async (req, res) => {
 });
 
 // === AI PROXY ===
-// Proxy per chiamate Anthropic — la API key non passa mai dal browser
+// Proxy per chiamate AI (Anthropic + OpenAI) — la API key non passa mai dal browser
 app.post('/api/ai-proxy', async (req, res) => {
   try {
     const authHeader = req.headers.authorization;
@@ -763,6 +763,8 @@ app.post('/api/ai-proxy', async (req, res) => {
     if (!model || !messages || !company_id) {
       return res.status(400).json({ error: 'Missing required fields: model, messages, company_id' });
     }
+
+    const isOpenAI = model.startsWith('gpt-') || model.startsWith('o1') || model.startsWith('o3');
 
     // Legge la API key dal DB usando il JWT dell'utente (rispetta RLS)
     const { createClient } = await import('@supabase/supabase-js');
@@ -774,30 +776,64 @@ app.post('/api/ai-proxy', async (req, res) => {
 
     const { data: settingsData, error: settingsError } = await userSupabase
       .from('settings')
-      .select('anthropic_api_key')
+      .select('anthropic_api_key, openai_api_key')
       .eq('id', 'default')
       .eq('company_id', company_id)
       .single();
 
-    if (settingsError || !settingsData?.anthropic_api_key) {
-      return res.status(400).json({ error: 'API key Anthropic non configurata nelle impostazioni' });
+    if (isOpenAI) {
+      if (settingsError || !settingsData?.openai_api_key) {
+        return res.status(400).json({ error: 'API key OpenAI non configurata nelle impostazioni' });
+      }
+
+      const openaiMessages = system
+        ? [{ role: 'system', content: system }, ...messages]
+        : messages;
+
+      const openaiRes = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${settingsData.openai_api_key}`,
+        },
+        body: JSON.stringify({
+          model,
+          max_tokens: max_tokens ?? 500,
+          messages: openaiMessages,
+          response_format: { type: 'json_object' },
+        }),
+      });
+
+      const data = await openaiRes.json();
+      // Normalizza la risposta al formato Anthropic per compatibilità col client
+      if (openaiRes.ok && data.choices?.[0]?.message?.content) {
+        return res.json({
+          content: [{ type: 'text', text: data.choices[0].message.content }],
+          model: data.model,
+        });
+      }
+      return res.status(openaiRes.status).json(data);
+    } else {
+      if (settingsError || !settingsData?.anthropic_api_key) {
+        return res.status(400).json({ error: 'API key Anthropic non configurata nelle impostazioni' });
+      }
+
+      const body = { model, max_tokens: max_tokens ?? 500, messages };
+      if (system) body.system = system;
+
+      const anthropicRes = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': settingsData.anthropic_api_key,
+          'anthropic-version': '2023-06-01',
+        },
+        body: JSON.stringify(body),
+      });
+
+      const data = await anthropicRes.json();
+      return res.status(anthropicRes.status).json(data);
     }
-
-    const body = { model, max_tokens: max_tokens ?? 500, messages };
-    if (system) body.system = system;
-
-    const anthropicRes = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': settingsData.anthropic_api_key,
-        'anthropic-version': '2023-06-01',
-      },
-      body: JSON.stringify(body),
-    });
-
-    const data = await anthropicRes.json();
-    res.status(anthropicRes.status).json(data);
   } catch (err) {
     console.error('[ai-proxy]', err);
     res.status(500).json({ error: err.message || 'Internal server error' });

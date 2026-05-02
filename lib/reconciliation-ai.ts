@@ -554,8 +554,17 @@ Movimenti disponibili: (nessuno - già filtrati)
     // Determine provider based on model name
     const systemPrompt = 'You are a precise JSON generator for bank reconciliation. CRITICAL RULES: 1) You MUST respond with ONLY valid JSON (no text, no markdown, no backticks). 2) You MUST filter by amount FIRST (difference ≤ 2€) BEFORE checking description. NEVER select a cashflow just because the description matches if the amount difference is > 2€. Your entire response must be a single valid JSON object starting with { and ending with }.';
 
-    if (selectedModel.startsWith('gpt-')) {
-      // OpenAI models — always direct (no proxy needed, different provider)
+    if (proxyConfig) {
+      // Tutti i provider passano dal proxy server (API key mai nel browser)
+      text = await callAnthropicProxy(
+        selectedModel,
+        systemPrompt,
+        [{ role: 'user', content: prompt }],
+        500,
+        proxyConfig
+      );
+    } else if (selectedModel.startsWith('gpt-')) {
+      // Fallback diretto OpenAI (solo in sviluppo locale senza server)
       const openai = getOpenAIClient();
       const response = await openai.chat.completions.create({
         model: selectedModel,
@@ -564,17 +573,8 @@ Movimenti disponibili: (nessuno - già filtrati)
         response_format: { type: 'json_object' }
       });
       text = response.choices[0]?.message?.content || '';
-    } else if (proxyConfig) {
-      // Anthropic via Edge Function proxy (API key stays server-side)
-      text = await callAnthropicProxy(
-        selectedModel,
-        systemPrompt,
-        [{ role: 'user', content: prompt }],
-        500,
-        proxyConfig
-      );
     } else {
-      // Anthropic direct fallback (dangerouslyAllowBrowser)
+      // Fallback diretto Anthropic (solo in sviluppo locale senza server)
       const anthropic = getAnthropicClient();
       const response = await anthropic.messages.create({
         model: selectedModel,
