@@ -6,6 +6,8 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import dotenv from 'dotenv';
+import jwt from 'jsonwebtoken';
+import rateLimit from 'express-rate-limit';
 import { createPool } from './db/pool.js';
 import { initEmailClient } from './email/email.service.js';
 import { errorHandler } from './middleware/errorHandler.js';
@@ -753,11 +755,34 @@ app.post('/api/auth/confirm-email', async (req, res) => {
 });
 
 // === AI PROXY ===
+const aiProxyLimiter = rateLimit({
+  windowMs: 60 * 1000, // 1 minuto
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Troppe richieste al proxy AI, riprova tra un minuto' },
+});
+
 // Proxy per chiamate AI (Anthropic + OpenAI) — la API key non passa mai dal browser
-app.post('/api/ai-proxy', async (req, res) => {
+app.post('/api/ai-proxy', aiProxyLimiter, async (req, res) => {
   try {
     const authHeader = req.headers.authorization;
     if (!authHeader) return res.status(401).json({ error: 'Missing authorization' });
+
+    // Validazione JWT: verifica firma e scadenza
+    const token = authHeader.replace(/^Bearer\s+/i, '');
+    const jwtSecret = process.env.SUPABASE_JWT_SECRET;
+    if (!jwtSecret) {
+      console.error('[ai-proxy] SUPABASE_JWT_SECRET non configurato');
+      return res.status(500).json({ error: 'Configurazione server incompleta' });
+    }
+    let jwtPayload;
+    try {
+      jwtPayload = jwt.verify(token, jwtSecret);
+    } catch (jwtErr) {
+      console.warn('[ai-proxy] JWT non valido:', jwtErr.message);
+      return res.status(401).json({ error: 'Token non valido o scaduto' });
+    }
 
     const { model, system, messages, max_tokens, company_id } = req.body;
     if (!model || !messages || !company_id) {
@@ -765,6 +790,8 @@ app.post('/api/ai-proxy', async (req, res) => {
     }
 
     const isOpenAI = model.startsWith('gpt-') || model.startsWith('o1') || model.startsWith('o3');
+
+    console.log(`[ai-proxy] user=${jwtPayload.sub} company=${company_id} model=${model} ip=${req.ip}`);
 
     // Legge la API key dal DB usando il JWT dell'utente (rispetta RLS)
     const { createClient } = await import('@supabase/supabase-js');
