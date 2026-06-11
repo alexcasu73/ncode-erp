@@ -7,6 +7,7 @@ import cors from 'cors';
 import helmet from 'helmet';
 import dotenv from 'dotenv';
 import jwt from 'jsonwebtoken';
+import { jwtVerify, createRemoteJWKSet } from 'jose';
 import rateLimit from 'express-rate-limit';
 import { createPool } from './db/pool.js';
 import { initEmailClient } from './email/email.service.js';
@@ -15,6 +16,12 @@ import { supabaseAdmin } from './supabase/admin.js';
 
 // Load environment variables
 dotenv.config();
+
+// JWKS di Supabase Auth: i token utente sono firmati in ES256 con chiave asimmetrica.
+// La verifica usa la chiave pubblica esposta dall'endpoint JWKS di gotrue.
+const supabaseJwks = process.env.SUPABASE_URL
+  ? createRemoteJWKSet(new URL(`${process.env.SUPABASE_URL}/auth/v1/.well-known/jwks.json`))
+  : null;
 
 const app = express();
 const PORT = process.env.SERVER_PORT || 3001;
@@ -769,19 +776,27 @@ app.post('/api/ai-proxy', aiProxyLimiter, async (req, res) => {
     const authHeader = req.headers.authorization;
     if (!authHeader) return res.status(401).json({ error: 'Missing authorization' });
 
-    // Validazione JWT: verifica firma e scadenza
+    // Validazione JWT: verifica firma e scadenza.
+    // Supabase Auth firma i token in ES256 (JWKS); fallback HS256 per il segreto legacy.
     const token = authHeader.replace(/^Bearer\s+/i, '');
-    const jwtSecret = process.env.SUPABASE_JWT_SECRET;
-    if (!jwtSecret) {
-      console.error('[ai-proxy] SUPABASE_JWT_SECRET non configurato');
-      return res.status(500).json({ error: 'Configurazione server incompleta' });
-    }
     let jwtPayload;
     try {
-      jwtPayload = jwt.verify(token, jwtSecret);
-    } catch (jwtErr) {
-      console.warn('[ai-proxy] JWT non valido:', jwtErr.message);
-      return res.status(401).json({ error: 'Token non valido o scaduto' });
+      if (!supabaseJwks) throw new Error('JWKS non disponibile');
+      const { payload } = await jwtVerify(token, supabaseJwks);
+      jwtPayload = payload;
+    } catch (jwksErr) {
+      // Fallback: segreto condiviso HS256 (deployment legacy)
+      const jwtSecret = process.env.SUPABASE_JWT_SECRET;
+      if (!jwtSecret) {
+        console.warn('[ai-proxy] JWT non valido (JWKS):', jwksErr.message);
+        return res.status(401).json({ error: 'Token non valido o scaduto' });
+      }
+      try {
+        jwtPayload = jwt.verify(token, jwtSecret);
+      } catch (jwtErr) {
+        console.warn('[ai-proxy] JWT non valido:', jwtErr.message);
+        return res.status(401).json({ error: 'Token non valido o scaduto' });
+      }
     }
 
     const { model, system, messages, max_tokens, company_id } = req.body;
