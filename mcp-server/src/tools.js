@@ -1,5 +1,4 @@
 import { z } from 'zod';
-import { api } from './api.js';
 
 // Parametri di lista comuni a (quasi) tutti i tool
 const listParams = {
@@ -22,7 +21,7 @@ function buildListQuery({ ricerca, pagina, limite, ordina }, filter) {
 const ok = (data) => ({ content: [{ type: 'text', text: JSON.stringify(data, null, 2) }] });
 const fail = (err) => ({ isError: true, content: [{ type: 'text', text: `❌ ${err.message || String(err)}` }] });
 
-export function registerTools(server) {
+export function registerTools(server, api) {
   // ---------- CLIENTI ----------
   server.registerTool('lista_clienti', {
     title: 'Elenco clienti',

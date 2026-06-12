@@ -13,6 +13,11 @@ Client MCP (Claude / claude.ai / Claude Code)
 
 Il MCP non parla direttamente col DB: usa la REST API con una **API key** (`X-API-Key`), quindi i dati visibili sono quelli della company a cui appartiene la chiave.
 
+**Multi-tenant:** non c'è una chiave fissa. Ogni client si autentica con la API key
+della propria azienda nel bearer (`Authorization: Bearer <ncode_...>`), generata da
+**Impostazioni → API Keys** nell'app. Il MCP la inoltra come `X-API-Key`: ogni azienda
+vede solo i propri dati.
+
 ## Configurazione
 
 Copia `.env.example` in `.env` e imposta:
@@ -21,8 +26,8 @@ Copia `.env.example` in `.env` e imposta:
 |-----------|-------------|
 | `MCP_PORT` | Porta del server MCP (default 3003) |
 | `API_BASE_URL` | URL della REST API ERP (es. `http://127.0.0.1:3002`) |
-| `API_KEY` | API key `ncode_...` con cui interrogare la REST API |
-| `MCP_AUTH_TOKEN` | (opzionale) bearer token per proteggere `/mcp`. In produzione **impostalo**. |
+
+La API key **non** si configura qui: arriva per-richiesta dal bearer del client.
 
 ## Avvio
 

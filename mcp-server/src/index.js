@@ -3,34 +3,46 @@ import express from 'express';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import { registerTools } from './tools.js';
+import { createApi } from './api.js';
 
 const PORT = process.env.MCP_PORT || 3003;
-const AUTH_TOKEN = process.env.MCP_AUTH_TOKEN;
 
-/** Crea una nuova istanza MCP con i tool registrati (una per richiesta, modalità stateless). */
-function createMcpServer() {
+/**
+ * Crea una nuova istanza MCP con i tool registrati (una per richiesta, modalità stateless).
+ * La API key dell'azienda arriva dal bearer del client e viene usata come X-API-Key.
+ */
+function createMcpServer(apiKey) {
   const server = new McpServer({ name: 'ncode-erp-mcp', version: '1.0.0' });
-  registerTools(server);
+  registerTools(server, createApi(apiKey));
   return server;
+}
+
+// Estrae la API key dalla richiesta: header Authorization: Bearer <key> oppure X-API-Key
+function extractApiKey(req) {
+  const auth = req.headers['authorization'];
+  if (auth?.toLowerCase().startsWith('bearer ')) return auth.slice(7).trim();
+  if (req.headers['x-api-key']) return String(req.headers['x-api-key']).trim();
+  return null;
 }
 
 const app = express();
 app.use(express.json({ limit: '4mb' }));
 
-// Protezione opzionale dell'endpoint MCP con bearer token
-function authorized(req, res) {
-  if (!AUTH_TOKEN) return true;
-  if (req.headers['authorization'] === `Bearer ${AUTH_TOKEN}`) return true;
-  res.status(401).json({ jsonrpc: '2.0', error: { code: -32001, message: 'Non autorizzato' }, id: null });
-  return false;
-}
-
 app.get('/health', (req, res) => res.json({ status: 'ok', ts: new Date().toISOString() }));
 
-// Endpoint MCP (Streamable HTTP) — modalità stateless: nuovo server+transport per richiesta
+// Endpoint MCP (Streamable HTTP) — stateless: nuovo server+transport per richiesta.
+// Multi-tenant: ogni azienda si autentica con la propria API key (bearer).
 app.post('/mcp', async (req, res) => {
-  if (!authorized(req, res)) return;
-  const server = createMcpServer();
+  const apiKey = extractApiKey(req);
+  if (!apiKey) {
+    return res.status(401).json({
+      jsonrpc: '2.0',
+      error: { code: -32001, message: 'API key mancante (Authorization: Bearer <chiave>)' },
+      id: null,
+    });
+  }
+
+  const server = createMcpServer(apiKey);
   const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined });
   res.on('close', () => { transport.close(); server.close(); });
   try {
@@ -51,7 +63,6 @@ app.get('/mcp', methodNotAllowed);
 app.delete('/mcp', methodNotAllowed);
 
 app.listen(PORT, () => {
-  console.log(`[MCP] ncode-erp-mcp in ascolto su http://localhost:${PORT}/mcp (Streamable HTTP)`);
+  console.log(`[MCP] ncode-erp-mcp in ascolto su http://localhost:${PORT}/mcp (Streamable HTTP, multi-tenant)`);
   console.log(`[MCP] API target: ${process.env.API_BASE_URL || 'http://127.0.0.1:3002'}`);
-  console.log(`[MCP] Auth bearer: ${AUTH_TOKEN ? 'attiva' : 'DISATTIVATA'}`);
 });

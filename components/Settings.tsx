@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
-import { Save, Eye, EyeOff, Key, AlertCircle, CheckCircle, Sparkles, Bell, Mail, Send } from 'lucide-react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Save, Eye, EyeOff, Key, AlertCircle, CheckCircle, Sparkles, Bell, Mail, Send, Plus, Trash2, Copy, Terminal } from 'lucide-react';
 import { useData } from '../context/DataContext';
 import { testSmtpConfiguration } from '../lib/email';
 import { useAuth } from '../context/AuthContext';
+import { supabase } from '../lib/supabase';
 
 const Settings: React.FC = () => {
   const { settings: dbSettings, updateSettings, getSettings } = useData();
@@ -173,6 +174,91 @@ const Settings: React.FC = () => {
 
   const isAnthropicKeyValid = anthropicApiKey.length > 0;
   const isOpenAIKeyValid = openaiApiKey.length > 0;
+
+  // ── API Keys ──────────────────────────────────────────────────────────────
+  const API_SERVER = import.meta.env.VITE_API_SERVER_URL || 'http://localhost:3002';
+
+  interface ApiKey {
+    id: string;
+    label: string;
+    key_prefix: string;
+    created_at: string;
+    last_used_at: string | null;
+    revoked_at: string | null;
+  }
+
+  const [apiKeys, setApiKeys] = useState<ApiKey[]>([]);
+  const [apiKeysLoading, setApiKeysLoading] = useState(false);
+  const [newKeyLabel, setNewKeyLabel] = useState('');
+  const [generatedKey, setGeneratedKey] = useState<string | null>(null);
+  const [creatingKey, setCreatingKey] = useState(false);
+  const [copiedKey, setCopiedKey] = useState(false);
+  const [revokingId, setRevokingId] = useState<string | null>(null);
+
+  const fetchApiKeys = useCallback(async () => {
+    setApiKeysLoading(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+      const res = await fetch(`${API_SERVER}/auth/keys`, {
+        headers: { Authorization: `Bearer ${session.access_token}` }
+      });
+      if (res.ok) {
+        const json = await res.json();
+        setApiKeys(json.data);
+      }
+    } finally {
+      setApiKeysLoading(false);
+    }
+  }, [API_SERVER]);
+
+  useEffect(() => { fetchApiKeys(); }, [fetchApiKeys]);
+
+  const handleCreateKey = async () => {
+    if (!newKeyLabel.trim()) return;
+    setCreatingKey(true);
+    setGeneratedKey(null);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+      const res = await fetch(`${API_SERVER}/auth/keys`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${session.access_token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ label: newKeyLabel.trim() })
+      });
+      if (res.ok) {
+        const json = await res.json();
+        setGeneratedKey(json.data.key);
+        setNewKeyLabel('');
+        fetchApiKeys();
+      }
+    } finally {
+      setCreatingKey(false);
+    }
+  };
+
+  const handleRevokeKey = async (id: string) => {
+    if (!confirm('Revocare questa chiave? Le integrazioni che la usano smetteranno di funzionare.')) return;
+    setRevokingId(id);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+      await fetch(`${API_SERVER}/auth/keys/${id}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${session.access_token}` }
+      });
+      fetchApiKeys();
+    } finally {
+      setRevokingId(null);
+    }
+  };
+
+  const handleCopyKey = () => {
+    if (!generatedKey) return;
+    navigator.clipboard.writeText(generatedKey);
+    setCopiedKey(true);
+    setTimeout(() => setCopiedKey(false), 2000);
+  };
 
   return (
     <div className="p-6 max-w-4xl mx-auto" style={{ paddingBottom: '15px' }}>
@@ -836,6 +922,128 @@ const Settings: React.FC = () => {
           )}
         </div>
       )}
+
+      {/* API Keys per accesso esterno */}
+      <div className="bg-white dark:bg-dark-card rounded-lg border border-gray-200 dark:border-dark-border p-6 mb-6 shadow-sm">
+        <h2 className="text-xl font-semibold text-dark dark:text-white mb-1 flex items-center gap-2">
+          <Terminal size={20} />
+          API Keys
+        </h2>
+        <p className="text-sm text-gray-500 dark:text-gray-400 mb-5">
+          Genera chiavi per accedere ai dati della tua azienda via API REST (machine-to-machine).
+          La chiave viene mostrata una sola volta al momento della creazione.
+        </p>
+
+        {/* Crea nuova chiave */}
+        <div className="flex gap-2 mb-5">
+          <input
+            type="text"
+            value={newKeyLabel}
+            onChange={(e) => setNewKeyLabel(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && handleCreateKey()}
+            placeholder="Etichetta (es: n8n, Retool, script backup)"
+            className="flex-1 px-4 py-2 rounded-lg border border-gray-300 dark:border-dark-border bg-white dark:bg-dark-bg text-dark dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
+          />
+          <button
+            onClick={handleCreateKey}
+            disabled={creatingKey || !newKeyLabel.trim()}
+            className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:opacity-90 transition-all disabled:opacity-50"
+          >
+            {creatingKey ? (
+              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+            ) : (
+              <Plus size={16} />
+            )}
+            Genera
+          </button>
+        </div>
+
+        {/* Chiave appena generata */}
+        {generatedKey && (
+          <div className="mb-5 p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-700 rounded-lg">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm font-semibold text-green-800 dark:text-green-300">
+                Chiave generata — copiala ora, non verrà più mostrata
+              </span>
+              <button
+                onClick={handleCopyKey}
+                className="flex items-center gap-1 text-xs px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700 transition-colors"
+              >
+                {copiedKey ? <CheckCircle size={12} /> : <Copy size={12} />}
+                {copiedKey ? 'Copiata!' : 'Copia'}
+              </button>
+            </div>
+            <code className="block text-sm font-mono text-green-900 dark:text-green-200 break-all bg-green-100 dark:bg-green-900/40 px-3 py-2 rounded">
+              {generatedKey}
+            </code>
+          </div>
+        )}
+
+        {/* Lista chiavi esistenti */}
+        {apiKeysLoading ? (
+          <div className="text-sm text-gray-400 dark:text-gray-500">Caricamento...</div>
+        ) : apiKeys.length === 0 ? (
+          <div className="text-sm text-gray-400 dark:text-gray-500 py-4 text-center border border-dashed border-gray-200 dark:border-dark-border rounded-lg">
+            Nessuna chiave API generata
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {apiKeys.map((k) => (
+              <div
+                key={k.id}
+                className={`flex items-center justify-between px-4 py-3 rounded-lg border ${
+                  k.revoked_at
+                    ? 'border-red-200 dark:border-red-900 bg-red-50 dark:bg-red-900/10 opacity-60'
+                    : 'border-gray-200 dark:border-dark-border bg-gray-50 dark:bg-gray-800/30'
+                }`}
+              >
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium text-dark dark:text-white text-sm">{k.label}</span>
+                    {k.revoked_at && (
+                      <span className="text-xs px-2 py-0.5 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded-full">Revocata</span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-3 mt-0.5">
+                    <code className="text-xs text-gray-500 dark:text-gray-400 font-mono">{k.key_prefix}…</code>
+                    <span className="text-xs text-gray-400 dark:text-gray-500">
+                      Creata {new Date(k.created_at).toLocaleDateString('it-IT')}
+                    </span>
+                    {k.last_used_at && (
+                      <span className="text-xs text-gray-400 dark:text-gray-500">
+                        Usata {new Date(k.last_used_at).toLocaleDateString('it-IT')}
+                      </span>
+                    )}
+                  </div>
+                </div>
+                {!k.revoked_at && (
+                  <button
+                    onClick={() => handleRevokeKey(k.id)}
+                    disabled={revokingId === k.id}
+                    className="flex items-center gap-1 text-xs px-3 py-1.5 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg transition-colors disabled:opacity-50"
+                  >
+                    {revokingId === k.id ? (
+                      <div className="w-3 h-3 border-2 border-red-400 border-t-transparent rounded-full animate-spin" />
+                    ) : (
+                      <Trash2 size={12} />
+                    )}
+                    Revoca
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+
+        <div className="mt-4 p-3 bg-gray-50 dark:bg-gray-800/40 rounded-lg border border-gray-200 dark:border-dark-border">
+          <p className="text-xs text-gray-500 dark:text-gray-400 font-mono">
+            <span className="font-semibold text-gray-700 dark:text-gray-300">Endpoint base:</span>{' '}
+            {API_SERVER}/api/v1/ &nbsp;|&nbsp;
+            <span className="font-semibold text-gray-700 dark:text-gray-300">Header:</span>{' '}
+            X-API-Key: &lt;chiave&gt;
+          </p>
+        </div>
+      </div>
 
       {/* Warning if no key configured */}
       {!isAnthropicKeyValid && !isOpenAIKeyValid && (
