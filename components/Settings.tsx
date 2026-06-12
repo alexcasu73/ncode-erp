@@ -194,6 +194,13 @@ const Settings: React.FC = () => {
   const [creatingKey, setCreatingKey] = useState(false);
   const [copiedKey, setCopiedKey] = useState(false);
   const [revokingId, setRevokingId] = useState<string | null>(null);
+  const [copiedField, setCopiedField] = useState<string | null>(null);
+
+  const copyToClipboard = (text: string, field: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedField(field);
+    setTimeout(() => setCopiedField(null), 2000);
+  };
 
   const fetchApiKeys = useCallback(async () => {
     setApiKeysLoading(true);
@@ -1060,6 +1067,13 @@ const Settings: React.FC = () => {
               <code className="flex-1 text-xs font-mono text-indigo-900 dark:text-indigo-200 break-all bg-indigo-100 dark:bg-indigo-900/40 px-3 py-1.5 rounded">
                 {API_SERVER}/mcp
               </code>
+              <button
+                onClick={() => copyToClipboard(`${API_SERVER}/mcp`, 'url')}
+                className="flex items-center gap-1 text-xs px-2 py-1.5 bg-indigo-600 text-white rounded hover:bg-indigo-700 transition-colors flex-shrink-0"
+              >
+                {copiedField === 'url' ? <CheckCircle size={12} /> : <Copy size={12} />}
+                {copiedField === 'url' ? 'Copiato!' : 'Copia'}
+              </button>
             </div>
             <div className="flex items-center gap-2">
               <span className="text-xs font-semibold text-indigo-800 dark:text-indigo-300 w-16 flex-shrink-0">Header</span>
@@ -1072,7 +1086,8 @@ const Settings: React.FC = () => {
             <summary className="text-xs text-indigo-700 dark:text-indigo-400 cursor-pointer hover:underline">
               Esempio di configurazione client
             </summary>
-            <pre className="mt-2 text-xs font-mono text-indigo-900 dark:text-indigo-200 bg-indigo-100 dark:bg-indigo-900/40 px-3 py-2 rounded overflow-x-auto">{`{
+            {(() => {
+              const mcpConfig = `{
   "mcpServers": {
     "ncode-erp": {
       "url": "${API_SERVER}/mcp",
@@ -1081,7 +1096,20 @@ const Settings: React.FC = () => {
       }
     }
   }
-}`}</pre>
+}`;
+              return (
+                <div className="relative mt-2">
+                  <button
+                    onClick={() => copyToClipboard(mcpConfig, 'config')}
+                    className="absolute top-2 right-2 flex items-center gap-1 text-xs px-2 py-1 bg-indigo-600 text-white rounded hover:bg-indigo-700 transition-colors"
+                  >
+                    {copiedField === 'config' ? <CheckCircle size={12} /> : <Copy size={12} />}
+                    {copiedField === 'config' ? 'Copiato!' : 'Copia'}
+                  </button>
+                  <pre className="text-xs font-mono text-indigo-900 dark:text-indigo-200 bg-indigo-100 dark:bg-indigo-900/40 px-3 py-2 rounded overflow-x-auto">{mcpConfig}</pre>
+                </div>
+              );
+            })()}
           </details>
         </div>
       </div>
