@@ -1,6 +1,11 @@
 import { createClient } from '@supabase/supabase-js';
+import ws from 'ws';
 import dotenv from 'dotenv';
 dotenv.config();
+
+// Node < 22 non ha WebSocket nativo: supabase-js (realtime) lo richiede.
+// Forniamo un polyfill anche se la Realtime non viene usata da questo servizio.
+if (!globalThis.WebSocket) globalThis.WebSocket = ws;
 
 const { SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY } = process.env;
 
