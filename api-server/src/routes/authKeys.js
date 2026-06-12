@@ -84,3 +84,34 @@ authKeysRouter.delete('/:id', jwtAuth, async (req, res, next) => {
     next(err);
   }
 });
+
+// DELETE /auth/keys/:id/permanent — elimina definitivamente (solo chiavi già revocate)
+authKeysRouter.delete('/:id/permanent', jwtAuth, async (req, res, next) => {
+  try {
+    const companyId = await resolveCompanyId(req.userId);
+    if (!companyId) return res.status(403).json({ error: 'Accesso riservato agli admin' });
+
+    const { data: key, error: findErr } = await supabase
+      .from('api_keys')
+      .select('id, revoked_at')
+      .eq('id', req.params.id)
+      .eq('company_id', companyId)
+      .single();
+
+    if (findErr || !key) return res.status(404).json({ error: 'Chiave non trovata' });
+    if (!key.revoked_at) {
+      return res.status(400).json({ error: 'Revoca la chiave prima di eliminarla definitivamente' });
+    }
+
+    const { error } = await supabase
+      .from('api_keys')
+      .delete()
+      .eq('id', req.params.id)
+      .eq('company_id', companyId);
+
+    if (error) throw error;
+    res.status(204).send();
+  } catch (err) {
+    next(err);
+  }
+});

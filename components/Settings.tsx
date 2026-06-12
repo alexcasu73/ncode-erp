@@ -194,6 +194,7 @@ const Settings: React.FC = () => {
   const [creatingKey, setCreatingKey] = useState(false);
   const [copiedKey, setCopiedKey] = useState(false);
   const [revokingId, setRevokingId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const [copiedField, setCopiedField] = useState<string | null>(null);
 
   const copyToClipboard = (text: string, field: string) => {
@@ -257,6 +258,22 @@ const Settings: React.FC = () => {
       fetchApiKeys();
     } finally {
       setRevokingId(null);
+    }
+  };
+
+  const handleDeleteKey = async (id: string) => {
+    if (!confirm('Eliminare definitivamente questa chiave revocata? L\'operazione è irreversibile.')) return;
+    setDeletingId(id);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+      await fetch(`${API_SERVER}/auth/keys/${id}/permanent`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${session.access_token}` }
+      });
+      fetchApiKeys();
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -1023,7 +1040,7 @@ const Settings: React.FC = () => {
                     )}
                   </div>
                 </div>
-                {!k.revoked_at && (
+                {!k.revoked_at ? (
                   <button
                     onClick={() => handleRevokeKey(k.id)}
                     disabled={revokingId === k.id}
@@ -1035,6 +1052,19 @@ const Settings: React.FC = () => {
                       <Trash2 size={12} />
                     )}
                     Revoca
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => handleDeleteKey(k.id)}
+                    disabled={deletingId === k.id}
+                    className="flex items-center gap-1 text-xs px-3 py-1.5 text-red-700 dark:text-red-300 hover:bg-red-100 dark:hover:bg-red-900/30 border border-red-300 dark:border-red-700 rounded-lg transition-colors disabled:opacity-50"
+                  >
+                    {deletingId === k.id ? (
+                      <div className="w-3 h-3 border-2 border-red-400 border-t-transparent rounded-full animate-spin" />
+                    ) : (
+                      <Trash2 size={12} />
+                    )}
+                    Elimina
                   </button>
                 )}
               </div>
