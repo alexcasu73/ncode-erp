@@ -156,6 +156,39 @@ export function registerTools(server, api) {
     } catch (e) { return fail(e); }
   });
 
+  server.registerTool('aggiorna_fattura', {
+    title: 'Aggiorna fattura',
+    description: 'Aggiorna una fattura esistente. Passa solo i campi da modificare. Se cambi la data, mese/anno vengono riallineati.',
+    inputSchema: {
+      id: z.string().describe('ID della fattura da aggiornare'),
+      tipo: z.enum(['Entrata', 'Uscita']).optional(),
+      data: z.string().optional().describe('Data YYYY-MM-DD'),
+      flusso: z.number().optional(),
+      nome_progetto: z.string().optional(),
+      iva: z.number().optional(),
+      percentuale_iva: z.number().optional(),
+      stato_fatturazione: z.string().optional(),
+      spesa: z.string().optional(),
+      tipo_spesa: z.string().optional(),
+      note: z.string().optional(),
+      data_scadenza: z.string().optional(),
+      percentuale_fatturazione: z.number().optional(),
+    },
+  }, async ({ id, data, ...rest }) => {
+    try {
+      const body = { ...(data ? { data, ...meseAnnoDaData(data) } : {}), ...rest };
+      return ok(await api.update('invoices', id, body));
+    } catch (e) { return fail(e); }
+  });
+
+  server.registerTool('elimina_fattura', {
+    title: 'Elimina fattura',
+    description: 'Elimina definitivamente una fattura dato il suo id. Operazione irreversibile.',
+    inputSchema: { id: z.string().describe('ID della fattura da eliminare') },
+  }, async ({ id }) => {
+    try { await api.remove('invoices', id); return ok({ deleted: true, id }); } catch (e) { return fail(e); }
+  });
+
   // ---------- CASHFLOW ----------
   server.registerTool('lista_cashflow', {
     title: 'Elenco movimenti di cashflow',
@@ -185,6 +218,32 @@ export function registerTools(server, api) {
     },
   }, async (body) => {
     try { return ok(await api.create('cashflow', body)); } catch (e) { return fail(e); }
+  });
+
+  server.registerTool('aggiorna_cashflow', {
+    title: 'Aggiorna movimento di cashflow',
+    description: 'Aggiorna un movimento di cashflow esistente. Passa solo i campi da modificare.',
+    inputSchema: {
+      id: z.string().describe('ID del movimento da aggiornare'),
+      tipo: z.enum(['Entrata', 'Uscita']).optional(),
+      importo: z.number().optional(),
+      data_pagamento: z.string().optional().describe('Data YYYY-MM-DD'),
+      descrizione: z.string().optional(),
+      categoria: z.string().optional(),
+      note: z.string().optional(),
+      stato_fatturazione: z.string().optional(),
+      invoice_id: z.string().optional(),
+    },
+  }, async ({ id, ...body }) => {
+    try { return ok(await api.update('cashflow', id, body)); } catch (e) { return fail(e); }
+  });
+
+  server.registerTool('elimina_cashflow', {
+    title: 'Elimina movimento di cashflow',
+    description: 'Elimina definitivamente un movimento di cashflow dato il suo id. Operazione irreversibile.',
+    inputSchema: { id: z.string().describe('ID del movimento da eliminare') },
+  }, async ({ id }) => {
+    try { await api.remove('cashflow', id); return ok({ deleted: true, id }); } catch (e) { return fail(e); }
   });
 
   // ---------- TRANSAZIONI ----------
