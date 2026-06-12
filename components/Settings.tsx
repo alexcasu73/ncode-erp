@@ -1043,6 +1043,47 @@ const Settings: React.FC = () => {
             X-API-Key: &lt;chiave&gt;
           </p>
         </div>
+
+        {/* Connessione MCP */}
+        <div className="mt-4 p-4 bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-800 rounded-lg">
+          <h3 className="text-sm font-semibold text-indigo-900 dark:text-indigo-300 mb-1 flex items-center gap-2">
+            <Terminal size={16} />
+            Connessione MCP (per assistenti AI)
+          </h3>
+          <p className="text-xs text-indigo-700 dark:text-indigo-400 mb-3">
+            La stessa chiave può collegare un client MCP (es. Claude) ai dati della tua azienda.
+            Aggiungi un server MCP remoto con questo URL e usa la chiave come bearer token.
+          </p>
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-semibold text-indigo-800 dark:text-indigo-300 w-16 flex-shrink-0">URL</span>
+              <code className="flex-1 text-xs font-mono text-indigo-900 dark:text-indigo-200 break-all bg-indigo-100 dark:bg-indigo-900/40 px-3 py-1.5 rounded">
+                {API_SERVER}/mcp
+              </code>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-semibold text-indigo-800 dark:text-indigo-300 w-16 flex-shrink-0">Header</span>
+              <code className="flex-1 text-xs font-mono text-indigo-900 dark:text-indigo-200 break-all bg-indigo-100 dark:bg-indigo-900/40 px-3 py-1.5 rounded">
+                Authorization: Bearer &lt;la-tua-chiave&gt;
+              </code>
+            </div>
+          </div>
+          <details className="mt-3">
+            <summary className="text-xs text-indigo-700 dark:text-indigo-400 cursor-pointer hover:underline">
+              Esempio di configurazione client
+            </summary>
+            <pre className="mt-2 text-xs font-mono text-indigo-900 dark:text-indigo-200 bg-indigo-100 dark:bg-indigo-900/40 px-3 py-2 rounded overflow-x-auto">{`{
+  "mcpServers": {
+    "ncode-erp": {
+      "url": "${API_SERVER}/mcp",
+      "headers": {
+        "Authorization": "Bearer <la-tua-chiave>"
+      }
+    }
+  }
+}`}</pre>
+          </details>
+        </div>
       </div>
 
       {/* Warning if no key configured */}
