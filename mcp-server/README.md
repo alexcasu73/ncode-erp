@@ -44,7 +44,7 @@ Lettura: `lista_clienti`, `dettaglio_cliente`, `lista_deal`, `dettaglio_deal`,
 `lista_fatture`, `dettaglio_fattura`, `lista_cashflow`, `lista_transazioni`,
 `lista_movimenti_bancari`, `lista_sessioni_riconciliazione`.
 
-Scrittura: `crea_cliente`, `aggiorna_cliente`.
+Scrittura: `crea_cliente`, `aggiorna_cliente`, `crea_fattura`, `crea_cashflow`.
 
 Tutti i tool di lista accettano `ricerca`, `pagina`, `limite`, `ordina` più filtri specifici.
 

@@ -21,6 +21,16 @@ function buildListQuery({ ricerca, pagina, limite, ordina }, filter) {
 const ok = (data) => ({ content: [{ type: 'text', text: JSON.stringify(data, null, 2) }] });
 const fail = (err) => ({ isError: true, content: [{ type: 'text', text: `❌ ${err.message || String(err)}` }] });
 
+const MESI = ['Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno',
+  'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre'];
+
+// Da "YYYY-MM-DD" ricava { mese: "Giugno", anno: 2026 } senza dipendere dal fuso orario
+function meseAnnoDaData(data) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(data || '');
+  if (!m) return {};
+  return { anno: parseInt(m[1], 10), mese: MESI[parseInt(m[2], 10) - 1] };
+}
+
 export function registerTools(server, api) {
   // ---------- CLIENTI ----------
   server.registerTool('lista_clienti', {
@@ -122,6 +132,30 @@ export function registerTools(server, api) {
     try { return ok(await api.get('invoices', id)); } catch (e) { return fail(e); }
   });
 
+  server.registerTool('crea_fattura', {
+    title: 'Crea fattura',
+    description: 'Crea una nuova fattura (attiva = Entrata, passiva = Uscita). L\'id viene generato automaticamente. mese/anno sono derivati dalla data se non indicati.',
+    inputSchema: {
+      tipo: z.enum(['Entrata', 'Uscita']).describe('Entrata = fattura attiva, Uscita = passiva'),
+      data: z.string().describe('Data della fattura in formato YYYY-MM-DD'),
+      flusso: z.number().describe('Importo imponibile (senza IVA)'),
+      nome_progetto: z.string().optional().describe('Nome progetto / descrizione'),
+      iva: z.number().optional().describe('Importo IVA (default 0)'),
+      percentuale_iva: z.number().optional().describe('Aliquota IVA come frazione, es. 0.22 per 22% (default 0)'),
+      stato_fatturazione: z.string().optional().describe('Es. "Effettivo" o "Previsionale"'),
+      spesa: z.string().optional().describe('Voce di spesa (per le passive)'),
+      tipo_spesa: z.string().optional(),
+      note: z.string().optional(),
+      data_scadenza: z.string().optional().describe('Data scadenza YYYY-MM-DD'),
+      percentuale_fatturazione: z.number().optional().describe('Percentuale di fatturazione (default 100)'),
+    },
+  }, async ({ data, ...rest }) => {
+    try {
+      const body = { data, ...meseAnnoDaData(data), ...rest };
+      return ok(await api.create('invoices', body));
+    } catch (e) { return fail(e); }
+  });
+
   // ---------- CASHFLOW ----------
   server.registerTool('lista_cashflow', {
     title: 'Elenco movimenti di cashflow',
@@ -134,6 +168,23 @@ export function registerTools(server, api) {
   }, async ({ tipo, categoria, ...list }) => {
     try { return ok(await api.list('cashflow', buildListQuery(list, { tipo, categoria }))); }
     catch (e) { return fail(e); }
+  });
+
+  server.registerTool('crea_cashflow', {
+    title: 'Crea movimento di cashflow',
+    description: 'Crea un nuovo movimento di cashflow (entrata o uscita previsionale/effettiva). L\'id viene generato automaticamente.',
+    inputSchema: {
+      tipo: z.enum(['Entrata', 'Uscita']).describe('Entrata o Uscita'),
+      importo: z.number().describe('Importo del movimento'),
+      data_pagamento: z.string().optional().describe('Data del pagamento in formato YYYY-MM-DD'),
+      descrizione: z.string().optional(),
+      categoria: z.string().optional(),
+      note: z.string().optional(),
+      stato_fatturazione: z.string().optional().describe('Es. "Effettivo" o "Previsionale"'),
+      invoice_id: z.string().optional().describe('ID di una fattura collegata (opzionale)'),
+    },
+  }, async (body) => {
+    try { return ok(await api.create('cashflow', body)); } catch (e) { return fail(e); }
   });
 
   // ---------- TRANSAZIONI ----------
