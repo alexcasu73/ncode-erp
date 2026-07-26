@@ -13,10 +13,10 @@ Client MCP (Claude / claude.ai / Claude Code)
 
 Il MCP non parla direttamente col DB: usa la REST API con una **API key** (`X-API-Key`), quindi i dati visibili sono quelli della company a cui appartiene la chiave.
 
-**Multi-tenant:** non c'è una chiave fissa. Ogni client si autentica con la API key
-della propria azienda nel bearer (`Authorization: Bearer <ncode_...>`), generata da
-**Impostazioni → API Keys** nell'app. Il MCP la inoltra come `X-API-Key`: ogni azienda
-vede solo i propri dati.
+**Per-utente (multi-tenant):** ogni utente genera un proprio token personale in
+**Impostazioni → I tuoi token API** e lo usa come bearer (`Authorization: Bearer <ncode_...>`).
+Il MCP lo inoltra come `X-API-Key`; la REST API risolve la company dell'utente, così
+ognuno vede solo i dati della propria azienda.
 
 ## Configurazione
 
@@ -28,7 +28,8 @@ Copia `.env.example` in `.env` e imposta:
 | `API_BASE_URL` | URL della REST API ERP (es. `http://127.0.0.1:3002`) |
 | `MCP_AUTH_TOKEN` | Token opzionale per proteggere `/mcp`. Vuoto = modalità retrocompatibile (company key come bearer). Valorizzato = gate separato (vedi sotto). |
 
-La API key **non** si configura qui: arriva per-richiesta dal bearer del client.
+La API key **non** si configura qui: ogni utente usa il proprio token personale
+come bearer (vedi sotto).
 
 ## Avvio
 
@@ -67,11 +68,13 @@ Authorization: Bearer <MCP_AUTH_TOKEN>     # gate endpoint
 X-API-Key: <ncode_...>                     # company key (multi-tenant)
 ```
 
-**Modalità B — `MCP_AUTH_TOKEN` vuoto (retrocompatibile, dev/locale):**
+**Modalità B — `MCP_AUTH_TOKEN` vuoto (flusso predefinito, per-utente):**
 
 ```
-Authorization: Bearer <ncode_...>          # company key direttamente nel bearer
+Authorization: Bearer <ncode_...>          # token personale dell'utente nel bearer
 ```
+
+Ogni utente genera il proprio `ncode_...` in Impostazioni → I tuoi token API.
 
 In entrambi i casi la company key proviene da **Impostazioni → API Keys** e determina
 i dati visibili (multi-tenant).

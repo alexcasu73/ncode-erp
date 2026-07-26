@@ -8,10 +8,13 @@ import { createApi } from './api.js';
 
 const PORT = process.env.MCP_PORT || 3003;
 
-// Token opzionale per proteggere l'endpoint /mcp da accessi anonimi.
-// Se valorizzato, il client deve inviarlo come `Authorization: Bearer <MCP_AUTH_TOKEN>`;
-// in quel caso la API key dell'azienda (multi-tenant) va passata in `X-API-Key`.
-// Se vuoto, l'endpoint resta multi-tenant con la company key nel bearer (retrocompatibile).
+// Flusso principale (per-utente): ogni utente genera un proprio token personale
+// in Impostazioni → Token API e lo usa come `Authorization: Bearer <ncode_...>`.
+// Il server MCP lo inoltra come `X-API-Key` alla REST API, che risolve la company.
+//
+// Opzionale: `MCP_AUTH_TOKEN` aggiunge un gate ulteriore (consigliato in produzione).
+// Se valorizzato, il client deve inviarlo come `Authorization: Bearer <MCP_AUTH_TOKEN>`
+// e il token utente in `X-API-Key: <ncode_...>`.
 const MCP_AUTH_TOKEN = process.env.MCP_AUTH_TOKEN || '';
 const mcpAuthEnabled = MCP_AUTH_TOKEN.length > 0;
 
