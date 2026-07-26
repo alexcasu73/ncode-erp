@@ -5,44 +5,31 @@ import { jwtAuth } from '../middleware/auth.js';
 
 export const authKeysRouter = Router();
 
-// Risolve la company_id dell'utente autenticato (qualsiasi membro attivo).
-// Restituisce anche il role per eventuali check admin.
-async function resolveCompany(userId) {
+// Risolve la company_id dell'utente autenticato
+async function resolveCompanyId(userId) {
   const { data, error } = await supabase
     .from('company_users')
     .select('company_id, role')
     .eq('user_id', userId)
-    .eq('is_active', true)
+    .eq('role', 'admin')
     .limit(1)
     .single();
   if (error || !data) return null;
-  return data; // { company_id, role }
+  return data.company_id;
 }
 
-// GET /auth/keys — lista le chiavi dell'utente corrente (e, se admin, anche quelle di company legacy)
+// GET /auth/keys — lista chiavi della propria company
 authKeysRouter.get('/', jwtAuth, async (req, res, next) => {
   try {
-    const membership = await resolveCompany(req.userId);
-    if (!membership) return res.status(403).json({ error: 'Nessuna company associata all\'utente' });
+    const companyId = await resolveCompanyId(req.userId);
+    if (!companyId) return res.status(403).json({ error: 'Accesso riservato agli admin' });
 
-    const isAdmin = membership.role === 'admin';
-    const companyId = membership.company_id;
-
-    // Le chiavi dell'utente corrente (user_id match) più, se admin,
-    // le chiavi legacy di company senza user_id (user_id IS NULL).
-    let query = supabase
+    const { data, error } = await supabase
       .from('api_keys')
       .select('id, label, key_prefix, created_at, last_used_at, revoked_at')
       .eq('company_id', companyId)
       .order('created_at', { ascending: false });
 
-    if (isAdmin) {
-      query = query.or(`user_id.eq.${req.userId},user_id.is.null`);
-    } else {
-      query = query.eq('user_id', req.userId);
-    }
-
-    const { data, error } = await query;
     if (error) throw error;
     res.json({ data });
   } catch (err) {
@@ -50,11 +37,11 @@ authKeysRouter.get('/', jwtAuth, async (req, res, next) => {
   }
 });
 
-// POST /auth/keys — crea nuova chiave personale per l'utente corrente
+// POST /auth/keys — crea nuova chiave
 authKeysRouter.post('/', jwtAuth, async (req, res, next) => {
   try {
-    const membership = await resolveCompany(req.userId);
-    if (!membership) return res.status(403).json({ error: 'Nessuna company associata all\'utente' });
+    const companyId = await resolveCompanyId(req.userId);
+    if (!companyId) return res.status(403).json({ error: 'Accesso riservato agli admin' });
 
     const { label } = req.body;
     if (!label?.trim()) return res.status(400).json({ error: 'Campo "label" obbligatorio' });
@@ -66,13 +53,7 @@ authKeysRouter.post('/', jwtAuth, async (req, res, next) => {
 
     const { data, error } = await supabase
       .from('api_keys')
-      .insert({
-        company_id: membership.company_id,
-        user_id: req.userId,
-        label: label.trim(),
-        key_prefix: keyPrefix,
-        key_hash: keyHash,
-      })
+      .insert({ company_id: companyId, label: label.trim(), key_prefix: keyPrefix, key_hash: keyHash })
       .select('id, label, key_prefix, created_at')
       .single();
 
@@ -86,21 +67,16 @@ authKeysRouter.post('/', jwtAuth, async (req, res, next) => {
 });
 
 // DELETE /auth/keys/:id — revoca chiave (soft delete)
-// L'utente revoca le proprie; gli admin possono revocare qualsiasi chiave della company.
 authKeysRouter.delete('/:id', jwtAuth, async (req, res, next) => {
   try {
-    const membership = await resolveCompany(req.userId);
-    if (!membership) return res.status(403).json({ error: 'Nessuna company associata all\'utente' });
-
-    const isAdmin = membership.role === 'admin';
-    const match = isAdmin
-      ? { id: req.params.id, company_id: membership.company_id }
-      : { id: req.params.id, company_id: membership.company_id, user_id: req.userId };
+    const companyId = await resolveCompanyId(req.userId);
+    if (!companyId) return res.status(403).json({ error: 'Accesso riservato agli admin' });
 
     const { error } = await supabase
       .from('api_keys')
       .update({ revoked_at: new Date().toISOString() })
-      .match(match);
+      .eq('id', req.params.id)
+      .eq('company_id', companyId);
 
     if (error) throw error;
     res.status(204).send();
@@ -112,18 +88,14 @@ authKeysRouter.delete('/:id', jwtAuth, async (req, res, next) => {
 // DELETE /auth/keys/:id/permanent — elimina definitivamente (solo chiavi già revocate)
 authKeysRouter.delete('/:id/permanent', jwtAuth, async (req, res, next) => {
   try {
-    const membership = await resolveCompany(req.userId);
-    if (!membership) return res.status(403).json({ error: 'Nessuna company associata all\'utente' });
-
-    const isAdmin = membership.role === 'admin';
-    const match = isAdmin
-      ? { id: req.params.id, company_id: membership.company_id }
-      : { id: req.params.id, company_id: membership.company_id, user_id: req.userId };
+    const companyId = await resolveCompanyId(req.userId);
+    if (!companyId) return res.status(403).json({ error: 'Accesso riservato agli admin' });
 
     const { data: key, error: findErr } = await supabase
       .from('api_keys')
       .select('id, revoked_at')
-      .match(match)
+      .eq('id', req.params.id)
+      .eq('company_id', companyId)
       .single();
 
     if (findErr || !key) return res.status(404).json({ error: 'Chiave non trovata' });
@@ -134,7 +106,8 @@ authKeysRouter.delete('/:id/permanent', jwtAuth, async (req, res, next) => {
     const { error } = await supabase
       .from('api_keys')
       .delete()
-      .match(match);
+      .eq('id', req.params.id)
+      .eq('company_id', companyId);
 
     if (error) throw error;
     res.status(204).send();

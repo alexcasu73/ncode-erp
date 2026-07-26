@@ -13,10 +13,10 @@ Client MCP (Claude / claude.ai / Claude Code)
 
 Il MCP non parla direttamente col DB: usa la REST API con una **API key** (`X-API-Key`), quindi i dati visibili sono quelli della company a cui appartiene la chiave.
 
-**Per-utente (multi-tenant):** ogni utente genera un proprio token personale in
-**Impostazioni → I tuoi token API** e lo usa come bearer (`Authorization: Bearer <ncode_...>`).
-Il MCP lo inoltra come `X-API-Key`; la REST API risolve la company dell'utente, così
-ognuno vede solo i dati della propria azienda.
+**Multi-tenant:** non c'è una chiave fissa. Ogni client si autentica con la API key
+della propria azienda nel bearer (`Authorization: Bearer <ncode_...>`), generata da
+**Impostazioni → API Keys** nell'app. Il MCP la inoltra come `X-API-Key`: ogni azienda
+vede solo i propri dati.
 
 ## Configurazione
 
@@ -26,10 +26,8 @@ Copia `.env.example` in `.env` e imposta:
 |-----------|-------------|
 | `MCP_PORT` | Porta del server MCP (default 3003) |
 | `API_BASE_URL` | URL della REST API ERP (es. `http://127.0.0.1:3002`) |
-| `MCP_AUTH_TOKEN` | Token opzionale per proteggere `/mcp`. Vuoto = modalità retrocompatibile (company key come bearer). Valorizzato = gate separato (vedi sotto). |
 
-La API key **non** si configura qui: ogni utente usa il proprio token personale
-come bearer (vedi sotto).
+La API key **non** si configura qui: arriva per-richiesta dal bearer del client.
 
 ## Avvio
 
@@ -51,35 +49,7 @@ Scrittura: `crea_cliente`, `aggiorna_cliente`, `crea_fattura`, `aggiorna_fattura
 
 Tutti i tool di lista accettano `ricerca`, `pagina`, `limite`, `ordina` più filtri specifici.
 
-## Protezione dell'endpoint /mcp (MCP_AUTH_TOKEN)
-
-`MCP_AUTH_TOKEN` (in `.env`) protegge `/mcp` da accessi anonimi. Genera un valore con:
-
-```bash
-npm run gen-token    # stampa: mcp_<48 hex>
-```
-
-Due modalità di autenticazione del client, a seconda che il token sia valorizzato o no:
-
-**Modalità A — `MCP_AUTH_TOKEN` valorizzato (consigliato in produzione):**
-
-```
-Authorization: Bearer <MCP_AUTH_TOKEN>     # gate endpoint
-X-API-Key: <ncode_...>                     # company key (multi-tenant)
-```
-
-**Modalità B — `MCP_AUTH_TOKEN` vuoto (flusso predefinito, per-utente):**
-
-```
-Authorization: Bearer <ncode_...>          # token personale dell'utente nel bearer
-```
-
-Ogni utente genera il proprio `ncode_...` in Impostazioni → I tuoi token API.
-
-In entrambi i casi la company key proviene da **Impostazioni → API Keys** e determina
-i dati visibili (multi-tenant).
-
 ## Collegare un client (es. claude.ai / Claude Code)
 
-Aggiungi un MCP server remoto con URL `https://<host>/mcp`. Vedi sopra per gli header
-di autenticazione a seconda della modalità configurata.
+Aggiungi un MCP server remoto con URL `https://<host>/mcp` e, se configurato,
+header `Authorization: Bearer <MCP_AUTH_TOKEN>`.

@@ -176,10 +176,7 @@ const Settings: React.FC = () => {
   const isOpenAIKeyValid = openaiApiKey.length > 0;
 
   // ── API Keys ──────────────────────────────────────────────────────────────
-  // Per le chiamate al api-server (gestione chiavi JWT): in dev VITE_API_SERVER_URL,
-  // in production l'app è servita dallo stesso origin (nginx proxy /auth, /api).
-  const API_SERVER = import.meta.env.VITE_API_SERVER_URL || (typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3002');
-  const MCP_URL = typeof window !== 'undefined' ? `${window.location.origin}/mcp` : 'http://localhost:3003/mcp';
+  const API_SERVER = import.meta.env.VITE_API_SERVER_URL || 'http://localhost:3002';
 
   interface ApiKey {
     id: string;
@@ -950,16 +947,15 @@ const Settings: React.FC = () => {
         </div>
       )}
 
-{/* API Keys per accesso esterno */}
-      <div className="bg-white dark:bg-dark-card rounded-xl shadow-sm border border-gray-200 dark:border-dark-border p-6 mb-6">
-        <h2 className="text-xl font-semibold text-dark dark:text-white flex items-center gap-2 mb-1">
-          <Key size={20} className="text-primary" />
-          I tuoi token API
+      {/* API Keys per accesso esterno */}
+      <div className="bg-white dark:bg-dark-card rounded-lg border border-gray-200 dark:border-dark-border p-6 mb-6 shadow-sm">
+        <h2 className="text-xl font-semibold text-dark dark:text-white mb-1 flex items-center gap-2">
+          <Terminal size={20} />
+          API Keys
         </h2>
-        <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
-          Genera token personali per collegare client MCP (es. Claude) e integrazioni esterne
-          (n8n, Retool, script). Ogni token dà accesso ai dati della tua azienda — è personale,
-          non condividirlo. Puoi revocarlo in qualsiasi momento.
+        <p className="text-sm text-gray-500 dark:text-gray-400 mb-5">
+          Genera chiavi per accedere ai dati della tua azienda via API REST (machine-to-machine).
+          La chiave viene mostrata una sola volta al momento della creazione.
         </p>
 
         {/* Crea nuova chiave */}
@@ -969,7 +965,7 @@ const Settings: React.FC = () => {
             value={newKeyLabel}
             onChange={(e) => setNewKeyLabel(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && handleCreateKey()}
-            placeholder="Etichetta (es: Claude Desktop, n8n, script backup)"
+            placeholder="Etichetta (es: n8n, Retool, script backup)"
             className="flex-1 px-4 py-2 rounded-lg border border-gray-300 dark:border-dark-border bg-white dark:bg-dark-bg text-dark dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
           />
           <button
@@ -991,7 +987,7 @@ const Settings: React.FC = () => {
           <div className="mb-5 p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-700 rounded-lg">
             <div className="flex items-center justify-between mb-2">
               <span className="text-sm font-semibold text-green-800 dark:text-green-300">
-                Token generato — copialo ora, non verrà più mostrato
+                Chiave generata — copiala ora, non verrà più mostrata
               </span>
               <button
                 onClick={handleCopyKey}
@@ -1012,7 +1008,7 @@ const Settings: React.FC = () => {
           <div className="text-sm text-gray-400 dark:text-gray-500">Caricamento...</div>
         ) : apiKeys.length === 0 ? (
           <div className="text-sm text-gray-400 dark:text-gray-500 py-4 text-center border border-dashed border-gray-200 dark:border-dark-border rounded-lg">
-            Nessun token generato
+            Nessuna chiave API generata
           </div>
         ) : (
           <div className="space-y-2">
@@ -1079,9 +1075,9 @@ const Settings: React.FC = () => {
         <div className="mt-4 p-3 bg-gray-50 dark:bg-gray-800/40 rounded-lg border border-gray-200 dark:border-dark-border">
           <p className="text-xs text-gray-500 dark:text-gray-400 font-mono">
             <span className="font-semibold text-gray-700 dark:text-gray-300">Endpoint base:</span>{' '}
-            {location.origin}/api/v1/ &nbsp;|&nbsp;
+            {API_SERVER}/api/v1/ &nbsp;|&nbsp;
             <span className="font-semibold text-gray-700 dark:text-gray-300">Header:</span>{' '}
-            X-API-Key: &lt;tuo-token&gt;
+            X-API-Key: &lt;chiave&gt;
           </p>
         </div>
 
@@ -1089,20 +1085,20 @@ const Settings: React.FC = () => {
         <div className="mt-4 p-4 bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-800 rounded-lg">
           <h3 className="text-sm font-semibold text-indigo-900 dark:text-indigo-300 mb-1 flex items-center gap-2">
             <Terminal size={16} />
-            Collega un assistente AI (MCP)
+            Connessione MCP (per assistenti AI)
           </h3>
           <p className="text-xs text-indigo-700 dark:text-indigo-400 mb-3">
-            Usa un tuo token per collegare un client MCP (es. Claude Desktop) ai dati della tua azienda.
-            Aggiungi un server MCP remoto con questo URL e il token come bearer.
+            La stessa chiave può collegare un client MCP (es. Claude) ai dati della tua azienda.
+            Aggiungi un server MCP remoto con questo URL e usa la chiave come bearer token.
           </p>
           <div className="space-y-2">
             <div className="flex items-center gap-2">
               <span className="text-xs font-semibold text-indigo-800 dark:text-indigo-300 w-16 flex-shrink-0">URL</span>
               <code className="flex-1 text-xs font-mono text-indigo-900 dark:text-indigo-200 break-all bg-indigo-100 dark:bg-indigo-900/40 px-3 py-1.5 rounded">
-                {MCP_URL}
+                {API_SERVER}/mcp
               </code>
               <button
-                onClick={() => copyToClipboard(MCP_URL, 'url')}
+                onClick={() => copyToClipboard(`${API_SERVER}/mcp`, 'url')}
                 className="flex items-center gap-1 text-xs px-2 py-1.5 bg-indigo-600 text-white rounded hover:bg-indigo-700 transition-colors flex-shrink-0"
               >
                 {copiedField === 'url' ? <CheckCircle size={12} /> : <Copy size={12} />}
@@ -1112,7 +1108,7 @@ const Settings: React.FC = () => {
             <div className="flex items-center gap-2">
               <span className="text-xs font-semibold text-indigo-800 dark:text-indigo-300 w-16 flex-shrink-0">Header</span>
               <code className="flex-1 text-xs font-mono text-indigo-900 dark:text-indigo-200 break-all bg-indigo-100 dark:bg-indigo-900/40 px-3 py-1.5 rounded">
-                Authorization: Bearer &lt;il-tuo-token&gt;
+                Authorization: Bearer &lt;la-tua-chiave&gt;
               </code>
             </div>
           </div>
@@ -1124,9 +1120,9 @@ const Settings: React.FC = () => {
               const mcpConfig = `{
   "mcpServers": {
     "ncode-erp": {
-      "url": "${MCP_URL}",
+      "url": "${API_SERVER}/mcp",
       "headers": {
-        "Authorization": "Bearer <il-tuo-token>"
+        "Authorization": "Bearer <la-tua-chiave>"
       }
     }
   }
