@@ -178,13 +178,17 @@ export function registerTools(server, api) {
     description: 'Elenca le fatture (attive = Entrata e passive = Uscita). ' + PAGINATION_NOTE + ' ' +
       'Campi restituiti: id, data (YYYY-MM-DD), mese (es. "Maggio"), anno (es. 2026), ' +
       'nome_progetto (descrizione/progetto), tipo ("Entrata" o "Uscita"), ' +
-      'stato_fatturazione ("Effettivo", "Previsionale" o "Nessuno"), ' +
+      'stato_fatturazione ("Effettivo" = fattura reale emessa/ricevuta, "Stimato" = previsionale non ancora realizzato, "Nessuno"), ' +
       'flusso (importo imponibile in euro), iva (importo IVA in euro), percentuale_iva (es. 22), ' +
       'spesa (categoria spesa, per le passive: "Tools", "Utenze", "Affitto", ecc.), ' +
       'tipo_spesa ("Costi per servizi", "Altri costi", "Team"), ' +
       'data_scadenza (data scadenza pagamento), percentuale_fatturazione, note, checked. ' +
       'Ricerca su: nome_progetto, note, tipo. Ordinamento default: data (desc). ' +
-      'NOTA: ci sono centinaia di fatture — usa sempre anno, mese, tipo o limite alto per non perdere record.',
+      'NOTA: ci sono centinaia di fatture — usa sempre anno, mese, tipo o limite alto per non perdere record. ' +
+      'IMPORTANT: per il "fatturato realizzato"/"fatturato effettivo"/"ricavi reali" filtra sempre stato_fatturazione="Effettivo" ' +
+      '(le "Stimato" sono previsioni future non ancora realizzate). ' +
+      'Per le "previsioni"/"budget"/"stimato" usa stato_fatturazione="Stimato". ' +
+      'Se l\'utente non specifica, mostra entrambi ma segnali chiaramente quanto è Effettivo vs Stimato.',
     inputSchema: {
       ...listParams,
       tipo: z.enum(['Entrata', 'Uscita']).optional().describe('Entrata = fattura attiva (vendita), Uscita = passiva (acquisto)'),
@@ -202,7 +206,8 @@ export function registerTools(server, api) {
 
   server.registerTool('dettaglio_fattura', {
     title: 'Dettaglio fattura',
-    description: 'Restituisce tutti i dati di una singola fattura dato il suo id (es. "NCO-IN-002/2025").',
+    description: 'Restituisce tutti i dati di una singola fattura dato il suo id (es. "NCO-IN-002/2025"). ' +
+      'Nota: stato_fatturazione="Effettivo" indica una fattura reale, "Stimato" una previsione non ancora realizzata.',
     inputSchema: { id: z.string().describe('ID della fattura') },
   }, async ({ id }) => {
     try { return ok(await api.get('invoices', id)); } catch (e) { return fail(e); }
@@ -274,9 +279,11 @@ export function registerTools(server, api) {
     description: 'Elenca i record di cashflow (entrate/uscite previste ed effettive). ' + PAGINATION_NOTE + ' ' +
       'Campi restituiti: id, tipo ("Entrata" o "Uscita"), importo (euro), ' +
       'data_pagamento (YYYY-MM-DD), descrizione, categoria, note, ' +
-      'stato_fatturazione ("Effettivo", "Stimato" o "Nessuno"), invoice_id (ID fattura collegata, opzionale). ' +
+      'stato_fatturazione ("Effettivo" = movimento reale avvenuto, "Stimato" = previsione futura, "Nessuno"), ' +
+      'invoice_id (ID fattura collegata, opzionale). ' +
       'Ricerca su: descrizione, categoria, note. ' +
-      'NOTA: ci sono centinaia di record — usa sempre tipo, categoria o limite alto.',
+      'NOTA: ci sono centinaia di record — usa sempre tipo, categoria o limite alto. ' +
+      'Per il "cashflow reale"/"effettivo" filtra stato_fatturazione="Effettivo"; per le previsioni "Stimato".',
     inputSchema: {
       ...listParams,
       tipo: z.enum(['Entrata', 'Uscita']).optional(),
