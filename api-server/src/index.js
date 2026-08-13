@@ -30,8 +30,12 @@ app.use(helmet());
 app.use(cors({
   origin: (origin, callback) => {
     // Richieste server-to-server (MCP, script) non inviano Origin: sempre permesse.
+    // Un origin non in whitelist viene negato in modo pulito (callback(null, false)):
+    // la preflight risponde senza header CORS e il browser blocca, senza generare
+    // un 500 che maschererebbe la vera causa (origin mancante nell'allowlist).
     if (!origin || allowedOrigins.includes(origin)) return callback(null, true);
-    callback(new Error('Origin non consentita da CORS'));
+    console.warn(`[CORS] origin non consentita: ${origin} (allowlist: ${allowedOrigins.join(', ')})`);
+    callback(null, false);
   },
 }));
 app.use(express.json({ limit: '5mb' }));
