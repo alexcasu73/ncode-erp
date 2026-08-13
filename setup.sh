@@ -135,6 +135,8 @@ install_dependencies() {
     run_as_user "npm install"
     info "Installing server dependencies..."
     run_as_user "cd server && npm install"
+    info "Installing api-server dependencies..."
+    run_as_user "cd api-server && npm install"
     ok "Dependencies installed"
 }
 
@@ -169,6 +171,9 @@ VITE_SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY:-your-supabase-anon-key}
 
 # API URL (via Nginx reverse proxy)
 VITE_API_URL=${scheme}://${domain}/api
+
+# REST API machine-to-machine (via Nginx)
+VITE_API_SERVER_URL=${scheme}://${domain}
 ENVEOF
         chown "$APP_USER:$APP_USER" "$APP_DIR/.env"
         ok "Root .env generated"
@@ -211,25 +216,43 @@ create_ecosystem() {
     mkdir -p "$LOG_DIR"
     chown "$APP_USER:$APP_USER" "$LOG_DIR"
 
+    mkdir -p "${APP_DIR}/api-server/logs"
+    chown "$APP_USER:$APP_USER" "${APP_DIR}/api-server/logs"
+
     cat > "$ECOSYSTEM" <<'JSEOF'
 module.exports = {
-  apps: [{
-    name: 'ncode-erp',
-    cwd: './server',
-    script: 'src/index.js',
-    interpreter: 'node',
-    instances: 1,
-    autorestart: true,
-    watch: false,
-    max_memory_restart: '512M',
-    env: {
-      NODE_ENV: 'production'
+  apps: [
+    {
+      name: 'ncode-erp',
+      cwd: './server',
+      script: 'src/index.js',
+      interpreter: 'node',
+      instances: 1,
+      autorestart: true,
+      watch: false,
+      max_memory_restart: '512M',
+      env: { NODE_ENV: 'production' },
+      error_file: '../server/logs/err.log',
+      out_file: '../server/logs/out.log',
+      merge_logs: true,
+      log_date_format: 'YYYY-MM-DD HH:mm:ss Z'
     },
-    error_file: '../server/logs/err.log',
-    out_file: '../server/logs/out.log',
-    merge_logs: true,
-    log_date_format: 'YYYY-MM-DD HH:mm:ss Z'
-  }]
+    {
+      name: 'ncode-api',
+      cwd: './api-server',
+      script: 'src/index.js',
+      interpreter: 'node',
+      instances: 1,
+      autorestart: true,
+      watch: false,
+      max_memory_restart: '256M',
+      env: { NODE_ENV: 'production' },
+      error_file: 'logs/err.log',
+      out_file: 'logs/out.log',
+      merge_logs: true,
+      log_date_format: 'YYYY-MM-DD HH:mm:ss Z'
+    }
+  ]
 };
 JSEOF
     chown "$APP_USER:$APP_USER" "$ECOSYSTEM"
@@ -332,7 +355,29 @@ server {
     gzip_types text/plain text/css application/json application/javascript text/xml application/xml text/javascript image/svg+xml;
     gzip_min_length 256;
 
-    # API reverse proxy
+    # REST API machine-to-machine (api-server porta 3002)
+    location /api/v1/ {
+        proxy_pass http://127.0.0.1:3002;
+        proxy_http_version 1.1;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+        proxy_read_timeout 90;
+    }
+
+    # Gestione chiavi API (api-server porta 3002)
+    location /auth/keys {
+        proxy_pass http://127.0.0.1:3002;
+        proxy_http_version 1.1;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+        proxy_read_timeout 90;
+    }
+
+    # API backend Express (porta 3001)
     location /api/ {
         proxy_pass http://127.0.0.1:${SERVER_PORT};
         proxy_http_version 1.1;
@@ -558,6 +603,9 @@ do_update() {
     info "Installing dependencies (server)..."
     run_as_user "cd server && npm install"
 
+    info "Installing dependencies (api-server)..."
+    run_as_user "cd api-server && npm install"
+
     info "Applying database migrations..."
     if run_as_user "cd supabase && supabase db push --yes" 2>/dev/null; then
         ok "Migrations applied"
@@ -586,7 +634,7 @@ do_update() {
     systemctl reload nginx 2>/dev/null || true
 
     info "Restarting PM2 processes..."
-    run_as_user "pm2 restart all"
+    run_as_user "pm2 restart all --update-env"
 
     echo ""
     ok "Update complete!"
@@ -644,9 +692,18 @@ do_status() {
     local health
     health=$(curl -sk --max-time 5 "https://localhost/api/health" 2>/dev/null || echo "FAIL")
     if echo "$health" | grep -q '"status"'; then
-        ok "API healthy: $health"
+        ok "Backend (3001): $health"
     else
-        err "API health check failed (is the server running?)"
+        err "Backend health check failed (porta 3001)"
+    fi
+
+    local api_health
+    api_health=$(curl -sk --max-time 5 "https://localhost/api/v1/../health" 2>/dev/null \
+        || curl -sk --max-time 5 "http://127.0.0.1:3002/health" 2>/dev/null || echo "FAIL")
+    if echo "$api_health" | grep -q '"status"'; then
+        ok "API server (3002): $api_health"
+    else
+        err "API server health check failed (porta 3002)"
     fi
     echo ""
 }

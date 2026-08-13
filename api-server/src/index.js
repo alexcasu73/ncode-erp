@@ -1,6 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
+import rateLimit from 'express-rate-limit';
 import dotenv from 'dotenv';
 dotenv.config();
 
@@ -20,9 +21,30 @@ import { authKeysRouter } from './routes/authKeys.js';
 const app = express();
 const PORT = process.env.API_PORT || 3002;
 
+const allowedOrigins = (process.env.CORS_ALLOWED_ORIGINS || process.env.FRONTEND_URL || 'http://localhost:3004')
+  .split(',')
+  .map((origin) => origin.trim())
+  .filter(Boolean);
+
 app.use(helmet());
-app.use(cors());
+app.use(cors({
+  origin: (origin, callback) => {
+    // Richieste server-to-server (MCP, script) non inviano Origin: sempre permesse.
+    if (!origin || allowedOrigins.includes(origin)) return callback(null, true);
+    callback(new Error('Origin non consentita da CORS'));
+  },
+}));
 app.use(express.json({ limit: '5mb' }));
+
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 600,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Troppe richieste, riprova più tardi' },
+});
+app.use('/api/v1', apiLimiter);
+app.use('/auth/keys', apiLimiter);
 
 // Health — no auth
 app.get('/health', (req, res) => res.json({ status: 'ok', ts: new Date().toISOString() }));

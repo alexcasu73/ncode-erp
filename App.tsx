@@ -275,7 +275,7 @@ const App: React.FC = () => {
         )}
 
         {/* Main Content Area */}
-        <main className="flex-1 overflow-y-auto px-4 lg:px-8 pt-4 lg:pt-6 pb-6 min-h-0">
+        <main className="flex-1 overflow-y-auto overflow-x-hidden px-4 lg:px-8 pt-4 lg:pt-6 pb-6 min-h-0">
           <div className="h-full">
             {renderContent()}
           </div>

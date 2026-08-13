@@ -55,6 +55,13 @@
         background-color: #0F172A;
       }
 
+      /* Riserva sempre lo spazio della scrollbar nell'area di contenuto scrollabile:
+         evita micro-resize quando un tooltip (es. funnel opportunità) fa oscillare
+         per un attimo l'altezza del contenuto e la scrollbar appare/scompare. */
+      main.overflow-y-auto {
+        scrollbar-gutter: stable;
+      }
+
       /* Typography Scale - Sistema Uniforme */
       .text-page-title { font-size: 1.5rem; font-weight: 700; line-height: 1.2; } /* 24px */
       .text-page-subtitle { font-size: 0.875rem; color: #6B7280; } /* 14px gray-500 */

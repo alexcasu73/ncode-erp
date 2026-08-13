@@ -18,7 +18,7 @@ interface User {
 }
 
 export const UserManagement: React.FC = () => {
-  const { companyId, user: currentUser } = useAuth();
+  const { companyId, companyName, user: currentUser } = useAuth();
   const { getCompanyUsers, createUser, updateUser, deleteUser } = useData();
   const { isAdmin, canManageUsers, loading: roleLoading } = useUserRole();
   const [users, setUsers] = useState<User[]>([]);
@@ -93,7 +93,6 @@ export const UserManagement: React.FC = () => {
       console.log('✅ [UserManagement] Invitation created:', inviteData);
 
       // Get company name for email
-      const companyName = 'Coalix'; // TODO: Get from context/settings
 
       // Build magic link with token
       const magicLink = `${window.location.origin}/setup-account?token=${inviteData.token}`;
@@ -272,7 +271,6 @@ export const UserManagement: React.FC = () => {
       }
 
       // Get company name
-      const companyName = 'Coalix'; // TODO: Get from context/settings
 
       // Build magic link with token
       const magicLink = `${window.location.origin}/setup-account?token=${invitation.token}`;

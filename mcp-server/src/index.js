@@ -1,11 +1,20 @@
 import 'dotenv/config';
 import express from 'express';
+import rateLimit from 'express-rate-limit';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import { registerTools } from './tools.js';
 import { createApi } from './api.js';
 
 const PORT = process.env.MCP_PORT || 3003;
+
+const mcpLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 300,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { jsonrpc: '2.0', error: { code: -32000, message: 'Troppe richieste, riprova più tardi' }, id: null },
+});
 
 /**
  * Crea una nuova istanza MCP con i tool registrati (una per richiesta, modalità stateless).
@@ -32,7 +41,7 @@ app.get('/health', (req, res) => res.json({ status: 'ok', ts: new Date().toISOSt
 
 // Endpoint MCP (Streamable HTTP) — stateless: nuovo server+transport per richiesta.
 // Multi-tenant: ogni azienda si autentica con la propria API key (bearer).
-app.post('/mcp', async (req, res) => {
+app.post('/mcp', mcpLimiter, async (req, res) => {
   const apiKey = extractApiKey(req);
   if (!apiKey) {
     return res.status(401).json({

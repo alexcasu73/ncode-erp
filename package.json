@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "vite",
     "dev:server": "cd server && npm run dev",
-    "dev:all": "concurrently \"npm run dev\" \"npm run dev:server\"",
+    "dev:api": "cd api-server && npm run dev",
+    "dev:all": "concurrently \"npm run dev\" \"npm run dev:server\" \"npm run dev:api\"",
     "build": "vite build",
     "build:server": "echo 'No build needed for server'",
     "preview": "vite preview"

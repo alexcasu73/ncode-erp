@@ -4,8 +4,9 @@ import {
   LineChart, Line, PieChart, Pie, Cell, ComposedChart, ReferenceLine, Legend
 } from 'recharts';
 import { useData } from '../context/DataContext';
-import { ArrowUpRight, TrendingUp, Users, Wallet, TrendingDown, Download, FileText } from 'lucide-react';
+import { ArrowUpRight, TrendingUp, Users, Wallet, TrendingDown, Download, FileText, Briefcase } from 'lucide-react';
 import { formatCurrency } from '../lib/currency';
+import { DealStage } from '../types';
 import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
@@ -30,7 +31,7 @@ const getImportoEffettivo = (cf: { importo?: number; invoice?: { flusso?: number
 };
 
 export const Dashboard: React.FC = () => {
-  const { customers, invoices, cashflowRecords, loading, getBankBalance } = useData();
+  const { customers, invoices, deals, cashflowRecords, loading, getBankBalance } = useData();
   const dashboardRef = useRef<HTMLDivElement>(null);
 
   // Calcola dati reali
@@ -216,6 +217,59 @@ export const Dashboard: React.FC = () => {
       });
     }
 
+    // Dati per grafico opportunità - 12 mesi dell'anno corrente, in base alla data di chiusura prevista
+    const dealsChartData = [];
+    let openDealsCount = 0;
+    let openDealsValue = 0;
+    for (let i = 0; i < 12; i++) {
+      const monthDeals = deals.filter(deal => {
+        if (!deal.expectedClose) return false;
+        const closeDate = new Date(deal.expectedClose);
+        return closeDate.getFullYear() === currentYear && closeDate.getMonth() === i;
+      });
+
+      const vinte = monthDeals.filter(d => d.stage === DealStage.WON);
+      const perse = monthDeals.filter(d => d.stage === DealStage.LOST);
+      const aperte = monthDeals.filter(d => d.stage !== DealStage.WON && d.stage !== DealStage.LOST);
+
+      openDealsCount += aperte.length;
+      openDealsValue += aperte.reduce((sum, d) => sum + (d.value || 0), 0);
+
+      dealsChartData.push({
+        name: MESI[i].substring(0, 3),
+        vinte: vinte.length,
+        perse: perse.length,
+        aperte: aperte.length,
+        valoreVinte: vinte.reduce((sum, d) => sum + (d.value || 0), 0),
+        valorePerse: perse.reduce((sum, d) => sum + (d.value || 0), 0),
+        valoreAperte: aperte.reduce((sum, d) => sum + (d.value || 0), 0),
+      });
+    }
+
+    const wonDealsThisYear = dealsChartData.reduce((sum, m) => sum + m.vinte, 0);
+    const lostDealsThisYear = dealsChartData.reduce((sum, m) => sum + m.perse, 0);
+    const closedDealsThisYear = wonDealsThisYear + lostDealsThisYear;
+    const winRate = closedDealsThisYear > 0 ? (wonDealsThisYear / closedDealsThisYear) * 100 : 0;
+
+    // Funnel: pipeline attuale per stage (istantanea corrente, non legata all'anno)
+    const funnelStages = [DealStage.LEAD, DealStage.QUALIFICATION, DealStage.PROPOSAL, DealStage.NEGOTIATION, DealStage.WON];
+    const funnelColors: Record<string, string> = {
+      [DealStage.LEAD]: '#0EA5E9',
+      [DealStage.QUALIFICATION]: '#6366f1',
+      [DealStage.PROPOSAL]: '#8b5cf6',
+      [DealStage.NEGOTIATION]: '#f59e0b',
+      [DealStage.WON]: '#10b981',
+    };
+    const funnelData = funnelStages.map(stage => {
+      const stageDeals = deals.filter(d => d.stage === stage);
+      return {
+        name: stage,
+        value: stageDeals.length,
+        importo: stageDeals.reduce((sum, d) => sum + (d.value || 0), 0),
+        fill: funnelColors[stage],
+      };
+    });
+
     return {
       currentRevenue,
       lastRevenue,
@@ -236,9 +290,14 @@ export const Dashboard: React.FC = () => {
       activeCustomers,
       customersWithInvoices,
       revenueChartData,
-      transactionsChartData
+      transactionsChartData,
+      dealsChartData,
+      openDealsCount,
+      openDealsValue,
+      winRate,
+      funnelData
     };
-  }, [invoices, cashflowRecords, customers, getBankBalance]);
+  }, [invoices, deals, cashflowRecords, customers, getBankBalance]);
 
   if (loading) {
     return <div className="flex items-center justify-center h-64">Caricamento...</div>;
@@ -654,6 +713,100 @@ export const Dashboard: React.FC = () => {
               />
             </ComposedChart>
           </ResponsiveContainer>
+        </div>
+      </div>
+
+      {/* Opportunità: andamento mensile + funnel pipeline */}
+      <div className="flex flex-col lg:flex-row gap-6 flex-1 min-h-0">
+        {/* Andamento Opportunità */}
+        <div className="bg-white dark:bg-dark-card p-8 rounded-xl shadow-sm border border-gray-100 dark:border-dark-border flex-1 flex flex-col min-h-0 lg:basis-2/3">
+          <div className="flex justify-between items-center mb-8 flex-shrink-0">
+            <div>
+              <h3 className="text-section-title text-dark dark:text-white">Andamento Opportunità</h3>
+              <p className="text-small text-gray-500 dark:text-gray-400 mt-1 flex items-center gap-1">
+                <Briefcase size={14} />
+                {dashboardData.openDealsCount} aperte ({formatCurrency(dashboardData.openDealsValue)}) · Win rate {dashboardData.winRate.toFixed(0)}%
+              </p>
+            </div>
+            <div className="text-sm text-gray-500 dark:text-gray-400">
+              Anno {new Date().getFullYear()}
+            </div>
+          </div>
+          <div className="w-full flex-1 min-h-0">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={dashboardData.dealsChartData} margin={{ top: 10, right: 10, left: 10, bottom: 10 }}>
+                <XAxis
+                  dataKey="name"
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{ fill: '#a1a1aa', fontSize: 12 }}
+                  dy={10}
+                />
+                <YAxis
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{ fill: '#a1a1aa', fontSize: 11 }}
+                  allowDecimals={false}
+                  width={40}
+                />
+                <Tooltip
+                  cursor={{ fill: 'rgba(14, 165, 233, 0.05)' }}
+                  contentStyle={{
+                    backgroundColor: '#1E293B',
+                    borderRadius: '12px',
+                    border: 'none',
+                    color: '#fff',
+                    padding: '12px'
+                  }}
+                  itemStyle={{ color: '#fff' }}
+                  formatter={(value: number, name: string, item: any) => {
+                    const key = item?.dataKey === 'vinte' ? 'valoreVinte' : item?.dataKey === 'perse' ? 'valorePerse' : 'valoreAperte';
+                    const label = name === 'vinte' ? 'Vinte' : name === 'perse' ? 'Perse' : 'Aperte';
+                    const valore = item?.payload?.[key] ?? 0;
+                    return [`${value} (${formatCurrency(valore)})`, label];
+                  }}
+                  labelStyle={{ color: '#0EA5E9', fontWeight: 'bold' }}
+                />
+                <Legend
+                  formatter={(value) => value === 'vinte' ? 'Vinte' : value === 'perse' ? 'Perse' : 'Aperte'}
+                  wrapperStyle={{ fontSize: '12px' }}
+                />
+                <Bar dataKey="aperte" stackId="opportunita" fill="#0EA5E9" radius={[0, 0, 0, 0]} />
+                <Bar dataKey="vinte" stackId="opportunita" fill="#10b981" radius={[0, 0, 0, 0]} />
+                <Bar dataKey="perse" stackId="opportunita" fill="#f43f5e" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        {/* Funnel Pipeline */}
+        <div className="bg-white dark:bg-dark-card p-8 rounded-xl shadow-sm border border-gray-100 dark:border-dark-border flex-1 flex flex-col min-h-0 overflow-hidden lg:basis-1/3">
+          <div className="mb-4 flex-shrink-0">
+            <h3 className="text-section-title text-dark dark:text-white">Pipeline Attuale</h3>
+            <p className="text-small text-gray-500 dark:text-gray-400 mt-1">Opportunità per fase, istantanea odierna</p>
+          </div>
+          <div className="w-full flex-1 min-h-0 flex flex-col justify-between">
+            {(() => {
+              const maxValue = Math.max(1, ...dashboardData.funnelData.map(s => s.value));
+              return dashboardData.funnelData.map(stage => (
+                <div key={stage.name} className="flex items-center gap-3 min-h-0">
+                  <span className="w-28 flex-shrink-0 text-sm text-gray-500 dark:text-gray-400 truncate" title={stage.name}>
+                    {stage.name}
+                  </span>
+                  <div className="flex-1 h-3 bg-gray-100 dark:bg-dark-border rounded-full overflow-hidden">
+                    <div
+                      className="h-full rounded-full transition-all"
+                      style={{ width: `${(stage.value / maxValue) * 100}%`, backgroundColor: stage.fill }}
+                      title={`${stage.value} opportunità (${formatCurrency(stage.importo)})`}
+                    />
+                  </div>
+                  <span className="w-6 flex-shrink-0 text-sm font-semibold text-dark dark:text-white text-right">
+                    {stage.value}
+                  </span>
+                </div>
+              ));
+            })()}
+          </div>
         </div>
       </div>
     </div>
