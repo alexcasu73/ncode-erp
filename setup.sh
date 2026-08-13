@@ -137,6 +137,15 @@ install_dependencies() {
     run_as_user "cd server && npm install"
     info "Installing api-server dependencies..."
     run_as_user "cd api-server && npm install"
+    info "Installing mcp-server dependencies..."
+    run_as_user "cd mcp-server && npm install"
+    # I package.json delle sottocartelle sono gitignored: sul server possono restare
+    # stale dopo un git pull e non contenere dipendenze nuove. Installiamo quindi in
+    # modo esplicito quelle critiche (importate in cima a index.js: se mancano, il
+    # processo va in crash all'avvio). --save le allinea al package.json locale.
+    info "Ensuring critical runtime deps (express-rate-limit)..."
+    run_as_user "cd api-server && npm install --save express-rate-limit"
+    run_as_user "cd mcp-server && npm install --save express-rate-limit"
     ok "Dependencies installed"
 }
 
